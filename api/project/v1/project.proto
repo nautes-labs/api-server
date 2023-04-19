@@ -56,7 +56,7 @@ message GetReply {
 // Defines the ListsRequest message which is used to retrieve a list of projects.
 message ListsRequest {
   // The name of the product the projects belong to.
-  string product_name = 1 [json_name = "product_name"];
+  string product_name = 1 [json_name = "product_name"]; 
 }
 
 // Defines the ListsReply message which is used to return a list of projects.
@@ -74,13 +74,13 @@ message SaveRequest {
   }
 
   // The name of the product the project belongs to.
-  string product_name = 1 [json_name = "product_name"];
+  string product_name = 1 [json_name = "product_name"]; 
 
   // The name of the project being created or updated.
   string project_name = 2 [json_name = "project_name"];
 
   // Whether or not to skip validation.
-  bool insecure_skip_check = 4 [json_name = "insecure_skip_check"];
+  bool insecure_skip_check = 4;
 
   // The request body for the project.
   Body body = 5;
@@ -101,7 +101,7 @@ message DeleteRequest {
   string product_name = 2 [json_name = "product_name"];
 
   // Whether or not to skip validation.
-  bool insecure_skip_check = 3 [json_name = "insecure_skip_check"];
+  bool insecure_skip_check = 3;
 }
 
 // Defines the SaveReply message which is used to return a message after deleting a project.

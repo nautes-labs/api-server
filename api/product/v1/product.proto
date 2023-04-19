@@ -100,7 +100,7 @@ message GitGroup {
 
 message GetProductRequest {
   // The name of the product to get
-  string product_name = 1;
+  string product_name = 1 [json_name = "product_name"];
 }
 
 message GetProductReply {
@@ -120,7 +120,7 @@ message ListProductsReply {
   
 message SaveProductRequest {
   // The name of the product to save
-  string product_name = 1;
+  string product_name = 1 [json_name = "product_name"];
 
   // The Git group of the product
   Git git = 2 [json_name = "git", (validate.rules).message.required = true];
@@ -133,7 +133,7 @@ message SaveProductReply {
 
 message DeleteProductRequest {
   // The name of the product to delete
-  string product_name = 1;
+  string product_name = 1 [json_name = "product_name"];
 }
 
 message DeleteProductReply {

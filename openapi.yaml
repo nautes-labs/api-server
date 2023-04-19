@@ -3,7 +3,7 @@
 
 openapi: 3.0.3
 info:
-    title: "api-server"
+    title: ""
     version: 0.0.1
 paths:
     /api/v1/clusters/{cluster_name}:
@@ -76,13 +76,13 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.product.v1.ListProductsReply'
-    /api/v1/products/{productName}:
+    /api/v1/products/{product_name}:
         get:
             tags:
                 - Product
             operationId: Product_GetProduct
             parameters:
-                - name: productName
+                - name: product_name
                   in: path
                   description: The name of the product to get
                   required: true
@@ -100,7 +100,7 @@ paths:
                 - Product
             operationId: Product_SaveProduct
             parameters:
-                - name: productName
+                - name: product_name
                   in: path
                   description: The name of the product to save
                   required: true
@@ -124,7 +124,7 @@ paths:
                 - Product
             operationId: Product_DeleteProduct
             parameters:
-                - name: productName
+                - name: product_name
                   in: path
                   description: The name of the product to delete
                   required: true
@@ -588,7 +588,7 @@ paths:
                   required: true
                   schema:
                     type: string
-                - name: insecure_skip_check
+                - name: insecureSkipCheck
                   in: query
                   description: Whether or not to skip validation.
                   schema:
@@ -623,7 +623,7 @@ paths:
                   required: true
                   schema:
                     type: string
-                - name: insecure_skip_check
+                - name: insecureSkipCheck
                   in: query
                   description: Whether or not to skip validation.
                   schema:
@@ -1125,7 +1125,7 @@ components:
         api.product.v1.SaveProductRequest:
             type: object
             properties:
-                productName:
+                product_name:
                     type: string
                     description: The name of the product to save
                 git:
