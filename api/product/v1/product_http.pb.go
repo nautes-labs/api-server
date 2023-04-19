@@ -33,10 +33,10 @@ type ProductHTTPServer interface {
 
 func RegisterProductHTTPServer(s *http.Server, srv ProductHTTPServer) {
 	r := s.Route("/")
-	r.GET("/api/v1/products/{productName}", _Product_GetProduct0_HTTP_Handler(srv))
+	r.GET("/api/v1/products/{product_name}", _Product_GetProduct0_HTTP_Handler(srv))
 	r.GET("/api/v1/products", _Product_ListProducts0_HTTP_Handler(srv))
-	r.POST("/api/v1/products/{productName}", _Product_SaveProduct0_HTTP_Handler(srv))
-	r.DELETE("/api/v1/products/{productName}", _Product_DeleteProduct0_HTTP_Handler(srv))
+	r.POST("/api/v1/products/{product_name}", _Product_SaveProduct0_HTTP_Handler(srv))
+	r.DELETE("/api/v1/products/{product_name}", _Product_DeleteProduct0_HTTP_Handler(srv))
 }
 
 func _Product_GetProduct0_HTTP_Handler(srv ProductHTTPServer) func(ctx http.Context) error {
@@ -141,7 +141,7 @@ func NewProductHTTPClient(client *http.Client) ProductHTTPClient {
 
 func (c *ProductHTTPClientImpl) DeleteProduct(ctx context.Context, in *DeleteProductRequest, opts ...http.CallOption) (*DeleteProductReply, error) {
 	var out DeleteProductReply
-	pattern := "/api/v1/products/{productName}"
+	pattern := "/api/v1/products/{product_name}"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationProductDeleteProduct))
 	opts = append(opts, http.PathTemplate(pattern))
@@ -154,7 +154,7 @@ func (c *ProductHTTPClientImpl) DeleteProduct(ctx context.Context, in *DeletePro
 
 func (c *ProductHTTPClientImpl) GetProduct(ctx context.Context, in *GetProductRequest, opts ...http.CallOption) (*GetProductReply, error) {
 	var out GetProductReply
-	pattern := "/api/v1/products/{productName}"
+	pattern := "/api/v1/products/{product_name}"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationProductGetProduct))
 	opts = append(opts, http.PathTemplate(pattern))
@@ -180,7 +180,7 @@ func (c *ProductHTTPClientImpl) ListProducts(ctx context.Context, in *ListProduc
 
 func (c *ProductHTTPClientImpl) SaveProduct(ctx context.Context, in *SaveProductRequest, opts ...http.CallOption) (*SaveProductReply, error) {
 	var out SaveProductReply
-	pattern := "/api/v1/products/{productName}"
+	pattern := "/api/v1/products/{product_name}"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationProductSaveProduct))
 	opts = append(opts, http.PathTemplate(pattern))

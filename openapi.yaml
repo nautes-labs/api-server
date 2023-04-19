@@ -76,13 +76,13 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.product.v1.ListProductsReply'
-    /api/v1/products/{product_name}:
+    /api/v1/products/{productName}:
         get:
             tags:
                 - Product
             operationId: Product_GetProduct
             parameters:
-                - name: product_name
+                - name: productName
                   in: path
                   description: The name of the product to get
                   required: true
@@ -100,7 +100,7 @@ paths:
                 - Product
             operationId: Product_SaveProduct
             parameters:
-                - name: product_name
+                - name: productName
                   in: path
                   description: The name of the product to save
                   required: true
@@ -124,7 +124,7 @@ paths:
                 - Product
             operationId: Product_DeleteProduct
             parameters:
-                - name: product_name
+                - name: productName
                   in: path
                   description: The name of the product to delete
                   required: true
@@ -1125,7 +1125,7 @@ components:
         api.product.v1.SaveProductRequest:
             type: object
             properties:
-                product_name:
+                productName:
                     type: string
                     description: The name of the product to save
                 git:
