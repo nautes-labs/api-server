@@ -51,8 +51,7 @@ func createFakeCodeRepoResource(name string) *resourcev1alpha1.CodeRepo {
 			Project:           _DefaultProjectResourceName,
 			DeploymentRuntime: true,
 			Webhook: &resourcev1alpha1.Webhook{
-				Events:    []string{"push_events"},
-				Isolation: "true",
+				Events: []string{"push_events"},
 			},
 		},
 	}
