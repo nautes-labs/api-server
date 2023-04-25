@@ -246,7 +246,7 @@ func (c *CodeRepoUsecase) SaveDeployKey(ctx context.Context, pid interface{}, pr
 			return err
 		}
 
-		err := c.AddDeployKeyAndRemoveInvalidDeployKey(ctx, project)
+		err := c.RefreshDeployKey(ctx, project)
 		if err != nil {
 			return err
 		}
@@ -261,7 +261,7 @@ func (c *CodeRepoUsecase) SaveDeployKey(ctx context.Context, pid interface{}, pr
 			return err
 		}
 
-		err = c.AddDeployKeyAndRemoveInvalidDeployKey(ctx, project)
+		err = c.RefreshDeployKey(ctx, project)
 		if err != nil {
 			return err
 		}
@@ -270,7 +270,7 @@ func (c *CodeRepoUsecase) SaveDeployKey(ctx context.Context, pid interface{}, pr
 	}
 
 	if projectDeployKey.Key != secretData.Fingerprint {
-		err = c.AddDeployKeyAndRemoveInvalidDeployKey(ctx, project)
+		err = c.RefreshDeployKey(ctx, project)
 		if err != nil {
 			return err
 		}
@@ -316,7 +316,7 @@ func (c *CodeRepoUsecase) getAllDeployKeys(ctx context.Context, project *Project
 	}
 }
 
-func (c *CodeRepoUsecase) AddDeployKeyAndRemoveInvalidDeployKey(ctx context.Context, project *Project) error {
+func (c *CodeRepoUsecase) RefreshDeployKey(ctx context.Context, project *Project) error {
 	publicKey, privateKey, err := utilkey.GenerateKeyPair(c.config.Git.DefaultDeployKeyType)
 	if err != nil {
 		return err

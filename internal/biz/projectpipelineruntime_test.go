@@ -45,20 +45,37 @@ func createProjectPiepeLineResource(name string) *resourcev1alpha1.ProjectPipeli
 			Project:        _DefaultProjectName,
 			PipelineSource: "pipelineCodeRepo",
 			Destination:    "env1",
+			Isolation:      "shared",
 			Pipelines: []resourcev1alpha1.Pipeline{
 				{
-					Name:   "dev",
-					Label:  "test",
-					Branch: "feature-xx",
-					Path:   "dev",
-					EventSources: []resourcev1alpha1.EventSource{
-						{
-							Webhook: "enabled",
-						},
+					Name:  "dev",
+					Label: "test",
+					Path:  "dev",
+				},
+			},
+			EventSources: []resourcev1alpha1.EventSource{
+				{
+					Name: "event1",
+					Gitlab: &resourcev1alpha1.Gitlab{
+						RepoName: "repo-2123",
+						Revision: "main",
+						Events:   []string{"push_events"},
+					},
+					Calendar: &resourcev1alpha1.Calendar{
+						Schedule:       "0 0 * * *",
+						Interval:       "24h",
+						ExclusionDates: []string{"2023-05-01"},
+						Timezone:       "America/Los_Angeles",
 					},
 				},
 			},
-			CodeSources: []string{"CodeRepo1"},
+			PipelineTriggers: []resourcev1alpha1.PipelineTrigger{
+				{
+					EventSource: "event1",
+					Pipeline:    "pipeline1",
+					Revision:    "main",
+				},
+			},
 		},
 	}
 }
@@ -111,9 +128,8 @@ var _ = Describe("Get project pipeline runtime", func() {
 	It("will get success", testUseCase.GetResourceSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 		tmp, _ := fakeNode.Content.(*resourcev1alpha1.ProjectPipelineRuntime)
 		tmp.Spec.PipelineSource = "repo-1"
-		tmp.Spec.CodeSources[0] = "repo-2"
+		tmp.Spec.EventSources[0].Gitlab.RepoName = "repo-2"
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), 1).Return(defautlProject, nil)
-		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), 2).Return(defautlProject, nil)
 
 		biz := NewProjectPipelineRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
 		result, err := biz.GetProjectPipelineRuntime(context.Background(), resourceName, defaultGroupName)
@@ -138,9 +154,9 @@ var _ = Describe("List project pipeline runtimes", func() {
 	It("will list successfully", testUseCase.ListResourceSuccess(fakeNodes, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 		tmp, _ := fakeNode.Content.(*resourcev1alpha1.ProjectPipelineRuntime)
 		tmp.Spec.PipelineSource = "repo-1"
-		tmp.Spec.CodeSources[0] = "repo-2"
+		tmp.Spec.EventSources[0].Gitlab.RepoName = "repo-2"
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), 1).Return(defautlProject, nil)
-		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), 2).Return(defautlProject, nil)
+		// codeRepo.EXPECT().GetCodeRepo(gomock.Any(), 2).Return(defautlProject, nil)
 
 		biz := NewProjectPipelineRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
 		results, err := biz.ListProjectPipelineRuntimes(ctx, defaultGroupName)
@@ -173,20 +189,37 @@ var _ = Describe("Save project pipeline runtime", func() {
 				Project:        _DefaultProjectName,
 				PipelineSource: projectForPipeline.Name,
 				Destination:    "env1",
+				Isolation:      "shared",
 				Pipelines: []resourcev1alpha1.Pipeline{
 					{
-						Name:   "dev",
-						Label:  "test",
-						Branch: "feature-xx",
-						Path:   "dev",
-						EventSources: []resourcev1alpha1.EventSource{
-							{
-								Webhook: "enabled",
-							},
+						Name:  "dev",
+						Label: "test",
+						Path:  "dev",
+					},
+				},
+				EventSources: []resourcev1alpha1.EventSource{
+					{
+						Name: "event1",
+						Gitlab: &resourcev1alpha1.Gitlab{
+							RepoName: "repo-2123",
+							Revision: "main",
+							Events:   []string{"push_events"},
+						},
+						Calendar: &resourcev1alpha1.Calendar{
+							Schedule:       "0 0 * * *",
+							Interval:       "24h",
+							ExclusionDates: []string{"2023-05-01"},
+							Timezone:       "America/Los_Angeles",
 						},
 					},
 				},
-				CodeSources: []string{projectForBase.Name},
+				PipelineTriggers: []resourcev1alpha1.PipelineTrigger{
+					{
+						EventSource: "event1",
+						Pipeline:    "pipeline1",
+						Revision:    "main",
+					},
+				},
 			},
 		}
 		pipelineSourceCodeRepoPath = fmt.Sprintf("%s/%s", defaultProductGroup.Path, projectForPipeline.Name)
@@ -201,7 +234,7 @@ var _ = Describe("Save project pipeline runtime", func() {
 
 	AfterEach(func() {
 		data.Spec.PipelineSource = projectForPipeline.Name
-		data.Spec.CodeSources[0] = projectForBase.Name
+		data.Spec.EventSources[0].Gitlab.RepoName = projectForBase.Name
 	})
 
 	It("failed to get product info", testUseCase.GetProductFail(func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
@@ -314,7 +347,7 @@ var _ = Describe("Save project pipeline runtime", func() {
 
 			newResouce := fakeResource.DeepCopy()
 			newResouce.Spec.PipelineSource = projectForPipelineRepoID
-			newResouce.Spec.CodeSources[0] = projectForPipelineRepoID
+			newResouce.Spec.EventSources[0].Gitlab.RepoName = projectForBaseRepoID
 			fakeNode.Content = newResouce
 
 			biz := NewProjectPipelineRuntimeUsecase(logger, nil, nodestree, nil)
@@ -361,7 +394,7 @@ var _ = Describe("Save project pipeline runtime", func() {
 			Expect(ok).To(BeTrue())
 		})
 
-		It("coderepo sources reference not found", func() {
+		It("pipeline repository not found in event sources", func() {
 			projectName := fakeResource.Spec.Project
 			projectNodes := createProjectNodes(createProjectNode(createProjectResource(projectName)))
 			env := fakeResource.Spec.Destination
@@ -409,7 +442,7 @@ var _ = Describe("Save project pipeline runtime", func() {
 
 			newResouce := fakeResource.DeepCopy()
 			newResouce.Spec.PipelineSource = projectForPipelineRepoID
-			newResouce.Spec.CodeSources[0] = projectForBaseRepoID
+			newResouce.Spec.EventSources[0].Gitlab.RepoName = projectForBaseRepoID
 			fakeNode.Content = newResouce
 
 			biz := NewProjectPipelineRuntimeUsecase(logger, nil, nodestree, nil)

@@ -1576,8 +1576,14 @@ github.com/nats-io/nuid v1.0.1/go.mod h1:19wcPz3Ph3q0Jbyiqsd0kePYG7A95tJPxeL+1OS
 github.com/nautes-labs/pkg v0.2.0/go.mod h1:CiOgAU62kDXQ8PGf12Hd82FjASPebjIWwJFlzbH/q/s=
 github.com/nautes-labs/pkg v0.2.2-0.20230424062356-90586ca29da4 h1:l1O/YbLU47rR4sIEKRCmfBfXcmHmq8JzR2vfdgbywbs=
 github.com/nautes-labs/pkg v0.2.2-0.20230424062356-90586ca29da4/go.mod h1:CiOgAU62kDXQ8PGf12Hd82FjASPebjIWwJFlzbH/q/s=
+github.com/nautes-labs/pkg v0.2.2-0.20230424072015-10000eef0b82 h1:w29PU4RmHzkJ8q8t3e/KBbfP60Csu0FQI/s2DRLG9XE=
+github.com/nautes-labs/pkg v0.2.2-0.20230424072015-10000eef0b82/go.mod h1:qT3YxKHvrAzeELExmkryPf3HUe9W0hnKLjTJTWTY14U=
 github.com/nautes-labs/pkg v0.2.2-0.20230424072616-f605d6ba5735 h1:B0ga5sFq695917E3wLQcO1jlWkYw+y4VI16F5I9js8E=
 github.com/nautes-labs/pkg v0.2.2-0.20230424072616-f605d6ba5735/go.mod h1:qT3YxKHvrAzeELExmkryPf3HUe9W0hnKLjTJTWTY14U=
+github.com/nautes-labs/pkg v0.2.2-0.20230424085336-f3c8593bb801 h1:0Dn15ciSjKWbCz5btleFU5+imQBvrE+mmpW84KZYL5s=
+github.com/nautes-labs/pkg v0.2.2-0.20230424085336-f3c8593bb801/go.mod h1:qT3YxKHvrAzeELExmkryPf3HUe9W0hnKLjTJTWTY14U=
+github.com/nautes-labs/pkg v0.2.2-0.20230425063242-d991f9dee152 h1:2pa4p2dpIjUQFNct6w2XzNOkcQuU2vFdnZqehGKFnbo=
+github.com/nautes-labs/pkg v0.2.2-0.20230425063242-d991f9dee152/go.mod h1:qT3YxKHvrAzeELExmkryPf3HUe9W0hnKLjTJTWTY14U=
 github.com/nautes-labs/vault-proxy v0.2.0 h1:rG1/r8+PNcxGub9mJEMyv/h8SZpNO2P5qGew1bGPTAA=
 github.com/nautes-labs/vault-proxy v0.2.0/go.mod h1:1QhxX5g2cnjD/LJNl5Zcz6+DBZeWXE2CG0dyGPj1ztQ=
 github.com/nautes-labs/vault-proxy v0.2.1 h1:oNz/gdr9QijSNMLLXMyv7UWf0rjdj6Wsj4XPUgmSMXI=

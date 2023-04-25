@@ -65,6 +65,17 @@ api:
 	       --openapi_out=fq_schema_naming=true,default_response=false:. \
 	       $(API_PROTO_FILES)
 
+.PHONY: vault-proxy
+# generate vault proto
+vault-proxy:
+	protoc --proto_path=./pkg/vaultproxy/v1 \
+	       --proto_path=./third_party \
+ 	       --go_out=paths=source_relative:./pkg/vaultproxy/v1 \
+ 	       --go-http_out=paths=source_relative:./pkg/vaultproxy/v1 \
+ 	       --go-grpc_out=paths=source_relative:./pkg/vaultproxy/v1 \
+	       --openapi_out=fq_schema_naming=true,default_response=false:. \
+	       api.proto
+
 .PHONY: build
 # build
 build:

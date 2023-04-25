@@ -33,8 +33,8 @@ import (
 	auth "github.com/hashicorp/vault/api/auth/kubernetes"
 	commonv1 "github.com/nautes-labs/api-server/api/common/v1"
 	"github.com/nautes-labs/api-server/internal/biz"
+	vaultproxyv1 "github.com/nautes-labs/api-server/pkg/vaultproxy/v1"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
-	vaultproxyv1 "github.com/nautes-labs/vault-proxy/api/vaultproxy/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	controllerruntime "sigs.k8s.io/controller-runtime/pkg/client"
@@ -275,17 +275,16 @@ func GetToken(namespace string) (string, error) {
 func (v *vaultRepo) SaveDeployKey(ctx context.Context, id int, key string, extendKVs map[string]string) error {
 	repoID := fmt.Sprintf("%s%d", prefix, id)
 	opt := &vaultproxyv1.GitRequest{
-		Providertype: string(v.config.Git.GitType),
-		Repoid:       repoID,
-		Username:     _USERNAME,
-		Permission:   _PERMISSION,
-		Account: &vaultproxyv1.GitAccount{
-			Access: &vaultproxyv1.GitAccount_Deploykey{
-				Deploykey: string(key),
-			},
-			Accesstype: _ACCESS_TYPE,
+		Meta: &vaultproxyv1.GitMeta{
+			ProviderType: string(v.config.Git.GitType),
+			Id:           repoID,
+			Username:     _USERNAME,
+			Permission:   _PERMISSION,
 		},
-		AdditionalKVs: extendKVs,
+		Kvs: &vaultproxyv1.GitKVs{
+			DeployKey:   string(key),
+			Additionals: extendKVs,
+		},
 	}
 	_, err := v.secret.CreateGit(context.Background(), opt)
 	if err != nil {
@@ -299,10 +298,12 @@ func (v *vaultRepo) SaveClusterConfig(ctx context.Context, id, config string) er
 	var clustertype = "kubernetes"
 	var permission = "admin"
 	opt := &vaultproxyv1.ClusterRequest{
-		Clustertype: clustertype,
-		Clusterid:   id,
-		Username:    _USERNAME,
-		Permission:  permission,
+		Meta: &vaultproxyv1.ClusterMeta{
+			Id:         id,
+			Type:       clustertype,
+			Username:   _USERNAME,
+			Permission: permission,
+		},
 		Account: &vaultproxyv1.ClusterAccount{
 			Kubeconfig: config,
 		},
@@ -318,10 +319,12 @@ func (v *vaultRepo) SaveClusterConfig(ctx context.Context, id, config string) er
 func (v *vaultRepo) DeleteSecret(ctx context.Context, id int) error {
 	repoID := fmt.Sprintf("%s%d", prefix, id)
 	opt := &vaultproxyv1.GitRequest{
-		Providertype: string(v.config.Git.GitType),
-		Repoid:       repoID,
-		Username:     _USERNAME,
-		Permission:   _PERMISSION,
+		Meta: &vaultproxyv1.GitMeta{
+			ProviderType: string(v.config.Git.GitType),
+			Id:           repoID,
+			Username:     _USERNAME,
+			Permission:   _PERMISSION,
+		},
 	}
 	_, err := v.secret.DeleteGit(context.TODO(), opt)
 	if err != nil {
@@ -344,11 +347,10 @@ func (v *vaultRepo) AuthorizationSecret(ctx context.Context, id int, destUser st
 	opt := &vaultproxyv1.AuthroleGitPolicyRequest{
 		ClusterName: v.config.Secret.Vault.MountPath,
 		DestUser:    destUser,
-		SecretOptions: &vaultproxyv1.GitRequest{
-			Providertype: string(v.config.Git.GitType),
-			Repoid:       repoID,
-			Username:     _USERNAME,
-			Permission:   _PERMISSION,
+		Secret: &vaultproxyv1.GitMeta{
+			Id:         repoID,
+			Username:   _USERNAME,
+			Permission: _PERMISSION,
 		},
 	}
 	_, err := v.auth.GrantAuthroleGitPolicy(context.Background(), opt)

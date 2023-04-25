@@ -61,14 +61,6 @@ func (p *ProjectPipelineRuntimeUsecase) convertCodeRepoToRepoName(ctx context.Co
 		runtime.Spec.PipelineSource = repoName
 	}
 
-	for idx, codeRepo := range runtime.Spec.CodeSources {
-		repoName, err := p.resourcesUsecase.convertCodeRepoToRepoName(ctx, codeRepo)
-		if err != nil {
-			return err
-		}
-		runtime.Spec.CodeSources[idx] = repoName
-	}
-
 	return nil
 }
 
@@ -119,25 +111,24 @@ func (p *ProjectPipelineRuntimeUsecase) ListProjectPipelineRuntimes(ctx context.
 }
 
 func (p *ProjectPipelineRuntimeUsecase) SaveProjectPipelineRuntime(ctx context.Context, options *BizOptions, data *ProjectPipelineRuntimeData) error {
-	project, err := p.resourcesUsecase.GetCodeRepo(ctx, options.ProductName, data.Spec.PipelineSource)
+	project, err := p.IsRepositoryExist(ctx, options.ProductName, data.Spec.PipelineSource)
 	if err != nil {
-		if ok := commonv1.IsProjectNotFound(err); ok {
-			return projectpipelineruntimev1.ErrorPipelineResourceNotFound("failed to get repository please check pipeline source %s or product %s valid", data.Spec.PipelineSource, options.ProductName)
-		} else {
-			return err
-		}
+		return err
 	}
 
 	data.Spec.PipelineSource = SpliceCodeRepoResourceName(int(project.Id))
 
-	if len(data.Spec.CodeSources) > 0 {
-		for i, source := range data.Spec.CodeSources {
-			project, err := p.resourcesUsecase.GetCodeRepo(ctx, options.ProductName, source)
+	for idx, eventSource := range data.Spec.EventSources {
+		if eventSource.Gitlab.RepoName != "" {
+			project, err := p.IsRepositoryExist(ctx, options.ProductName, eventSource.Gitlab.RepoName)
 			if err != nil {
-				return fmt.Errorf("failed to get repository please check codeRepo source or product name, err: %w", err)
+				return err
 			}
-
-			data.Spec.CodeSources[i] = SpliceCodeRepoResourceName(int(project.Id))
+			if project == nil {
+				return fmt.Errorf("failed to get repository %s in event sources", eventSource.Gitlab.RepoName)
+			}
+			eventSource.Gitlab.RepoName = fmt.Sprintf("repo-%d", int(project.Id))
+			data.Spec.EventSources[idx] = eventSource
 		}
 	}
 
@@ -153,6 +144,18 @@ func (p *ProjectPipelineRuntimeUsecase) SaveProjectPipelineRuntime(ctx context.C
 	}
 
 	return nil
+}
+
+func (p *ProjectPipelineRuntimeUsecase) IsRepositoryExist(ctx context.Context, productName, repoName string) (*Project, error) {
+	project, err := p.resourcesUsecase.GetCodeRepo(ctx, productName, repoName)
+	if err != nil {
+		if ok := commonv1.IsProjectNotFound(err); ok {
+			return nil, projectpipelineruntimev1.ErrorPipelineResourceNotFound("failed to get repository %s in product %s", repoName, productName)
+		} else {
+			return nil, err
+		}
+	}
+	return project, nil
 }
 
 func (p *ProjectPipelineRuntimeUsecase) DeleteProjectPipelineRuntime(ctx context.Context, options *BizOptions) error {
@@ -235,44 +238,42 @@ func (p *ProjectPipelineRuntimeUsecase) CheckReference(options nodestree.Compare
 		return true, fmt.Errorf("node %s resource type error", node.Name)
 	}
 
-	ok, err := p.isRepeatRepositories(projectPipelineRuntime)
-	if ok {
-		return true, err
-	}
-
-	ok, err = p.isRepeatPipelinePath(projectPipelineRuntime)
+	ok, err := p.isRepeatPipelinePath(projectPipelineRuntime)
 	if ok {
 		return true, err
 	}
 
 	projectName := projectPipelineRuntime.Spec.Project
+	resourceDirectory := fmt.Sprintf("%s/%s", _ProjectsDir, projectPipelineRuntime.Spec.Project)
 	ok = nodestree.IsResourceExist(options, projectName, nodestree.Project)
 	if !ok {
 		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, _ProjectKind, projectName, _PipelineRuntimeKind,
-			projectPipelineRuntime.Name, _ProjectsDir+projectPipelineRuntime.Spec.Project)
+			projectPipelineRuntime.Name, resourceDirectory)
 	}
 
 	targetEnvironment := projectPipelineRuntime.Spec.Destination
 	ok = nodestree.IsResourceExist(options, targetEnvironment, nodestree.Enviroment)
 	if !ok {
 		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, _EnvironmentKind, targetEnvironment, _PipelineRuntimeKind,
-			projectPipelineRuntime.Name, projectPipelineRuntime.Spec.Project)
+			projectPipelineRuntime.Name, resourceDirectory)
 	}
 
-	codeRepoName := projectPipelineRuntime.Spec.PipelineSource
-	ok = nodestree.IsResourceExist(options, codeRepoName, nodestree.CodeRepo)
+	pipelineRepository := projectPipelineRuntime.Spec.PipelineSource
+	ok = nodestree.IsResourceExist(options, pipelineRepository, nodestree.CodeRepo)
 	if !ok {
-		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, _CodeRepoKind, codeRepoName, _PipelineRuntimeKind,
-			projectPipelineRuntime.Name, projectPipelineRuntime.Spec.Project)
+		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, _CodeRepoKind, pipelineRepository, _PipelineRuntimeKind,
+			projectPipelineRuntime.Name, resourceDirectory)
 	}
 
-	if len(projectPipelineRuntime.Spec.CodeSources) > 0 {
-		codeSources := projectPipelineRuntime.Spec.CodeSources
-		for _, source := range codeSources {
-			ok = nodestree.IsResourceExist(options, source, nodestree.CodeRepo)
-			if !ok {
-				return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, _CodeRepoKind, codeRepoName, _PipelineRuntimeKind,
-					projectPipelineRuntime.Name, projectPipelineRuntime.Spec.Project)
+	if len(projectPipelineRuntime.Spec.EventSources) > 0 {
+		for _, event := range projectPipelineRuntime.Spec.EventSources {
+			if event.Gitlab != nil {
+				// TODO
+				// In the future, cross product query codeRepo will be supported.
+				if ok := nodestree.IsResourceExist(options, event.Gitlab.RepoName, nodestree.CodeRepo); !ok {
+					return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, _CodeRepoKind, event.Gitlab.RepoName, _PipelineRuntimeKind,
+						projectPipelineRuntime.Name, resourceDirectory)
+				}
 			}
 		}
 	}
@@ -283,19 +284,6 @@ func (p *ProjectPipelineRuntimeUsecase) CheckReference(options nodestree.Compare
 	}
 
 	return true, nil
-}
-
-func (p *ProjectPipelineRuntimeUsecase) isRepeatRepositories(runtime *resourcev1alpha1.ProjectPipelineRuntime) (bool, error) {
-	codeRepos := runtime.Spec.CodeSources
-	if len(codeRepos) > 0 {
-		for _, source := range codeRepos {
-			if source == runtime.Spec.PipelineSource {
-				return true, fmt.Errorf("CodeSource for ProjectPipelineRuntime %s has duplicate item, as found in the global validation", runtime.Name)
-			}
-		}
-	}
-
-	return false, nil
 }
 
 func (p *ProjectPipelineRuntimeUsecase) isRepeatPipelinePath(runtime *resourcev1alpha1.ProjectPipelineRuntime) (bool, error) {

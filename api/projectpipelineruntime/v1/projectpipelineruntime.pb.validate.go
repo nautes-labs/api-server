@@ -35,6 +35,399 @@ var (
 	_ = sort.Sort
 )
 
+// Validate checks the field values on Calendar with the rules defined in the
+// proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
+func (m *Calendar) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on Calendar with the rules defined in
+// the proto definition for this message. If any rules are violated, the
+// result is a list of violation errors wrapped in CalendarMultiError, or nil
+// if none found.
+func (m *Calendar) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *Calendar) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Schedule
+
+	// no validation rules for Interval
+
+	// no validation rules for Timezone
+
+	if len(errors) > 0 {
+		return CalendarMultiError(errors)
+	}
+
+	return nil
+}
+
+// CalendarMultiError is an error wrapping multiple validation errors returned
+// by Calendar.ValidateAll() if the designated constraints aren't met.
+type CalendarMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m CalendarMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m CalendarMultiError) AllErrors() []error { return m }
+
+// CalendarValidationError is the validation error returned by
+// Calendar.Validate if the designated constraints aren't met.
+type CalendarValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e CalendarValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e CalendarValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e CalendarValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e CalendarValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e CalendarValidationError) ErrorName() string { return "CalendarValidationError" }
+
+// Error satisfies the builtin error interface
+func (e CalendarValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sCalendar.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = CalendarValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = CalendarValidationError{}
+
+// Validate checks the field values on Gitlab with the rules defined in the
+// proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
+func (m *Gitlab) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on Gitlab with the rules defined in the
+// proto definition for this message. If any rules are violated, the result is
+// a list of violation errors wrapped in GitlabMultiError, or nil if none found.
+func (m *Gitlab) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *Gitlab) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if utf8.RuneCountInString(m.GetRepoName()) < 1 {
+		err := GitlabValidationError{
+			field:  "RepoName",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if utf8.RuneCountInString(m.GetRevision()) < 1 {
+		err := GitlabValidationError{
+			field:  "Revision",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return GitlabMultiError(errors)
+	}
+
+	return nil
+}
+
+// GitlabMultiError is an error wrapping multiple validation errors returned by
+// Gitlab.ValidateAll() if the designated constraints aren't met.
+type GitlabMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m GitlabMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m GitlabMultiError) AllErrors() []error { return m }
+
+// GitlabValidationError is the validation error returned by Gitlab.Validate if
+// the designated constraints aren't met.
+type GitlabValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e GitlabValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e GitlabValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e GitlabValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e GitlabValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e GitlabValidationError) ErrorName() string { return "GitlabValidationError" }
+
+// Error satisfies the builtin error interface
+func (e GitlabValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sGitlab.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = GitlabValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = GitlabValidationError{}
+
+// Validate checks the field values on EventSource with the rules defined in
+// the proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
+func (m *EventSource) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on EventSource with the rules defined in
+// the proto definition for this message. If any rules are violated, the
+// result is a list of violation errors wrapped in EventSourceMultiError, or
+// nil if none found.
+func (m *EventSource) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *EventSource) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if utf8.RuneCountInString(m.GetName()) < 1 {
+		err := EventSourceValidationError{
+			field:  "Name",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if all {
+		switch v := interface{}(m.GetGitlab()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, EventSourceValidationError{
+					field:  "Gitlab",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, EventSourceValidationError{
+					field:  "Gitlab",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetGitlab()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return EventSourceValidationError{
+				field:  "Gitlab",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if all {
+		switch v := interface{}(m.GetCalendar()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, EventSourceValidationError{
+					field:  "Calendar",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, EventSourceValidationError{
+					field:  "Calendar",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetCalendar()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return EventSourceValidationError{
+				field:  "Calendar",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return EventSourceMultiError(errors)
+	}
+
+	return nil
+}
+
+// EventSourceMultiError is an error wrapping multiple validation errors
+// returned by EventSource.ValidateAll() if the designated constraints aren't met.
+type EventSourceMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m EventSourceMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m EventSourceMultiError) AllErrors() []error { return m }
+
+// EventSourceValidationError is the validation error returned by
+// EventSource.Validate if the designated constraints aren't met.
+type EventSourceValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e EventSourceValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e EventSourceValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e EventSourceValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e EventSourceValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e EventSourceValidationError) ErrorName() string { return "EventSourceValidationError" }
+
+// Error satisfies the builtin error interface
+func (e EventSourceValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sEventSource.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = EventSourceValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = EventSourceValidationError{}
+
 // Validate checks the field values on Pipeline with the rules defined in the
 // proto definition for this message. If any rules are violated, the first
 // error encountered is returned, or nil if there are no violations.
@@ -68,16 +461,7 @@ func (m *Pipeline) validate(all bool) error {
 		errors = append(errors, err)
 	}
 
-	if utf8.RuneCountInString(m.GetBranch()) < 1 {
-		err := PipelineValidationError{
-			field:  "Branch",
-			reason: "value length must be at least 1 runes",
-		}
-		if !all {
-			return err
-		}
-		errors = append(errors, err)
-	}
+	// no validation rules for Label
 
 	if utf8.RuneCountInString(m.GetPath()) < 1 {
 		err := PipelineValidationError{
@@ -88,51 +472,6 @@ func (m *Pipeline) validate(all bool) error {
 			return err
 		}
 		errors = append(errors, err)
-	}
-
-	if len(m.GetEventSources()) < 1 {
-		err := PipelineValidationError{
-			field:  "EventSources",
-			reason: "value must contain at least 1 item(s)",
-		}
-		if !all {
-			return err
-		}
-		errors = append(errors, err)
-	}
-
-	for idx, item := range m.GetEventSources() {
-		_, _ = idx, item
-
-		if all {
-			switch v := interface{}(item).(type) {
-			case interface{ ValidateAll() error }:
-				if err := v.ValidateAll(); err != nil {
-					errors = append(errors, PipelineValidationError{
-						field:  fmt.Sprintf("EventSources[%v]", idx),
-						reason: "embedded message failed validation",
-						cause:  err,
-					})
-				}
-			case interface{ Validate() error }:
-				if err := v.Validate(); err != nil {
-					errors = append(errors, PipelineValidationError{
-						field:  fmt.Sprintf("EventSources[%v]", idx),
-						reason: "embedded message failed validation",
-						cause:  err,
-					})
-				}
-			}
-		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
-			if err := v.Validate(); err != nil {
-				return PipelineValidationError{
-					field:  fmt.Sprintf("EventSources[%v]", idx),
-					reason: "embedded message failed validation",
-					cause:  err,
-				}
-			}
-		}
-
 	}
 
 	if len(errors) > 0 {
@@ -211,6 +550,130 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = PipelineValidationError{}
+
+// Validate checks the field values on PipelineTriggers with the rules defined
+// in the proto definition for this message. If any rules are violated, the
+// first error encountered is returned, or nil if there are no violations.
+func (m *PipelineTriggers) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on PipelineTriggers with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// PipelineTriggersMultiError, or nil if none found.
+func (m *PipelineTriggers) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *PipelineTriggers) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if utf8.RuneCountInString(m.GetEventSource()) < 1 {
+		err := PipelineTriggersValidationError{
+			field:  "EventSource",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if utf8.RuneCountInString(m.GetPipeline()) < 1 {
+		err := PipelineTriggersValidationError{
+			field:  "Pipeline",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	// no validation rules for Revision
+
+	if len(errors) > 0 {
+		return PipelineTriggersMultiError(errors)
+	}
+
+	return nil
+}
+
+// PipelineTriggersMultiError is an error wrapping multiple validation errors
+// returned by PipelineTriggers.ValidateAll() if the designated constraints
+// aren't met.
+type PipelineTriggersMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m PipelineTriggersMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m PipelineTriggersMultiError) AllErrors() []error { return m }
+
+// PipelineTriggersValidationError is the validation error returned by
+// PipelineTriggers.Validate if the designated constraints aren't met.
+type PipelineTriggersValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e PipelineTriggersValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e PipelineTriggersValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e PipelineTriggersValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e PipelineTriggersValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e PipelineTriggersValidationError) ErrorName() string { return "PipelineTriggersValidationError" }
+
+// Error satisfies the builtin error interface
+func (e PipelineTriggersValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sPipelineTriggers.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = PipelineTriggersValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = PipelineTriggersValidationError{}
 
 // Validate checks the field values on GetRequest with the rules defined in the
 // proto definition for this message. If any rules are violated, the first
@@ -343,6 +806,40 @@ func (m *GetReply) validate(all bool) error {
 
 	// no validation rules for PipelineSource
 
+	for idx, item := range m.GetEventSources() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, GetReplyValidationError{
+						field:  fmt.Sprintf("EventSources[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, GetReplyValidationError{
+						field:  fmt.Sprintf("EventSources[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return GetReplyValidationError{
+					field:  fmt.Sprintf("EventSources[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
 	for idx, item := range m.GetPipelines() {
 		_, _ = idx, item
 
@@ -377,7 +874,43 @@ func (m *GetReply) validate(all bool) error {
 
 	}
 
+	for idx, item := range m.GetPipelineTriggers() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, GetReplyValidationError{
+						field:  fmt.Sprintf("PipelineTriggers[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, GetReplyValidationError{
+						field:  fmt.Sprintf("PipelineTriggers[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return GetReplyValidationError{
+					field:  fmt.Sprintf("PipelineTriggers[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
 	// no validation rules for Destination
+
+	// no validation rules for Isolation
 
 	if len(errors) > 0 {
 		return GetReplyMultiError(errors)
@@ -689,258 +1222,6 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = ListsReplyValidationError{}
-
-// Validate checks the field values on CalendarEventSource with the rules
-// defined in the proto definition for this message. If any rules are
-// violated, the first error encountered is returned, or nil if there are no violations.
-func (m *CalendarEventSource) Validate() error {
-	return m.validate(false)
-}
-
-// ValidateAll checks the field values on CalendarEventSource with the rules
-// defined in the proto definition for this message. If any rules are
-// violated, the result is a list of violation errors wrapped in
-// CalendarEventSourceMultiError, or nil if none found.
-func (m *CalendarEventSource) ValidateAll() error {
-	return m.validate(true)
-}
-
-func (m *CalendarEventSource) validate(all bool) error {
-	if m == nil {
-		return nil
-	}
-
-	var errors []error
-
-	// no validation rules for Schedule
-
-	// no validation rules for Interval
-
-	// no validation rules for Timezone
-
-	if len(errors) > 0 {
-		return CalendarEventSourceMultiError(errors)
-	}
-
-	return nil
-}
-
-// CalendarEventSourceMultiError is an error wrapping multiple validation
-// errors returned by CalendarEventSource.ValidateAll() if the designated
-// constraints aren't met.
-type CalendarEventSourceMultiError []error
-
-// Error returns a concatenation of all the error messages it wraps.
-func (m CalendarEventSourceMultiError) Error() string {
-	var msgs []string
-	for _, err := range m {
-		msgs = append(msgs, err.Error())
-	}
-	return strings.Join(msgs, "; ")
-}
-
-// AllErrors returns a list of validation violation errors.
-func (m CalendarEventSourceMultiError) AllErrors() []error { return m }
-
-// CalendarEventSourceValidationError is the validation error returned by
-// CalendarEventSource.Validate if the designated constraints aren't met.
-type CalendarEventSourceValidationError struct {
-	field  string
-	reason string
-	cause  error
-	key    bool
-}
-
-// Field function returns field value.
-func (e CalendarEventSourceValidationError) Field() string { return e.field }
-
-// Reason function returns reason value.
-func (e CalendarEventSourceValidationError) Reason() string { return e.reason }
-
-// Cause function returns cause value.
-func (e CalendarEventSourceValidationError) Cause() error { return e.cause }
-
-// Key function returns key value.
-func (e CalendarEventSourceValidationError) Key() bool { return e.key }
-
-// ErrorName returns error name.
-func (e CalendarEventSourceValidationError) ErrorName() string {
-	return "CalendarEventSourceValidationError"
-}
-
-// Error satisfies the builtin error interface
-func (e CalendarEventSourceValidationError) Error() string {
-	cause := ""
-	if e.cause != nil {
-		cause = fmt.Sprintf(" | caused by: %v", e.cause)
-	}
-
-	key := ""
-	if e.key {
-		key = "key for "
-	}
-
-	return fmt.Sprintf(
-		"invalid %sCalendarEventSource.%s: %s%s",
-		key,
-		e.field,
-		e.reason,
-		cause)
-}
-
-var _ error = CalendarEventSourceValidationError{}
-
-var _ interface {
-	Field() string
-	Reason() string
-	Key() bool
-	Cause() error
-	ErrorName() string
-} = CalendarEventSourceValidationError{}
-
-// Validate checks the field values on EventSource with the rules defined in
-// the proto definition for this message. If any rules are violated, the first
-// error encountered is returned, or nil if there are no violations.
-func (m *EventSource) Validate() error {
-	return m.validate(false)
-}
-
-// ValidateAll checks the field values on EventSource with the rules defined in
-// the proto definition for this message. If any rules are violated, the
-// result is a list of violation errors wrapped in EventSourceMultiError, or
-// nil if none found.
-func (m *EventSource) ValidateAll() error {
-	return m.validate(true)
-}
-
-func (m *EventSource) validate(all bool) error {
-	if m == nil {
-		return nil
-	}
-
-	var errors []error
-
-	if _, ok := _EventSource_Webhook_InLookup[m.GetWebhook()]; !ok {
-		err := EventSourceValidationError{
-			field:  "Webhook",
-			reason: "value must be in list [enabled disabled]",
-		}
-		if !all {
-			return err
-		}
-		errors = append(errors, err)
-	}
-
-	if all {
-		switch v := interface{}(m.GetCalendar()).(type) {
-		case interface{ ValidateAll() error }:
-			if err := v.ValidateAll(); err != nil {
-				errors = append(errors, EventSourceValidationError{
-					field:  "Calendar",
-					reason: "embedded message failed validation",
-					cause:  err,
-				})
-			}
-		case interface{ Validate() error }:
-			if err := v.Validate(); err != nil {
-				errors = append(errors, EventSourceValidationError{
-					field:  "Calendar",
-					reason: "embedded message failed validation",
-					cause:  err,
-				})
-			}
-		}
-	} else if v, ok := interface{}(m.GetCalendar()).(interface{ Validate() error }); ok {
-		if err := v.Validate(); err != nil {
-			return EventSourceValidationError{
-				field:  "Calendar",
-				reason: "embedded message failed validation",
-				cause:  err,
-			}
-		}
-	}
-
-	if len(errors) > 0 {
-		return EventSourceMultiError(errors)
-	}
-
-	return nil
-}
-
-// EventSourceMultiError is an error wrapping multiple validation errors
-// returned by EventSource.ValidateAll() if the designated constraints aren't met.
-type EventSourceMultiError []error
-
-// Error returns a concatenation of all the error messages it wraps.
-func (m EventSourceMultiError) Error() string {
-	var msgs []string
-	for _, err := range m {
-		msgs = append(msgs, err.Error())
-	}
-	return strings.Join(msgs, "; ")
-}
-
-// AllErrors returns a list of validation violation errors.
-func (m EventSourceMultiError) AllErrors() []error { return m }
-
-// EventSourceValidationError is the validation error returned by
-// EventSource.Validate if the designated constraints aren't met.
-type EventSourceValidationError struct {
-	field  string
-	reason string
-	cause  error
-	key    bool
-}
-
-// Field function returns field value.
-func (e EventSourceValidationError) Field() string { return e.field }
-
-// Reason function returns reason value.
-func (e EventSourceValidationError) Reason() string { return e.reason }
-
-// Cause function returns cause value.
-func (e EventSourceValidationError) Cause() error { return e.cause }
-
-// Key function returns key value.
-func (e EventSourceValidationError) Key() bool { return e.key }
-
-// ErrorName returns error name.
-func (e EventSourceValidationError) ErrorName() string { return "EventSourceValidationError" }
-
-// Error satisfies the builtin error interface
-func (e EventSourceValidationError) Error() string {
-	cause := ""
-	if e.cause != nil {
-		cause = fmt.Sprintf(" | caused by: %v", e.cause)
-	}
-
-	key := ""
-	if e.key {
-		key = "key for "
-	}
-
-	return fmt.Sprintf(
-		"invalid %sEventSource.%s: %s%s",
-		key,
-		e.field,
-		e.reason,
-		cause)
-}
-
-var _ error = EventSourceValidationError{}
-
-var _ interface {
-	Field() string
-	Reason() string
-	Key() bool
-	Cause() error
-	ErrorName() string
-} = EventSourceValidationError{}
-
-var _EventSource_Webhook_InLookup = map[string]struct{}{
-	"enabled":  {},
-	"disabled": {},
-}
 
 // Validate checks the field values on SaveRequest with the rules defined in
 // the proto definition for this message. If any rules are violated, the first
@@ -1428,6 +1709,17 @@ func (m *SaveRequest_Body) validate(all bool) error {
 		errors = append(errors, err)
 	}
 
+	if len(m.GetPipelines()) < 1 {
+		err := SaveRequest_BodyValidationError{
+			field:  "Pipelines",
+			reason: "value must contain at least 1 item(s)",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
 	for idx, item := range m.GetPipelines() {
 		_, _ = idx, item
 
@@ -1462,10 +1754,111 @@ func (m *SaveRequest_Body) validate(all bool) error {
 
 	}
 
+	if len(m.GetEventSources()) < 1 {
+		err := SaveRequest_BodyValidationError{
+			field:  "EventSources",
+			reason: "value must contain at least 1 item(s)",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	for idx, item := range m.GetEventSources() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, SaveRequest_BodyValidationError{
+						field:  fmt.Sprintf("EventSources[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, SaveRequest_BodyValidationError{
+						field:  fmt.Sprintf("EventSources[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return SaveRequest_BodyValidationError{
+					field:  fmt.Sprintf("EventSources[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
+	if len(m.GetPipelineTriggers()) < 1 {
+		err := SaveRequest_BodyValidationError{
+			field:  "PipelineTriggers",
+			reason: "value must contain at least 1 item(s)",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	for idx, item := range m.GetPipelineTriggers() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, SaveRequest_BodyValidationError{
+						field:  fmt.Sprintf("PipelineTriggers[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, SaveRequest_BodyValidationError{
+						field:  fmt.Sprintf("PipelineTriggers[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return SaveRequest_BodyValidationError{
+					field:  fmt.Sprintf("PipelineTriggers[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
 	if utf8.RuneCountInString(m.GetDestination()) < 1 {
 		err := SaveRequest_BodyValidationError{
 			field:  "Destination",
 			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if _, ok := _SaveRequest_Body_Isolation_InLookup[m.GetIsolation()]; !ok {
+		err := SaveRequest_BodyValidationError{
+			field:  "Isolation",
+			reason: "value must be in list [shared exclusive]",
 		}
 		if !all {
 			return err
@@ -1550,3 +1943,8 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = SaveRequest_BodyValidationError{}
+
+var _SaveRequest_Body_Isolation_InLookup = map[string]struct{}{
+	"shared":    {},
+	"exclusive": {},
+}
