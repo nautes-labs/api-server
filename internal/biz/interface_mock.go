@@ -218,18 +218,18 @@ func (mr *MockCodeRepoMockRecorder) ListGroupCodeRepos(ctx, gid interface{}, opt
 }
 
 // SaveDeployKey mocks base method.
-func (m *MockCodeRepo) SaveDeployKey(ctx context.Context, publicKey []byte, project *Project) (*ProjectDeployKey, error) {
+func (m *MockCodeRepo) SaveDeployKey(ctx context.Context, pid interface{}, title string, canPush bool, publicKey []byte) (*ProjectDeployKey, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SaveDeployKey", ctx, publicKey, project)
+	ret := m.ctrl.Call(m, "SaveDeployKey", ctx, pid, title, canPush, publicKey)
 	ret0, _ := ret[0].(*ProjectDeployKey)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SaveDeployKey indicates an expected call of SaveDeployKey.
-func (mr *MockCodeRepoMockRecorder) SaveDeployKey(ctx, publicKey, project interface{}) *gomock.Call {
+func (mr *MockCodeRepoMockRecorder) SaveDeployKey(ctx, pid, title, canPush, publicKey interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveDeployKey", reflect.TypeOf((*MockCodeRepo)(nil).SaveDeployKey), ctx, publicKey, project)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveDeployKey", reflect.TypeOf((*MockCodeRepo)(nil).SaveDeployKey), ctx, pid, title, canPush, publicKey)
 }
 
 // UpdateCodeRepo mocks base method.
@@ -286,17 +286,17 @@ func (m *MockSecretrepo) EXPECT() *MockSecretrepoMockRecorder {
 }
 
 // AuthorizationSecret mocks base method.
-func (m *MockSecretrepo) AuthorizationSecret(ctx context.Context, id int, destUser string) error {
+func (m *MockSecretrepo) AuthorizationSecret(ctx context.Context, id int, destUser, gitType, mountPath string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AuthorizationSecret", ctx, id, destUser)
+	ret := m.ctrl.Call(m, "AuthorizationSecret", ctx, id, destUser, gitType, mountPath)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AuthorizationSecret indicates an expected call of AuthorizationSecret.
-func (mr *MockSecretrepoMockRecorder) AuthorizationSecret(ctx, id, destUser interface{}) *gomock.Call {
+func (mr *MockSecretrepoMockRecorder) AuthorizationSecret(ctx, id, destUser, gitType, mountPath interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthorizationSecret", reflect.TypeOf((*MockSecretrepo)(nil).AuthorizationSecret), ctx, id, destUser)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthorizationSecret", reflect.TypeOf((*MockSecretrepo)(nil).AuthorizationSecret), ctx, id, destUser, gitType, mountPath)
 }
 
 // DeleteSecret mocks base method.
@@ -358,17 +358,17 @@ func (mr *MockSecretrepoMockRecorder) SaveClusterConfig(ctx, id, config interfac
 }
 
 // SaveDeployKey mocks base method.
-func (m *MockSecretrepo) SaveDeployKey(ctx context.Context, id int, key string, extendKVs map[string]string) error {
+func (m *MockSecretrepo) SaveDeployKey(ctx context.Context, id, key, user, permission string, extendKVs map[string]string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SaveDeployKey", ctx, id, key, extendKVs)
+	ret := m.ctrl.Call(m, "SaveDeployKey", ctx, id, key, user, permission, extendKVs)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SaveDeployKey indicates an expected call of SaveDeployKey.
-func (mr *MockSecretrepoMockRecorder) SaveDeployKey(ctx, id, key, extendKVs interface{}) *gomock.Call {
+func (mr *MockSecretrepoMockRecorder) SaveDeployKey(ctx, id, key, user, permission, extendKVs interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveDeployKey", reflect.TypeOf((*MockSecretrepo)(nil).SaveDeployKey), ctx, id, key, extendKVs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveDeployKey", reflect.TypeOf((*MockSecretrepo)(nil).SaveDeployKey), ctx, id, key, user, permission, extendKVs)
 }
 
 // MockGitRepo is a mock of GitRepo interface.

@@ -272,14 +272,13 @@ func GetToken(namespace string) (string, error) {
 	return string(secret.Data["token"]), nil
 }
 
-func (v *vaultRepo) SaveDeployKey(ctx context.Context, id int, key string, extendKVs map[string]string) error {
-	repoID := fmt.Sprintf("%s%d", prefix, id)
+func (v *vaultRepo) SaveDeployKey(ctx context.Context, id, key, user, permission string, extendKVs map[string]string) error {
 	opt := &vaultproxyv1.GitRequest{
 		Meta: &vaultproxyv1.GitMeta{
 			ProviderType: string(v.config.Git.GitType),
-			Id:           repoID,
-			Username:     _USERNAME,
-			Permission:   _PERMISSION,
+			Id:           id,
+			Username:     user,
+			Permission:   permission,
 		},
 		Kvs: &vaultproxyv1.GitKVs{
 			DeployKey:   string(key),
@@ -325,6 +324,11 @@ func (v *vaultRepo) DeleteSecret(ctx context.Context, id int) error {
 			Username:     _USERNAME,
 			Permission:   _PERMISSION,
 		},
+		// TODO:
+		// This is a bug, Subsequent deletion required.
+		Kvs: &vaultproxyv1.GitKVs{
+			DeployKey: "deploy_key",
+		},
 	}
 	_, err := v.secret.DeleteGit(context.TODO(), opt)
 	if err != nil {
@@ -333,7 +337,7 @@ func (v *vaultRepo) DeleteSecret(ctx context.Context, id int) error {
 	return nil
 }
 
-func (v *vaultRepo) AuthorizationSecret(ctx context.Context, id int, destUser string) error {
+func (v *vaultRepo) AuthorizationSecret(ctx context.Context, id int, destUser, gitType, mountPath string) error {
 	if id == 0 || destUser == "" {
 		return fmt.Errorf("authorization failed. please check the parameters")
 	}
@@ -345,12 +349,13 @@ func (v *vaultRepo) AuthorizationSecret(ctx context.Context, id int, destUser st
 
 	repoID := fmt.Sprintf("%s%d", prefix, id)
 	opt := &vaultproxyv1.AuthroleGitPolicyRequest{
-		ClusterName: v.config.Secret.Vault.MountPath,
+		ClusterName: mountPath,
 		DestUser:    destUser,
 		Secret: &vaultproxyv1.GitMeta{
-			Id:         repoID,
-			Username:   _USERNAME,
-			Permission: _PERMISSION,
+			ProviderType: gitType,
+			Id:           repoID,
+			Username:     _USERNAME,
+			Permission:   _PERMISSION,
 		},
 	}
 	_, err := v.auth.GrantAuthroleGitPolicy(context.Background(), opt)

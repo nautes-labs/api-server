@@ -365,8 +365,11 @@ func (g *gitlabRepo) ListDeployKeys(ctx context.Context, pid interface{}, opt *b
 	projectDeployKeys := []*biz.ProjectDeployKey{}
 	for _, key := range keys {
 		projectDeployKey := &biz.ProjectDeployKey{
-			ID:  key.ID,
-			Key: key.Key,
+			Title:     key.Title,
+			ID:        key.ID,
+			Key:       key.Key,
+			CreatedAt: key.CreatedAt,
+			CanPush:   key.CanPush,
 		}
 		projectDeployKeys = append(projectDeployKeys, projectDeployKey)
 	}
@@ -409,11 +412,11 @@ func (g *gitlabRepo) GetDeployKey(ctx context.Context, pid interface{}, deployKe
 	}, nil
 }
 
-func (g *gitlabRepo) SaveDeployKey(ctx context.Context, publicKey []byte, project *biz.Project) (*biz.ProjectDeployKey, error) {
-	title := fmt.Sprintf("repo-%v", project.Id)
+func (g *gitlabRepo) SaveDeployKey(ctx context.Context, pid interface{}, title string, canPush bool, publicKey []byte) (*biz.ProjectDeployKey, error) {
 	opts := &gitlab.AddDeployKeyOptions{
-		Title: gitlab.String(title),
-		Key:   gitlab.String(string(publicKey)),
+		Title:   gitlab.String(title),
+		Key:     gitlab.String(string(publicKey)),
+		CanPush: gitlab.Bool(canPush),
 	}
 
 	client, err := NewGitlabClient(ctx, g)
@@ -421,7 +424,7 @@ func (g *gitlabRepo) SaveDeployKey(ctx context.Context, publicKey []byte, projec
 		return nil, err
 	}
 
-	projectDeployKey, _, err := client.AddDeployKey(int(project.Id), opts)
+	projectDeployKey, _, err := client.AddDeployKey(pid, opts)
 	if err != nil {
 		return nil, err
 	}

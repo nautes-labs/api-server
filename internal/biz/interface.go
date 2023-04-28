@@ -26,7 +26,7 @@ type CodeRepo interface {
 	GetCodeRepo(ctx context.Context, pid interface{}) (*Project, error)
 	ListDeployKeys(ctx context.Context, pid interface{}, opt *ListOptions) ([]*ProjectDeployKey, error)
 	GetDeployKey(ctx context.Context, pid interface{}, deployKeyID int) (*ProjectDeployKey, error)
-	SaveDeployKey(ctx context.Context, publicKey []byte, project *Project) (*ProjectDeployKey, error)
+	SaveDeployKey(ctx context.Context, pid interface{}, title string, canPush bool, publicKey []byte) (*ProjectDeployKey, error)
 	DeleteDeployKey(ctx context.Context, pid interface{}, deployKey int) error
 	CreateGroup(ctx context.Context, gitOptions *GitGroupOptions) (*Group, error)
 	DeleteGroup(ctx context.Context, gid interface{}) error
@@ -39,10 +39,10 @@ type CodeRepo interface {
 type Secretrepo interface {
 	GetSecret(ctx context.Context, secretOptions *SecretOptions) (string, error)
 	GetDeployKey(ctx context.Context, secretOptions *SecretOptions) (*DeployKeySecretData, error)
-	SaveDeployKey(ctx context.Context, id int, key string, extendKVs map[string]string) error
+	SaveDeployKey(ctx context.Context, id, key, user, permission string, extendKVs map[string]string) error
 	SaveClusterConfig(ctx context.Context, id, config string) error
 	DeleteSecret(ctx context.Context, id int) error
-	AuthorizationSecret(ctx context.Context, id int, destUser string) error
+	AuthorizationSecret(ctx context.Context, id int, destUser, gitType, mountPath string) error
 }
 
 type GitRepo interface {

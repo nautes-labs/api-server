@@ -36,4 +36,5 @@ type GitlabOperator interface {
 	ListDeployKeys(pid interface{}, opt *gitlab.ListProjectDeployKeysOptions, options ...gitlab.RequestOptionFunc) (keys []*gitlab.ProjectDeployKey, res *gitlab.Response, err error)
 	AddDeployKey(pid interface{}, opt *gitlab.AddDeployKeyOptions, options ...gitlab.RequestOptionFunc) (key *gitlab.ProjectDeployKey, res *gitlab.Response, err error)
 	DeleteDeployKey(pid interface{}, deployKey int, options ...gitlab.RequestOptionFunc) (res *gitlab.Response, err error)
+	EnableProjectDeployKey(pid interface{}, deployKey int, options ...gitlab.RequestOptionFunc) (key *gitlab.ProjectDeployKey, res *gitlab.Response, err error)
 }

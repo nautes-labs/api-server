@@ -128,6 +128,10 @@ func (s *CodeRepoService) SaveCodeRepo(ctx context.Context, req *coderepov1.Save
 		if gitOptions.Gitlab.Path == "" {
 			gitOptions.Gitlab.Path = gitOptions.Gitlab.Name
 		}
+
+		if gitOptions.Gitlab.Path != req.CoderepoName {
+			return nil, fmt.Errorf("the name of the codeRepo resource must be the same as the repository path")
+		}
 	} else {
 		if gitOptions.Github != "" {
 			return nil, errors.New("coming soon to support github")

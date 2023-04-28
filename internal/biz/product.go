@@ -17,7 +17,6 @@ package biz
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	errors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/log"
@@ -212,29 +211,16 @@ func (p *ProductUsecase) saveDefaultProject(ctx context.Context, group *Group) (
 }
 
 func (p *ProductUsecase) grantAuthorizationDefaultProject(ctx context.Context, project *Project) error {
-	err := p.codeRepoUsecase.SaveDeployKey(ctx, int(project.Id), project)
+	projectDeployKey, err := p.codeRepoUsecase.SaveDeployKey(ctx, int(project.Id), false)
 	if err != nil {
 		return err
 	}
 
-	err = p.secretRepo.AuthorizationSecret(ctx, int(project.Id), _ProductDestUser)
-	if err != nil {
+	if err := p.codeRepoUsecase.RemoveInvalidDeploykey(ctx, int(project.Id), projectDeployKey); err != nil {
 		return err
 	}
 
-	return nil
-}
-
-func (p *ProductUsecase) AddDeployKey(ctx context.Context, project *Project, publicKey, privateKey []byte) error {
-	projectDeployKey, err := p.codeRepo.SaveDeployKey(ctx, publicKey, project)
-	if err != nil {
-		return err
-	}
-
-	extendKVs := make(map[string]string)
-	extendKVs["fingerprint"] = projectDeployKey.Key
-	extendKVs["id"] = strconv.Itoa(projectDeployKey.ID)
-	err = p.secretRepo.SaveDeployKey(ctx, int(project.Id), string(privateKey), extendKVs)
+	err = p.secretRepo.AuthorizationSecret(ctx, int(project.Id), _ProductDestUser, string(p.configs.Git.GitType), p.configs.Secret.Vault.MountPath)
 	if err != nil {
 		return err
 	}

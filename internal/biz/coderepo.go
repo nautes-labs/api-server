@@ -32,12 +32,17 @@ import (
 )
 
 const (
-	_CodeRepoKind    = "CodeRepo"
-	_CodeReposSubDir = "code-repos"
-	_RepoPrefix      = "repo-"
-	SecretsEngine    = "git"
-	SecretsKey       = "deploykey"
+	_CodeRepoKind                  = "CodeRepo"
+	_CodeReposSubDir               = "code-repos"
+	_RepoPrefix                    = "repo-"
+	_DefaultUser                   = "default"
+	SecretsEngine                  = "git"
+	SecretsKey                     = "deploykey"
+	ReadOnly         DeployKeyType = "readonly"
+	ReadWrite        DeployKeyType = "readwrite"
 )
+
+type DeployKeyType string
 
 type CodeRepoUsecase struct {
 	log              *log.Helper
@@ -186,8 +191,17 @@ func (c *CodeRepoUsecase) SaveCodeRepo(ctx context.Context, options *BizOptions,
 		return err
 	}
 
-	pid := fmt.Sprintf("%s/%s", group.Path, options.ResouceName)
-	err = c.SaveDeployKey(ctx, pid, project)
+	projectReadWriteDeployKey, err := c.SaveDeployKey(ctx, int(project.Id), true)
+	if err != nil {
+		return err
+	}
+
+	projectReadOnlyDeployKey, err := c.SaveDeployKey(ctx, int(project.Id), false)
+	if err != nil {
+		return err
+	}
+
+	err = c.RemoveInvalidDeploykey(ctx, int(project.Id), projectReadWriteDeployKey, projectReadOnlyDeployKey)
 	if err != nil {
 		return err
 	}
@@ -218,11 +232,12 @@ func (c *CodeRepoUsecase) saveRepository(ctx context.Context, group *Group, reso
 	return project, nil
 }
 
-func (c *CodeRepoUsecase) GetDeployKeyFromSecretRepo(ctx context.Context, repoName string) (*DeployKeySecretData, error) {
+func (c *CodeRepoUsecase) GetDeployKeyFromSecretRepo(ctx context.Context, repoName, permission string) (*DeployKeySecretData, error) {
 	gitType := c.config.Git.GitType
 	secretsEngine := SecretsEngine
 	secretsKey := SecretsKey
-	secretPath := fmt.Sprintf("%s/%s/%s/%s", gitType, repoName, "default", "readonly")
+	username := _DefaultUser
+	secretPath := fmt.Sprintf("%s/%s/%s/%s", gitType, repoName, username, permission)
 	secretOptions := &SecretOptions{
 		SecretPath:   secretPath,
 		SecretEngine: secretsEngine,
@@ -237,57 +252,76 @@ func (c *CodeRepoUsecase) GetDeployKeyFromSecretRepo(ctx context.Context, repoNa
 	return deployKeySecretData, nil
 }
 
-func (c *CodeRepoUsecase) SaveDeployKey(ctx context.Context, pid interface{}, project *Project) error {
-	repoName := fmt.Sprintf("%s%d", _RepoPrefix, int(project.Id))
-	secretData, err := c.GetDeployKeyFromSecretRepo(ctx, repoName)
+// SaveDeployKey is to store the deploykey to git and the key repository separately
+// It takes in an argument pid of type int and an argument canPush of type bool,
+// and returns a project deploykey and error.
+func (c *CodeRepoUsecase) SaveDeployKey(ctx context.Context, pid int, canPush bool) (*ProjectDeployKey, error) {
+	var repoName, permission string
+
+	repoName = fmt.Sprintf("%s%d", _RepoPrefix, pid)
+	permission = string(ReadOnly)
+	if canPush {
+		permission = string(ReadWrite)
+	}
+
+	secretData, err := c.GetDeployKeyFromSecretRepo(ctx, repoName, permission)
 	if err != nil {
 		ok := commonv1.IsSecretNotFound(err)
 		if !ok {
-			return err
+			return nil, err
 		}
 
-		err := c.RefreshDeployKey(ctx, project)
+		projectDeployKey, err := c.saveDeployKeyToGitAndSecretRepo(ctx, pid, canPush, permission)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		return nil
+		return projectDeployKey, nil
 	}
 
 	projectDeployKey, err := c.codeRepo.GetDeployKey(ctx, pid, secretData.ID)
 	if err != nil {
 		ok := commonv1.IsDeploykeyNotFound(err)
 		if !ok {
-			return err
+			return nil, err
 		}
 
-		err = c.RefreshDeployKey(ctx, project)
+		projectDeployKey, err = c.saveDeployKeyToGitAndSecretRepo(ctx, pid, canPush, permission)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		return nil
+		return projectDeployKey, nil
 	}
 
-	if projectDeployKey.Key != secretData.Fingerprint {
-		err = c.RefreshDeployKey(ctx, project)
-		if err != nil {
-			return err
-		}
+	if projectDeployKey.Key == secretData.Fingerprint {
+		return projectDeployKey, nil
 	}
 
-	return nil
+	projectDeployKey, err = c.saveDeployKeyToGitAndSecretRepo(ctx, pid, canPush, permission)
+	if err != nil {
+		return nil, err
+	}
+
+	return projectDeployKey, nil
 }
 
-func (c *CodeRepoUsecase) removeInvalidDeploykey(ctx context.Context, project *Project, validDeployKeyID int) error {
-	keys, err := c.getAllDeployKeys(ctx, project)
+func (c *CodeRepoUsecase) RemoveInvalidDeploykey(ctx context.Context, pid int, projectDeployKeys ...*ProjectDeployKey) error {
+	keys, err := c.getAllDeployKeys(ctx, pid)
 	if err != nil {
 		return err
 	}
 
 	for _, key := range keys {
-		if key.ID != validDeployKeyID {
-			err := c.codeRepo.DeleteDeployKey(ctx, int(project.Id), key.ID)
+		isDelete := false
+		for _, projectDeployKey := range projectDeployKeys {
+			if key.ID != projectDeployKey.ID && key.Title == projectDeployKey.Title {
+				isDelete = true
+				break
+			}
+		}
+		if isDelete {
+			err := c.codeRepo.DeleteDeployKey(ctx, pid, key.ID)
 			if err != nil {
 				return err
 			}
@@ -297,14 +331,14 @@ func (c *CodeRepoUsecase) removeInvalidDeploykey(ctx context.Context, project *P
 	return nil
 }
 
-func (c *CodeRepoUsecase) getAllDeployKeys(ctx context.Context, project *Project) ([]*ProjectDeployKey, error) {
+func (c *CodeRepoUsecase) getAllDeployKeys(ctx context.Context, pid int) ([]*ProjectDeployKey, error) {
 	opts := &ListOptions{
 		Page:    1,
 		PerPage: 10,
 	}
 	allDeployKeys := []*ProjectDeployKey{}
 	for {
-		keys, err := c.codeRepo.ListDeployKeys(ctx, int(project.Id), opts)
+		keys, err := c.codeRepo.ListDeployKeys(ctx, pid, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -316,31 +350,30 @@ func (c *CodeRepoUsecase) getAllDeployKeys(ctx context.Context, project *Project
 	}
 }
 
-func (c *CodeRepoUsecase) RefreshDeployKey(ctx context.Context, project *Project) error {
-	publicKey, privateKey, err := utilkey.GenerateKeyPair(c.config.Git.DefaultDeployKeyType)
+func (c *CodeRepoUsecase) saveDeployKeyToGitAndSecretRepo(ctx context.Context, pid int, canPush bool, permission string) (*ProjectDeployKey, error) {
+	var title string
+	title = fmt.Sprintf("%s%d-%s", _RepoPrefix, pid, permission)
+
+	publicKey, privateKey, err := utilkey.GenerateKeyPair(c.config.Git.DefaultDeployKeyType, title)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	projectDeployKey, err := c.codeRepo.SaveDeployKey(ctx, publicKey, project)
+	projectDeployKey, err := c.codeRepo.SaveDeployKey(ctx, pid, title, canPush, publicKey)
 	if err != nil {
-		return err
-	}
-
-	err = c.removeInvalidDeploykey(ctx, project, projectDeployKey.ID)
-	if err != nil {
-		return err
+		return nil, err
 	}
 
 	extendKVs := make(map[string]string)
 	extendKVs[gitlabclient.FINGERPRINT] = projectDeployKey.Key
 	extendKVs[gitlabclient.DEPLOYID] = strconv.Itoa(projectDeployKey.ID)
-	err = c.secretRepo.SaveDeployKey(ctx, int(project.Id), string(privateKey), extendKVs)
+	user := _DefaultUser
+	err = c.secretRepo.SaveDeployKey(ctx, convertRepoName(pid), string(privateKey), user, permission, extendKVs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return projectDeployKey, nil
 }
 
 func (c *CodeRepoUsecase) CreateNode(path string, data interface{}) (*nodestree.Node, error) {
@@ -610,4 +643,8 @@ func getCodeRepoProvider(k8sClient client.Client, namespace string) (*resourcev1
 	}
 
 	return nil, nil
+}
+
+func convertRepoName(id int) string {
+	return fmt.Sprintf("repo-%d", id)
 }
