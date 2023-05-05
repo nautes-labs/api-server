@@ -271,33 +271,16 @@ func (g *gitlabRepo) GetGroup(ctx context.Context, gid interface{}) (*biz.Group,
 	}, nil
 }
 
-func (g *gitlabRepo) ListGroupCodeRepos(ctx context.Context, gid interface{}, opts ...interface{}) ([]*biz.Project, error) {
-	var page, per_page int
+func (g *gitlabRepo) ListGroupCodeRepos(ctx context.Context, gid interface{}) ([]*biz.Project, error) {
 	var projects []*gitlab.Project
 	var result []*biz.Project
-
-	if len(opts) > 0 {
-		if value, ok := opts[0].(int); ok {
-			page = value
-		}
-
-		if value, ok := opts[1].(int); ok {
-			per_page = value
-		}
-	}
-
-	opt := &gitlab.ListGroupProjectsOptions{
-		ListOptions: gitlab.ListOptions{
-			Page:    page,
-			PerPage: per_page,
-		},
-	}
 
 	client, err := NewGitlabClient(ctx, g)
 	if err != nil {
 		return nil, err
 	}
 
+	opt := &gitlab.ListGroupProjectsOptions{}
 	projects, _, err = client.ListGroupProjects(gid, opt)
 	if err != nil {
 		return nil, err
@@ -383,7 +366,10 @@ func (g *gitlabRepo) DeleteDeployKey(ctx context.Context, pid interface{}, deplo
 		return err
 	}
 
-	_, err = client.DeleteDeployKey(pid, deployKey)
+	res, err := client.DeleteDeployKey(pid, deployKey)
+	if err != nil && res != nil && res.StatusCode == 404 {
+		return commonv1.ErrorDeploykeyNotFound("failed to delete deploy key, err: %s", err)
+	}
 	if err != nil {
 		return err
 	}
@@ -425,6 +411,24 @@ func (g *gitlabRepo) SaveDeployKey(ctx context.Context, pid interface{}, title s
 	}
 
 	projectDeployKey, _, err := client.AddDeployKey(pid, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return &biz.ProjectDeployKey{
+		ID:    projectDeployKey.ID,
+		Title: projectDeployKey.Title,
+		Key:   projectDeployKey.Key,
+	}, nil
+}
+
+func (g *gitlabRepo) EnableProjectDeployKey(ctx context.Context, pid interface{}, deployKey int) (*biz.ProjectDeployKey, error) {
+	client, err := NewGitlabClient(ctx, g)
+	if err != nil {
+		return nil, err
+	}
+
+	projectDeployKey, _, err := client.EnableProjectDeployKey(pid, deployKey)
 	if err != nil {
 		return nil, err
 	}

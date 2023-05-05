@@ -39,7 +39,7 @@ type ListRequestTestCases interface {
 type SaveRequestTestCases interface {
 	GetProductFail(fn BizFunc) interface{}
 	GetDefaultProjectFail(fn BizFunc) interface{}
-	CreateResourceSuccess(nodes nodestree.Node, fn BizFunc) interface{}
+	CreateResourceSuccess(nodes nodestree.Node, node *nodestree.Node, fn BizFunc) interface{}
 	CreateResourceAndAutoRetry(nodes nodestree.Node, fn BizFunc) interface{}
 	CreateResourceButNotConformTemplate(fn BizFunc) interface{}
 	UpdateResoureSuccess(nodes nodestree.Node, node *nodestree.Node, fn BizFunc) interface{}
@@ -215,7 +215,7 @@ func (t *testBiz) GetDefaultProjectFail(fn BizFunc) interface{} {
 	}
 }
 
-func (t *testBiz) CreateResourceSuccess(nodes nodestree.Node, fn BizFunc) interface{} {
+func (t *testBiz) CreateResourceSuccess(nodes nodestree.Node, node *nodestree.Node, fn BizFunc) interface{} {
 	return func() {
 		codeRepo := NewMockCodeRepo(ctl)
 		codeRepo.EXPECT().GetGroup(gomock.Any(), gomock.Eq(defaultGroupName)).Return(defaultProductGroup, nil).AnyTimes()
@@ -230,9 +230,9 @@ func (t *testBiz) CreateResourceSuccess(nodes nodestree.Node, fn BizFunc) interf
 
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any())
-		nodestree.EXPECT().Load(gomock.Eq(localRepositaryPath)).Return(emptyNodes, nil)
+		nodestree.EXPECT().Load(gomock.Eq(localRepositaryPath)).Return(nodes, nil)
 		nodestree.EXPECT().Compare(gomock.Any()).Return(nil).AnyTimes()
-		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Any(), gomock.Any()).Return(node)
 		nodestree.EXPECT().InsertNodes(gomock.Any(), gomock.Any()).Return(&nodes, nil)
 		secretrepo := NewMockSecretrepo(ctl)
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, nil, gitRepo, nodestree, nautesConfigs)

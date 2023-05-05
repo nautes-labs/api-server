@@ -252,7 +252,7 @@ var _ = Describe("Save project pipeline runtime", func() {
 		Expect(err).Should(HaveOccurred())
 	}))
 
-	It("will created successfully", testUseCase.CreateResourceSuccess(fakeNodes, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
+	It("will created successfully", testUseCase.CreateResourceSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(pipelineSourceCodeRepoPath)).Return(pipelineSouceProject, nil)
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(codeRepoSourcePath)).Return(codeRepoSouceProject, nil)
 

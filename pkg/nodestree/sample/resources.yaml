@@ -55,6 +55,11 @@ sub:
       level: 4
       name: any
       optional: false
+    - count: -1
+      kind: CodeRepoBinding
+      level: 4
+      name: any
+      optional: false
 - level: 2
   name: runtimes
   optional: false

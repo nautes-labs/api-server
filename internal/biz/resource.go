@@ -74,9 +74,7 @@ func (r *ResourcesUsecase) Get(ctx context.Context, resourceKind, productName st
 		return nil, err
 	}
 
-	defer func(path string) {
-		cleanCodeRepo(path)
-	}(localPath)
+	// defer cleanCodeRepo(localPath)
 
 	nodes, err := r.nodestree.Load(localPath)
 	if err != nil {
@@ -107,8 +105,8 @@ func (r *ResourcesUsecase) Get(ctx context.Context, resourceKind, productName st
 	return resourceNode, nil
 }
 
-func (r *ResourcesUsecase) List(ctx context.Context, productName string, operator nodestree.NodesOperator) (*nodestree.Node, error) {
-	product, project, err := r.GetProductAndCodeRepo(ctx, productName)
+func (r *ResourcesUsecase) List(ctx context.Context, gid interface{}, operator nodestree.NodesOperator) (*nodestree.Node, error) {
+	product, project, err := r.GetProductAndCodeRepo(ctx, gid)
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +263,7 @@ func (r *ResourcesUsecase) Delete(ctx context.Context, resourceOptions *resource
 
 	resourceNode := r.GetNode(&nodes, resourceOptions.resourceKind, resourceName)
 	if resourceNode == nil {
-		return fmt.Errorf("the resource %s of type %s was not found", resourceName, resourceOptions.resourceKind)
+		return fmt.Errorf("the %s resource of type %s was not found", resourceName, resourceOptions.resourceKind)
 	}
 
 	newNodes, err := r.RemoveNode(&nodes, resourceNode)
@@ -317,8 +315,8 @@ func (r *ResourcesUsecase) RemoveNode(nodes, node *nodestree.Node) (*nodestree.N
 	return nodes, nil
 }
 
-func (r *ResourcesUsecase) GetProductAndCodeRepo(ctx context.Context, ProductName string) (*Group, *Project, error) {
-	group, err := r.codeRepo.GetGroup(ctx, ProductName)
+func (r *ResourcesUsecase) GetProductAndCodeRepo(ctx context.Context, gid interface{}) (*Group, *Project, error) {
+	group, err := r.codeRepo.GetGroup(ctx, gid)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -512,6 +510,16 @@ func (r *ResourcesUsecase) convertCodeRepoToRepoName(ctx context.Context, codeRe
 	return project.Name, nil
 }
 
+func (r *ResourcesUsecase) convertRepoNameToCodeRepo(ctx context.Context, productName, codeRepoName string) (string, error) {
+	pid := fmt.Sprintf("%s/%s", productName, codeRepoName)
+	project, err := r.codeRepo.GetCodeRepo(ctx, pid)
+	if err != nil {
+		return "", fmt.Errorf("invalid authorization code repository specified, err: %v", err)
+	}
+
+	return fmt.Sprintf("%s%d", _RepoPrefix, int(project.Id)), nil
+}
+
 func (r *ResourcesUsecase) convertProductToGroupName(ctx context.Context, productName string) (string, error) {
 	id, err := utilstrings.ExtractNumber("product-", productName)
 	if err != nil {
@@ -524,6 +532,14 @@ func (r *ResourcesUsecase) convertProductToGroupName(ctx context.Context, produc
 	}
 
 	return group.Name, nil
+}
+
+func (r *ResourcesUsecase) convertGroupToProduct(ctx context.Context, productName string) (string, error) {
+	group, err := r.codeRepo.GetGroup(ctx, productName)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s%d", _ProductPrefix, int(group.Id)), nil
 }
 
 func (r *ResourcesUsecase) retryAutoMerge(ctx context.Context, path string) error {
@@ -598,6 +614,9 @@ func getCount(ctx context.Context) interface{} {
 func deleteResource(node *nodestree.Node) (err error) {
 	fileinfos, err := ioutil.ReadDir(filepath.Dir(node.Path))
 	if err != nil {
+		if ok := os.IsNotExist(err); ok {
+			return nil
+		}
 		return err
 	}
 

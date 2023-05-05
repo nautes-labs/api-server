@@ -221,7 +221,7 @@ func (d *DeploymentRuntimeUsecase) CheckReference(options nodestree.CompareOptio
 
 	deploymentRuntime, ok := node.Content.(*resourcev1alpha1.DeploymentRuntime)
 	if !ok {
-		return true, fmt.Errorf("node %s resource type error", node.Name)
+		return true, fmt.Errorf("wrong type found for %s node when checking DeploymentRuntime type", node.Name)
 	}
 
 	productName := deploymentRuntime.Spec.Product

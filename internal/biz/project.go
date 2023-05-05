@@ -228,7 +228,7 @@ func (p *ProjectUsecase) CheckReference(options nodestree.CompareOptions, node *
 
 	project, ok := node.Content.(*resourcev1alpha1.Project)
 	if !ok {
-		return true, fmt.Errorf("node %s resource type error", node.Name)
+		return true, fmt.Errorf("wrong type found for %s node when checking Project type", node.Name)
 	}
 
 	productName := project.Spec.Product

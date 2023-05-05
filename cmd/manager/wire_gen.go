@@ -46,6 +46,8 @@ func wireApp(confServer *conf.Server, confData *conf.Data, logger log.Logger, no
 	deploymentRuntimeUsecase := biz.NewDeploymentRuntimeUsecase(logger, codeRepo, nodesTree, resourcesUsecase)
 	deploymentruntimeService := service.NewDeploymentruntimeService(deploymentRuntimeUsecase)
 	codeRepoService := service.NewCodeRepoService(codeRepoUsecase, config)
+	codeRepoBindingUsecase := biz.NewCodeRepoCodeRepoBindingUsecase(logger, codeRepo, secretrepo, nodesTree, codeRepoUsecase, resourcesUsecase, config, client2)
+	codeRepoBindingService := service.NewCodeRepoBindingService(codeRepoBindingUsecase)
 	projectUsecase := biz.NewProjectUsecase(logger, codeRepo, secretrepo, nodesTree, config, resourcesUsecase)
 	projectService := service.NewProjectService(projectUsecase)
 	environmentUsecase := biz.NewEnviromentUsecase(logger, config, codeRepo, nodesTree, resourcesUsecase)
@@ -53,7 +55,7 @@ func wireApp(confServer *conf.Server, confData *conf.Data, logger log.Logger, no
 	dexRepo := data.NewDexRepo(client2)
 	clusterUsecase := biz.NewClusterUsecase(logger, codeRepo, secretrepo, resourcesUsecase, config, client2, clusteroperator, dexRepo)
 	clusterService := service.NewClusterService(clusterUsecase, config)
-	serviceProductGroup := server.NewServiceGroup(projectPipelineRuntimeService, deploymentruntimeService, codeRepoService, productService, projectService, environmentService, clusterService)
+	serviceProductGroup := server.NewServiceGroup(projectPipelineRuntimeService, deploymentruntimeService, codeRepoService, codeRepoBindingService, productService, projectService, environmentService, clusterService)
 	httpServer := server.NewHTTPServer(confServer, serviceProductGroup)
 	app := newApp(logger, grpcServer, httpServer)
 	return app, func() {

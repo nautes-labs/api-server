@@ -45,7 +45,7 @@ func resourceEffectiveness(nodeInfos []NodeInfo, configInfos []configInfo) error
 		}
 
 		if !isKindContained {
-			return fmt.Errorf("this %s resource kind is not allowed to exist", node.Name)
+			return fmt.Errorf("this %s resource type is not allowed to exist", node.Name)
 		}
 
 		isKindContained = !isKindContained

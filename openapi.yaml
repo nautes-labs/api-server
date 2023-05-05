@@ -137,6 +137,109 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.product.v1.DeleteProductReply'
+    /api/v1/products/{product_name}/coderepobindings:
+        get:
+            tags:
+                - CodeRepoBinding
+            operationId: CodeRepoBinding_ListCodeRepoBindings
+            parameters:
+                - name: product_name
+                  in: path
+                  description: The name of the product to list repositories for
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/api.coderepobinding.v1.ListsReply'
+    /api/v1/products/{product_name}/coderepobindings/{coderepo_binding_name}:
+        get:
+            tags:
+                - CodeRepoBinding
+            operationId: CodeRepoBinding_GetCodeRepoBinding
+            parameters:
+                - name: product_name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: coderepo_binding_name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/api.coderepobinding.v1.GetReply'
+        post:
+            tags:
+                - CodeRepoBinding
+            operationId: CodeRepoBinding_SaveCodeRepoBinding
+            parameters:
+                - name: product_name
+                  in: path
+                  description: Products to which the resource belongs.
+                  required: true
+                  schema:
+                    type: string
+                - name: coderepo_binding_name
+                  in: path
+                  description: CodeRepoBinding resource name.
+                  required: true
+                  schema:
+                    type: string
+                - name: insecure_skip_check
+                  in: query
+                  description: Whether to skip global resource detection (not recommended).
+                  schema:
+                    type: boolean
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/api.coderepobinding.v1.SaveRequest_Body'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/api.coderepobinding.v1.SaveReply'
+        delete:
+            tags:
+                - CodeRepoBinding
+            operationId: CodeRepoBinding_DeleteCodeRepoBinding
+            parameters:
+                - name: product_name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: coderepo_binding_name
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: insecure_skip_check
+                  in: query
+                  schema:
+                    type: boolean
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/api.coderepobinding.v1.DeleteReply'
     /api/v1/products/{product_name}/coderepos:
         get:
             tags:
@@ -876,7 +979,6 @@ components:
                     type: boolean
                 git:
                     $ref: '#/components/schemas/api.coderepo.v1.Git'
-            description: Define the Body message, which includes the project, webhook, DeploymentRuntime, PipelineRuntime, and Git fields.
         api.coderepo.v1.Webhook:
             type: object
             properties:
@@ -886,6 +988,65 @@ components:
                         type: string
                     description: The events that the webhook should trigger on
             description: Message representing a webhook
+        api.coderepobinding.v1.DeleteReply:
+            type: object
+            properties:
+                message:
+                    type: string
+                    description: Msg is a message confirming the delete.
+            description: Represents a response to a DeleteRequest message.
+        api.coderepobinding.v1.GetReply:
+            type: object
+            properties:
+                product:
+                    type: string
+                    description: The Code repo is authorized to this product or projects under it.
+                name:
+                    type: string
+                    description: CodeRepoBinding resource name.
+                projects:
+                    type: array
+                    items:
+                        type: string
+                    description: If the project list is empty, it means that the code repo is authorized to the product. If the project list has values, it means that the code repo is authorized to the specified projects.
+                permissions:
+                    type: string
+                    description: Authorization Permissions, readwrite or readonly.
+                coderepo:
+                    type: string
+                    description: Authorized Code Repository.
+        api.coderepobinding.v1.ListsReply:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/api.coderepobinding.v1.GetReply'
+            description: Define the ListsReply message, which includes the repeated items field.
+        api.coderepobinding.v1.SaveReply:
+            type: object
+            properties:
+                message:
+                    type: string
+                    description: Msg is a message confirming the save.
+            description: Define the SaveReply message, which includes the msg field.
+        api.coderepobinding.v1.SaveRequest_Body:
+            type: object
+            properties:
+                product:
+                    type: string
+                    description: The Code repo is authorized to this product or projects under it.
+                projects:
+                    type: array
+                    items:
+                        type: string
+                    description: If the project list is empty, it means that the code repo is authorized to the product. If the project list has values, it means that the code repo is authorized to the specified projects.
+                permissions:
+                    type: string
+                    description: Authorization Permissions, readwrite or readonly.
+                coderepo:
+                    type: string
+                    description: Authorized Code Repository.
         api.deploymentruntime.v1.DeleteReply:
             type: object
             properties:
@@ -1311,6 +1472,7 @@ components:
 tags:
     - name: Cluster
     - name: CodeRepo
+    - name: CodeRepoBinding
     - name: Deploymentruntime
     - name: Environment
     - name: Product

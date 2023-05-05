@@ -88,14 +88,14 @@ func (s *CodeRepoService) GetCodeRepo(ctx context.Context, req *coderepov1.GetRe
 }
 
 func (s *CodeRepoService) ListCodeRepos(ctx context.Context, req *coderepov1.ListsRequest) (*coderepov1.ListsReply, error) {
-	cps, err := s.codeRepo.ListCodeRepos(ctx, req.ProductName)
+	codeRepos, err := s.codeRepo.ListCodeRepos(ctx, req.ProductName)
 	if err != nil {
 		return nil, err
 	}
 
 	var items []*coderepov1.GetReply
-	for _, cp := range cps {
-		items = append(items, s.CovertCodeRepoValueToReply(cp.CodeRepo, cp.Project))
+	for _, codeRepo := range codeRepos {
+		items = append(items, s.CovertCodeRepoValueToReply(codeRepo.CodeRepo, codeRepo.Project))
 	}
 
 	return &coderepov1.ListsReply{

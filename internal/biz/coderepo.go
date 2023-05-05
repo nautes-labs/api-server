@@ -60,9 +60,9 @@ type CodeRepoData struct {
 }
 
 func NewCodeRepoUsecase(logger log.Logger, codeRepo CodeRepo, secretRepo Secretrepo, nodestree nodestree.NodesTree, config *nautesconfigs.Config, resourcesUsecase *ResourcesUsecase, client client.Client) *CodeRepoUsecase {
-	coderepo := &CodeRepoUsecase{log: log.NewHelper(log.With(logger)), codeRepo: codeRepo, secretRepo: secretRepo, nodestree: nodestree, config: config, resourcesUsecase: resourcesUsecase, client: client}
-	nodestree.AppendOperators(coderepo)
-	return coderepo
+	codeRepoUsecase := &CodeRepoUsecase{log: log.NewHelper(log.With(logger)), codeRepo: codeRepo, secretRepo: secretRepo, nodestree: nodestree, config: config, resourcesUsecase: resourcesUsecase, client: client}
+	nodestree.AppendOperators(codeRepoUsecase)
+	return codeRepoUsecase
 }
 
 func (c *CodeRepoUsecase) GetCodeRepo(ctx context.Context, codeRepoName, productName string) (*resourcev1alpha1.CodeRepo, *Project, error) {
@@ -172,14 +172,14 @@ func (c *CodeRepoUsecase) SaveCodeRepo(ctx context.Context, options *BizOptions,
 	if err != nil {
 		return err
 	}
+	data.Spec.Product = fmt.Sprintf("%s%d", _ProductPrefix, int(group.Id))
 
 	project, err := c.saveRepository(ctx, group, options.ResouceName, gitOptions)
 	if err != nil {
 		return err
 	}
-
-	data.Spec.Product = fmt.Sprintf("%s%d", _ProductPrefix, int(group.Id))
 	data.Name = fmt.Sprintf("%s%d", _RepoPrefix, int(project.Id))
+
 	resourceOptions := &resourceOptions{
 		resourceKind:      nodestree.CodeRepo,
 		productName:       options.ProductName,
@@ -454,7 +454,7 @@ func (c *CodeRepoUsecase) CheckReference(options nodestree.CompareOptions, node 
 
 	codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
 	if !ok {
-		return true, fmt.Errorf("node %s resource type error", node.Name)
+		return true, fmt.Errorf("wrong type found for %s node when checking CodeRepo type", node.Name)
 	}
 
 	err := nodestree.CheckResourceSubdirectory(&options.Nodes, node)
@@ -562,13 +562,16 @@ func (c *CodeRepoUsecase) DeleteCodeRepo(ctx context.Context, options *BizOption
 	return nil
 }
 
-func (e *CodeRepoUsecase) nodesToLists(nodes nodestree.Node) ([]*resourcev1alpha1.CodeRepo, error) {
+type ListMatchOptions func(*resourcev1alpha1.CodeRepo) bool
+
+func (e *CodeRepoUsecase) nodesToLists(nodes nodestree.Node, options ...ListMatchOptions) ([]*resourcev1alpha1.CodeRepo, error) {
 	var codeReposDir *nodestree.Node
 	var resources []*resourcev1alpha1.CodeRepo
+	var filteredRepos []*resourcev1alpha1.CodeRepo
 
-	for _, child := range nodes.Children {
-		if child.Name == _CodeReposSubDir {
-			codeReposDir = child
+	for _, childNode := range nodes.Children {
+		if childNode.Name == _CodeReposSubDir {
+			codeReposDir = childNode
 			break
 		}
 	}
@@ -579,13 +582,32 @@ func (e *CodeRepoUsecase) nodesToLists(nodes nodestree.Node) ([]*resourcev1alpha
 
 	for _, subNode := range codeReposDir.Children {
 		for _, node := range subNode.Children {
-			r, err := e.nodeToResource(node)
+			if node.Kind != nodestree.CodeRepo {
+				continue
+			}
+
+			resource, err := e.nodeToResource(node)
 			if err != nil {
 				return nil, err
 			}
 
-			resources = append(resources, r)
+			matching := false
+			for _, fn := range options {
+				if fn(resource) {
+					filteredRepos = append(filteredRepos, resource)
+					matching = true
+					break
+				}
+			}
+
+			if !matching {
+				resources = append(resources, resource)
+			}
 		}
+	}
+
+	if len(filteredRepos) > 0 {
+		return filteredRepos, nil
 	}
 
 	return resources, nil

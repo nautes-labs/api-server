@@ -634,13 +634,13 @@ type GetReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Product           string      `protobuf:"bytes,1,opt,name=product,proto3" json:"product,omitempty"`                                              // The product field.
-	Name              string      `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                                                    // The name field.
-	Project           string      `protobuf:"bytes,3,opt,name=project,proto3" json:"project,omitempty"`                                              // The project field.
-	Webhook           *Webhook    `protobuf:"bytes,4,opt,name=webhook,proto3" json:"webhook,omitempty"`                                              // The webhook field.
-	DeploymentRuntime bool        `protobuf:"varint,5,opt,name=DeploymentRuntime,json=deployment_runtime,proto3" json:"DeploymentRuntime,omitempty"` // The DeploymentRuntime field.
-	PipelineRuntime   bool        `protobuf:"varint,6,opt,name=PipelineRuntime,json=pipeline_runtime,proto3" json:"PipelineRuntime,omitempty"`       // The PipelineRuntime field.
-	Git               *GitProject `protobuf:"bytes,7,opt,name=git,proto3" json:"git,omitempty"`                                                      // The GitProject field.
+	Product           string      `protobuf:"bytes,1,opt,name=product,proto3" json:"product,omitempty"`
+	Name              string      `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Project           string      `protobuf:"bytes,3,opt,name=project,proto3" json:"project,omitempty"`
+	Webhook           *Webhook    `protobuf:"bytes,4,opt,name=webhook,proto3" json:"webhook,omitempty"`
+	DeploymentRuntime bool        `protobuf:"varint,5,opt,name=DeploymentRuntime,json=deployment_runtime,proto3" json:"DeploymentRuntime,omitempty"`
+	PipelineRuntime   bool        `protobuf:"varint,6,opt,name=PipelineRuntime,json=pipeline_runtime,proto3" json:"PipelineRuntime,omitempty"`
+	Git               *GitProject `protobuf:"bytes,7,opt,name=git,proto3" json:"git,omitempty"`
 }
 
 func (x *GetReply) Reset() {
@@ -730,7 +730,7 @@ type ListsReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Items []*GetReply `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"` // The items field.
+	Items []*GetReply `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
 }
 
 func (x *ListsReply) Reset() {
@@ -778,10 +778,10 @@ type SaveRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ProductName       string            `protobuf:"bytes,1,opt,name=productName,json=product_name,proto3" json:"productName,omitempty"`                     // The productName field.
-	CoderepoName      string            `protobuf:"bytes,2,opt,name=coderepoName,json=coderepo_name,proto3" json:"coderepoName,omitempty"`                  // The coderepoName field.
-	InsecureSkipCheck bool              `protobuf:"varint,3,opt,name=insecureSkipCheck,json=insecure_skip_check,proto3" json:"insecureSkipCheck,omitempty"` // The insecureSkipCheck field.
-	Body              *SaveRequest_Body `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`                                                     // The Body field.
+	ProductName       string            `protobuf:"bytes,1,opt,name=productName,json=product_name,proto3" json:"productName,omitempty"`
+	CoderepoName      string            `protobuf:"bytes,2,opt,name=coderepoName,json=coderepo_name,proto3" json:"coderepoName,omitempty"`
+	InsecureSkipCheck bool              `protobuf:"varint,3,opt,name=insecureSkipCheck,json=insecure_skip_check,proto3" json:"insecureSkipCheck,omitempty"`
+	Body              *SaveRequest_Body `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`
 }
 
 func (x *SaveRequest) Reset() {
@@ -1005,18 +1005,17 @@ func (x *DeleteReply) GetMsg() string {
 	return ""
 }
 
-// Define the Body message, which includes the project, webhook, DeploymentRuntime, PipelineRuntime, and Git fields.
 type SaveRequest_Body struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project           string   `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`                                              // The project field.
-	Webhook           *Webhook `protobuf:"bytes,2,opt,name=webhook,proto3" json:"webhook,omitempty"`                                              // The webhook field.
-	DeploymentRuntime bool     `protobuf:"varint,3,opt,name=DeploymentRuntime,json=deployment_runtime,proto3" json:"DeploymentRuntime,omitempty"` // The DeploymentRuntime field.
-	PipelineRuntime   bool     `protobuf:"varint,4,opt,name=PipelineRuntime,json=pipeline_runtime,proto3" json:"PipelineRuntime,omitempty"`       // The PipelineRuntime field.
+	Project           string   `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	Webhook           *Webhook `protobuf:"bytes,2,opt,name=webhook,proto3" json:"webhook,omitempty"`
+	DeploymentRuntime bool     `protobuf:"varint,3,opt,name=DeploymentRuntime,json=deployment_runtime,proto3" json:"DeploymentRuntime,omitempty"`
+	PipelineRuntime   bool     `protobuf:"varint,4,opt,name=PipelineRuntime,json=pipeline_runtime,proto3" json:"PipelineRuntime,omitempty"`
 	// You must fill in the parameters related to gitlab or github
-	Git *Git `protobuf:"bytes,5,opt,name=git,proto3" json:"git,omitempty"` // The Git field, which must be filled in.
+	Git *Git `protobuf:"bytes,5,opt,name=git,proto3" json:"git,omitempty"`
 }
 
 func (x *SaveRequest_Body) Reset() {

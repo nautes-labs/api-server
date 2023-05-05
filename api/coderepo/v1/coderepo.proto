@@ -121,35 +121,34 @@ message GetRequest {
 
 // Define the GetReply message, which includes the product, name, project, webhook, DeploymentRuntime, PipelineRuntime, and GitProject fields.
 message GetReply {
-  string product = 1 [json_name = "product"]; // The product field.
-  string name = 2 [json_name = "name"]; // The name field.
-  string project = 3 [json_name = "project"]; // The project field.
-  Webhook webhook = 4 [json_name = "webhook"]; // The webhook field.
-  bool DeploymentRuntime = 5 [json_name = "deployment_runtime"]; // The DeploymentRuntime field.
-  bool PipelineRuntime = 6 [json_name = "pipeline_runtime"]; // The PipelineRuntime field.
-  GitProject git = 7 [json_name = "git"]; // The GitProject field.
+  string product = 1 [json_name = "product"]; 
+  string name = 2 [json_name = "name"]; 
+  string project = 3 [json_name = "project"]; 
+  Webhook webhook = 4 [json_name = "webhook"]; 
+  bool DeploymentRuntime = 5 [json_name = "deployment_runtime"]; 
+  bool PipelineRuntime = 6 [json_name = "pipeline_runtime"]; 
+  GitProject git = 7 [json_name = "git"]; 
 }
 
 // Define the ListsReply message, which includes the repeated items field.
 message ListsReply {
-  repeated GetReply items = 1; // The items field.
+  repeated GetReply items = 1; 
 }
 
 // Define the SaveRequest message, which includes the productName, coderepoName, insecureSkipCheck, and Body fields.
 message SaveRequest { 
-  // Define the Body message, which includes the project, webhook, DeploymentRuntime, PipelineRuntime, and Git fields.
   message Body {
-    string project = 1 [json_name = "project"]; // The project field.
-    Webhook webhook = 2 [json_name = "webhook"]; // The webhook field.
-    bool DeploymentRuntime = 3 [json_name = "deployment_runtime"]; // The DeploymentRuntime field.
-    bool PipelineRuntime = 4 [json_name = "pipeline_runtime"]; // The PipelineRuntime field.
+    string project = 1 [json_name = "project"]; 
+    Webhook webhook = 2 [json_name = "webhook"]; 
+    bool DeploymentRuntime = 3 [json_name = "deployment_runtime"]; 
+    bool PipelineRuntime = 4 [json_name = "pipeline_runtime"]; 
     // You must fill in the parameters related to gitlab or github
-    Git git = 5 [json_name = "git", (validate.rules).message.required = true]; // The Git field, which must be filled in.
+    Git git = 5 [json_name = "git", (validate.rules).message.required = true]; 
   }
-  string productName = 1 [json_name = "product_name"]; // The productName field.
-  string coderepoName = 2 [json_name = "coderepo_name"]; // The coderepoName field.
-  bool insecureSkipCheck = 3 [json_name = "insecure_skip_check"]; // The insecureSkipCheck field.
-  Body body = 4; // The Body field.
+  string productName = 1 [json_name = "product_name"]; 
+  string coderepoName = 2 [json_name = "coderepo_name"]; 
+  bool insecureSkipCheck = 3 [json_name = "insecure_skip_check"]; 
+  Body body = 4; 
 }
 
 // Define the SaveReply message, which includes the msg field.

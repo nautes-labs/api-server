@@ -20,6 +20,7 @@ import (
 
 	clusterv1 "github.com/nautes-labs/api-server/api/cluster/v1"
 	coderepov1 "github.com/nautes-labs/api-server/api/coderepo/v1"
+	coderepobindingv1 "github.com/nautes-labs/api-server/api/coderepobinding/v1"
 	deploymentruntimev1 "github.com/nautes-labs/api-server/api/deploymentruntime/v1"
 	environmentv1 "github.com/nautes-labs/api-server/api/environment/v1"
 	productv1 "github.com/nautes-labs/api-server/api/product/v1"
@@ -41,17 +42,19 @@ type ServiceProductGroup struct {
 	projectPipelineRuntime *service.ProjectPipelineRuntimeService
 	deploymentRuntime      *service.DeploymentruntimeService
 	codeRepo               *service.CodeRepoService
+	codeRepoBinding        *service.CodeRepoBindingService
 	product                *service.ProductService
 	project                *service.ProjectService
 	enviroment             *service.EnvironmentService
 	cluster                *service.ClusterService
 }
 
-func NewServiceGroup(projectPipelineRuntime *service.ProjectPipelineRuntimeService, deploymentRuntime *service.DeploymentruntimeService, codeRepo *service.CodeRepoService, product *service.ProductService, project *service.ProjectService, enviroment *service.EnvironmentService, cluster *service.ClusterService) *ServiceProductGroup {
+func NewServiceGroup(projectPipelineRuntime *service.ProjectPipelineRuntimeService, deploymentRuntime *service.DeploymentruntimeService, codeRepo *service.CodeRepoService, codeRepoBinding *service.CodeRepoBindingService, product *service.ProductService, project *service.ProjectService, enviroment *service.EnvironmentService, cluster *service.ClusterService) *ServiceProductGroup {
 	return &ServiceProductGroup{
 		projectPipelineRuntime: projectPipelineRuntime,
 		deploymentRuntime:      deploymentRuntime,
 		codeRepo:               codeRepo,
+		codeRepoBinding:        codeRepoBinding,
 		product:                product,
 		project:                project,
 		enviroment:             enviroment,
@@ -65,6 +68,7 @@ func (s *ServiceProductGroup) Register(srv *http.Server) {
 	environmentv1.RegisterEnvironmentHTTPServer(srv, s.enviroment)
 	clusterv1.RegisterClusterHTTPServer(srv, s.cluster)
 	coderepov1.RegisterCodeRepoHTTPServer(srv, s.codeRepo)
+	coderepobindingv1.RegisterCodeRepoBindingHTTPServer(srv, s.codeRepoBinding)
 	deploymentruntimev1.RegisterDeploymentruntimeHTTPServer(srv, s.deploymentRuntime)
 	projectpipelineruntimev1.RegisterProjectPipelineRuntimeHTTPServer(srv, s.projectPipelineRuntime)
 }

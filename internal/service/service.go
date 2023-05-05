@@ -19,4 +19,4 @@ import (
 )
 
 // ProviderSet is service providers.
-var ProviderSet = wire.NewSet(NewProjectPipelineRuntimeService, NewDeploymentruntimeService, NewCodeRepoService, NewProductService, NewProjectService, NewEnvironmentService, NewClusterService)
+var ProviderSet = wire.NewSet(NewProjectPipelineRuntimeService, NewDeploymentruntimeService, NewCodeRepoService, NewProductService, NewProjectService, NewEnvironmentService, NewClusterService, NewCodeRepoBindingService)

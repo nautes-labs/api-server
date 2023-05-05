@@ -106,6 +106,21 @@ func (mr *MockCodeRepoMockRecorder) DeleteGroup(ctx, gid interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteGroup", reflect.TypeOf((*MockCodeRepo)(nil).DeleteGroup), ctx, gid)
 }
 
+// EnableProjectDeployKey mocks base method.
+func (m *MockCodeRepo) EnableProjectDeployKey(ctx context.Context, pid interface{}, deployKey int) (*ProjectDeployKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnableProjectDeployKey", ctx, pid, deployKey)
+	ret0, _ := ret[0].(*ProjectDeployKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnableProjectDeployKey indicates an expected call of EnableProjectDeployKey.
+func (mr *MockCodeRepoMockRecorder) EnableProjectDeployKey(ctx, pid, deployKey interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableProjectDeployKey", reflect.TypeOf((*MockCodeRepo)(nil).EnableProjectDeployKey), ctx, pid, deployKey)
+}
+
 // GetCodeRepo mocks base method.
 func (m *MockCodeRepo) GetCodeRepo(ctx context.Context, pid interface{}) (*Project, error) {
 	m.ctrl.T.Helper()
@@ -198,23 +213,18 @@ func (mr *MockCodeRepoMockRecorder) ListDeployKeys(ctx, pid, opt interface{}) *g
 }
 
 // ListGroupCodeRepos mocks base method.
-func (m *MockCodeRepo) ListGroupCodeRepos(ctx context.Context, gid interface{}, opts ...interface{}) ([]*Project, error) {
+func (m *MockCodeRepo) ListGroupCodeRepos(ctx context.Context, gid interface{}) ([]*Project, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, gid}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ListGroupCodeRepos", varargs...)
+	ret := m.ctrl.Call(m, "ListGroupCodeRepos", ctx, gid)
 	ret0, _ := ret[0].([]*Project)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListGroupCodeRepos indicates an expected call of ListGroupCodeRepos.
-func (mr *MockCodeRepoMockRecorder) ListGroupCodeRepos(ctx, gid interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockCodeRepoMockRecorder) ListGroupCodeRepos(ctx, gid interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, gid}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListGroupCodeRepos", reflect.TypeOf((*MockCodeRepo)(nil).ListGroupCodeRepos), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListGroupCodeRepos", reflect.TypeOf((*MockCodeRepo)(nil).ListGroupCodeRepos), ctx, gid)
 }
 
 // SaveDeployKey mocks base method.

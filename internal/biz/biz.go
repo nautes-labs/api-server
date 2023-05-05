@@ -17,7 +17,7 @@ package biz
 import "github.com/google/wire"
 
 // ProviderSet is biz providers.
-var ProviderSet = wire.NewSet(NewProjectPipelineRuntimeUsecase, NewDeploymentRuntimeUsecase, NewProductUsecase, NewResourcesUsecase, NewProjectUsecase, NewEnviromentUsecase, NewClusterUsecase, NewCodeRepoUsecase)
+var ProviderSet = wire.NewSet(NewProjectPipelineRuntimeUsecase, NewDeploymentRuntimeUsecase, NewProductUsecase, NewResourcesUsecase, NewProjectUsecase, NewEnviromentUsecase, NewClusterUsecase, NewCodeRepoUsecase, NewCodeRepoCodeRepoBindingUsecase)
 
 type BizOptions struct {
 	ResouceName       string
