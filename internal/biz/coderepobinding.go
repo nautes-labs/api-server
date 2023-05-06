@@ -335,6 +335,10 @@ func (c *CodeRepoBindingUsecase) GetDeployKeyFromSecretRepo(ctx context.Context,
 }
 
 func (c *CodeRepoBindingUsecase) CheckReference(options nodestree.CompareOptions, node *nodestree.Node, k8sClient client.Client) (bool, error) {
+	if node.Kind != nodestree.CodeRepoBinding {
+		return false, nil
+	}
+
 	codeRepoBinding, ok := node.Content.(*resourcev1alpha1.CodeRepoBinding)
 	if !ok {
 		return true, fmt.Errorf("wrong type found for %s node when checking CodeRepoBinding type", node.Name)
@@ -342,7 +346,7 @@ func (c *CodeRepoBindingUsecase) CheckReference(options nodestree.CompareOptions
 
 	objKey := client.ObjectKey{
 		Namespace: codeRepoBinding.Spec.Product,
-		Name:      codeRepoBinding.Spec.CodeRepo,
+		Name:      codeRepoBinding.Name,
 	}
 
 	err := k8sClient.Get(context.TODO(), objKey, &resourcev1alpha1.CodeRepoBinding{})
