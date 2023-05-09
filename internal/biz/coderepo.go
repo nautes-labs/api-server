@@ -22,7 +22,6 @@ import (
 	errors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/log"
 	commonv1 "github.com/nautes-labs/api-server/api/common/v1"
-	gitlabclient "github.com/nautes-labs/api-server/pkg/gitlab"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
 	utilkey "github.com/nautes-labs/api-server/util/key"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
@@ -32,17 +31,9 @@ import (
 )
 
 const (
-	_CodeRepoKind                  = "CodeRepo"
-	_CodeReposSubDir               = "code-repos"
-	_RepoPrefix                    = "repo-"
-	_DefaultUser                   = "default"
-	SecretsEngine                  = "git"
-	SecretsKey                     = "deploykey"
-	ReadOnly         DeployKeyType = "readonly"
-	ReadWrite        DeployKeyType = "readwrite"
+	_CodeRepoKind    = "CodeRepo"
+	_CodeReposSubDir = "code-repos"
 )
-
-type DeployKeyType string
 
 type CodeRepoUsecase struct {
 	log              *log.Helper
@@ -73,13 +64,13 @@ func (c *CodeRepoUsecase) GetCodeRepo(ctx context.Context, codeRepoName, product
 	}
 
 	if project != nil {
-		resourceName := fmt.Sprintf("%s%d", _RepoPrefix, int(project.Id))
+		resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
 		codeRepoName = resourceName
 	}
 
 	node, err := c.resourcesUsecase.Get(ctx, nodestree.CodeRepo, productName, c, func(nodes nodestree.Node) (string, error) {
 		if project != nil {
-			resourceName := fmt.Sprintf("%s%d", _RepoPrefix, int(project.Id))
+			resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
 			return resourceName, nil
 		}
 
@@ -178,7 +169,8 @@ func (c *CodeRepoUsecase) SaveCodeRepo(ctx context.Context, options *BizOptions,
 	if err != nil {
 		return err
 	}
-	data.Name = fmt.Sprintf("%s%d", _RepoPrefix, int(project.Id))
+	pid := int(project.Id)
+	data.Name = fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
 
 	resourceOptions := &resourceOptions{
 		resourceKind:      nodestree.CodeRepo,
@@ -191,18 +183,26 @@ func (c *CodeRepoUsecase) SaveCodeRepo(ctx context.Context, options *BizOptions,
 		return err
 	}
 
-	projectReadWriteDeployKey, err := c.SaveDeployKey(ctx, int(project.Id), true)
+	projectReadWriteDeployKey, err := c.SaveDeployKey(ctx, pid, true)
 	if err != nil {
 		return err
 	}
 
-	projectReadOnlyDeployKey, err := c.SaveDeployKey(ctx, int(project.Id), false)
+	projectReadOnlyDeployKey, err := c.SaveDeployKey(ctx, pid, false)
 	if err != nil {
 		return err
 	}
 
-	err = c.RemoveInvalidDeploykey(ctx, int(project.Id), projectReadWriteDeployKey, projectReadOnlyDeployKey)
+	if err := c.RemoveInvalidDeploykey(ctx, pid, projectReadWriteDeployKey, projectReadOnlyDeployKey); err != nil {
+		return err
+	}
+
+	projectAccessToken, err := c.SaveAccessToken(ctx, pid)
 	if err != nil {
+		return err
+	}
+
+	if err := c.RemoveInvalidProjectAccessTokens(ctx, pid, projectAccessToken); err != nil {
 		return err
 	}
 
@@ -232,16 +232,14 @@ func (c *CodeRepoUsecase) saveRepository(ctx context.Context, group *Group, reso
 	return project, nil
 }
 
-func (c *CodeRepoUsecase) GetDeployKeyFromSecretRepo(ctx context.Context, repoName, permission string) (*DeployKeySecretData, error) {
+func (c *CodeRepoUsecase) GetDeployKeyFromSecretRepo(ctx context.Context, pid int, permission string) (*DeployKeySecretData, error) {
+	repoName := fmt.Sprintf("%s%d", RepoPrefix, pid)
 	gitType := c.config.Git.GitType
-	secretsEngine := SecretsEngine
-	secretsKey := SecretsKey
-	username := _DefaultUser
-	secretPath := fmt.Sprintf("%s/%s/%s/%s", gitType, repoName, username, permission)
+	secretPath := fmt.Sprintf("%s/%s/%s/%s", gitType, repoName, DefaultUser, permission)
 	secretOptions := &SecretOptions{
 		SecretPath:   secretPath,
-		SecretEngine: secretsEngine,
-		SecretKey:    secretsKey,
+		SecretEngine: SecretsGitEngine,
+		SecretKey:    SecretsDeployKey,
 	}
 
 	deployKeySecretData, err := c.secretRepo.GetDeployKey(ctx, secretOptions)
@@ -252,19 +250,34 @@ func (c *CodeRepoUsecase) GetDeployKeyFromSecretRepo(ctx context.Context, repoNa
 	return deployKeySecretData, nil
 }
 
+func (c *CodeRepoUsecase) GetAccessTokenFromSecretRepo(ctx context.Context, pid int) (*AccessTokenSecretData, error) {
+	repoName := fmt.Sprintf("%s%d", RepoPrefix, pid)
+	gitType := c.config.Git.GitType
+	secretPath := fmt.Sprintf("%s/%s/%s/%s", gitType, repoName, DefaultUser, AccessTokenName)
+	secretOptions := &SecretOptions{
+		SecretPath:   secretPath,
+		SecretEngine: SecretsGitEngine,
+		SecretKey:    SecretsAccessToken,
+	}
+
+	accessTokenSecretData, err := c.secretRepo.GetProjectAccessToken(ctx, secretOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	return accessTokenSecretData, nil
+}
+
 // SaveDeployKey is to store the deploykey to git and the key repository separately
 // It takes in an argument pid of type int and an argument canPush of type bool,
 // and returns a project deploykey and error.
 func (c *CodeRepoUsecase) SaveDeployKey(ctx context.Context, pid int, canPush bool) (*ProjectDeployKey, error) {
-	var repoName, permission string
-
-	repoName = fmt.Sprintf("%s%d", _RepoPrefix, pid)
-	permission = string(ReadOnly)
+	permission := string(ReadOnly)
 	if canPush {
 		permission = string(ReadWrite)
 	}
 
-	secretData, err := c.GetDeployKeyFromSecretRepo(ctx, repoName, permission)
+	secretData, err := c.GetDeployKeyFromSecretRepo(ctx, pid, permission)
 	if err != nil {
 		ok := commonv1.IsSecretNotFound(err)
 		if !ok {
@@ -307,23 +320,23 @@ func (c *CodeRepoUsecase) SaveDeployKey(ctx context.Context, pid int, canPush bo
 }
 
 func (c *CodeRepoUsecase) RemoveInvalidDeploykey(ctx context.Context, pid int, projectDeployKeys ...*ProjectDeployKey) error {
-	keys, err := c.getAllDeployKeys(ctx, pid)
+	validProjectDeployKeys := make(map[int]bool, len(projectDeployKeys))
+	for _, deployKey := range projectDeployKeys {
+		validProjectDeployKeys[deployKey.ID] = true
+	}
+
+	deployKeysToDelete, err := c.FilterProjectDeployKeysByIDList(ctx, pid, validProjectDeployKeys)
 	if err != nil {
 		return err
 	}
 
-	for _, key := range keys {
-		isDelete := false
+	for _, key := range deployKeysToDelete {
 		for _, projectDeployKey := range projectDeployKeys {
-			if key.ID != projectDeployKey.ID && key.Title == projectDeployKey.Title {
-				isDelete = true
-				break
-			}
-		}
-		if isDelete {
-			err := c.codeRepo.DeleteDeployKey(ctx, pid, key.ID)
-			if err != nil {
-				return err
+			if key.Title == projectDeployKey.Title {
+				err := c.codeRepo.DeleteDeployKey(ctx, pid, key.ID)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -331,28 +344,187 @@ func (c *CodeRepoUsecase) RemoveInvalidDeploykey(ctx context.Context, pid int, p
 	return nil
 }
 
-func (c *CodeRepoUsecase) getAllDeployKeys(ctx context.Context, pid int) ([]*ProjectDeployKey, error) {
-	opts := &ListOptions{
-		Page:    1,
-		PerPage: 10,
+func (c *CodeRepoUsecase) FilterProjectDeployKeysByIDList(ctx context.Context, pid int, idList map[int]bool) ([]*ProjectDeployKey, error) {
+	keys, err := c.GetAllDeployKeys(ctx, pid)
+	if err != nil {
+		return nil, err
 	}
-	allDeployKeys := []*ProjectDeployKey{}
+
+	var filteredDeployKeys []*ProjectDeployKey
+	for _, key := range keys {
+		if !idList[key.ID] {
+			filteredDeployKeys = append(filteredDeployKeys, key)
+		}
+	}
+
+	return filteredDeployKeys, nil
+}
+
+func (c *CodeRepoUsecase) SaveAccessToken(ctx context.Context, pid int) (*ProjectAccessToken, error) {
+	accessTokenSecretData, err := c.GetAccessTokenFromSecretRepo(ctx, pid)
+	if err != nil {
+		ok := commonv1.IsSecretNotFound(err)
+		if !ok {
+			return nil, err
+		}
+
+		projectAccessToken, err := c.createAccessTokenToGitAndSecretRepo(ctx, pid)
+		if err != nil {
+			return nil, err
+		}
+
+		return projectAccessToken, nil
+	}
+
+	projectAccessToken, err := c.codeRepo.GetProjectAccessToken(ctx, pid, accessTokenSecretData.ID)
+	if err != nil {
+		ok := commonv1.IsAccesstokenNotFound(err)
+		if !ok {
+			return nil, err
+		}
+
+		projectAccessToken, err := c.createAccessTokenToGitAndSecretRepo(ctx, pid)
+		if err != nil {
+			return nil, err
+		}
+
+		return projectAccessToken, nil
+	}
+
+	return projectAccessToken, nil
+}
+
+func (c *CodeRepoUsecase) RemoveInvalidProjectAccessTokens(ctx context.Context, pid int, projectAccessTokens ...*ProjectAccessToken) error {
+	validAccessTokens := make(map[int]bool, len(projectAccessTokens))
+	for _, projectAccessToken := range projectAccessTokens {
+		validAccessTokens[projectAccessToken.ID] = true
+	}
+
+	accessTokensToDelete, err := c.FilterAccessTokensByIDList(ctx, pid, validAccessTokens)
+	if err != nil {
+		return err
+	}
+
+	for _, token := range accessTokensToDelete {
+		for _, validToken := range projectAccessTokens {
+			if token.Name == validToken.Name {
+				err := c.codeRepo.DeleteProjectAccessToken(ctx, pid, token.ID)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (c *CodeRepoUsecase) FilterAccessTokensByIDList(ctx context.Context, pid int, idList map[int]bool) ([]*ProjectAccessToken, error) {
+	allAccessTokens, err := c.GetAllAccessTokens(ctx, pid)
+	if err != nil {
+		return nil, err
+	}
+
+	var filteredAccessTokens []*ProjectAccessToken
+	for _, token := range allAccessTokens {
+		if !idList[token.ID] {
+			filteredAccessTokens = append(filteredAccessTokens, token)
+		}
+	}
+
+	return filteredAccessTokens, nil
+}
+
+func (c *CodeRepoUsecase) getAllItems(ctx context.Context, pid int, opts *ListOptions, getAllFunc func(ctx context.Context, pid int, opts *ListOptions) ([]interface{}, error)) ([]interface{}, error) {
+	allItems := []interface{}{}
+	var err error
 	for {
-		keys, err := c.codeRepo.ListDeployKeys(ctx, pid, opts)
+		var items []interface{}
+		items, err = getAllFunc(ctx, pid, opts)
 		if err != nil {
 			return nil, err
 		}
 		opts.Page += 1
-		allDeployKeys = append(allDeployKeys, keys...)
-		if len(keys) != opts.PerPage {
-			return allDeployKeys, nil
+		allItems = append(allItems, items...)
+		if len(items) != opts.PerPage {
+			break
 		}
 	}
+	return allItems, err
+}
+
+func (c *CodeRepoUsecase) GetAllAccessTokens(ctx context.Context, pid int) ([]*ProjectAccessToken, error) {
+	opts := &ListOptions{
+		Page:    1,
+		PerPage: 10,
+	}
+	items, err := c.getAllItems(ctx, pid, opts, c.ListAccessTokens)
+	if err != nil {
+		return nil, err
+	}
+	accessTokens := make([]*ProjectAccessToken, len(items))
+	for i, item := range items {
+		accessToken, ok := item.(*ProjectAccessToken)
+		if !ok {
+			return nil, fmt.Errorf("unexpected item type: %T", item)
+		}
+		accessTokens[i] = accessToken
+	}
+
+	return accessTokens, nil
+}
+
+func (c *CodeRepoUsecase) ListAccessTokens(ctx context.Context, pid int, opts *ListOptions) ([]interface{}, error) {
+	tokens, err := c.codeRepo.ListAccessTokens(ctx, pid, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	var interfaceSlice []interface{}
+	for _, v := range tokens {
+		interfaceSlice = append(interfaceSlice, interface{}(v))
+	}
+
+	return interfaceSlice, nil
+}
+
+func (c *CodeRepoUsecase) GetAllDeployKeys(ctx context.Context, pid int) ([]*ProjectDeployKey, error) {
+	opts := &ListOptions{
+		Page:    1,
+		PerPage: 10,
+	}
+	items, err := c.getAllItems(ctx, pid, opts, c.ListDeployKeys)
+	if err != nil {
+		return nil, err
+	}
+	allDeployKeys := make([]*ProjectDeployKey, len(items))
+	for i, item := range items {
+		accessToken, ok := item.(*ProjectDeployKey)
+		if !ok {
+			return nil, fmt.Errorf("unexpected item type: %T", item)
+		}
+		allDeployKeys[i] = accessToken
+	}
+
+	return allDeployKeys, nil
+}
+
+func (c *CodeRepoUsecase) ListDeployKeys(ctx context.Context, pid int, opts *ListOptions) ([]interface{}, error) {
+	keys, err := c.codeRepo.ListDeployKeys(ctx, pid, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	var interfaceSlice []interface{}
+	for _, v := range keys {
+		interfaceSlice = append(interfaceSlice, interface{}(v))
+	}
+
+	return interfaceSlice, nil
 }
 
 func (c *CodeRepoUsecase) saveDeployKeyToGitAndSecretRepo(ctx context.Context, pid int, canPush bool, permission string) (*ProjectDeployKey, error) {
-	var title string
-	title = fmt.Sprintf("%s%d-%s", _RepoPrefix, pid, permission)
+	title := fmt.Sprintf("%s%d-%s", RepoPrefix, pid, permission)
 
 	publicKey, privateKey, err := utilkey.GenerateKeyPair(c.config.Git.DefaultDeployKeyType, title)
 	if err != nil {
@@ -365,15 +537,37 @@ func (c *CodeRepoUsecase) saveDeployKeyToGitAndSecretRepo(ctx context.Context, p
 	}
 
 	extendKVs := make(map[string]string)
-	extendKVs[gitlabclient.FINGERPRINT] = projectDeployKey.Key
-	extendKVs[gitlabclient.DEPLOYID] = strconv.Itoa(projectDeployKey.ID)
-	user := _DefaultUser
-	err = c.secretRepo.SaveDeployKey(ctx, convertRepoName(pid), string(privateKey), user, permission, extendKVs)
+	extendKVs[Fingerprint] = projectDeployKey.Key
+	extendKVs[DeployKeyID] = strconv.Itoa(projectDeployKey.ID)
+	err = c.secretRepo.SaveDeployKey(ctx, convertRepoName(pid), string(privateKey), DefaultUser, permission, extendKVs)
 	if err != nil {
 		return nil, err
 	}
 
 	return projectDeployKey, nil
+}
+
+func (c *CodeRepoUsecase) createAccessTokenToGitAndSecretRepo(ctx context.Context, pid int) (*ProjectAccessToken, error) {
+	name := AccessTokenName
+	scopes := []string{string(APIPermission)}
+	accessLevel := AccessLevelValue(Developer)
+	projectToken, err := c.codeRepo.CreateProjectAccessToken(ctx, pid, &CreateProjectAccessTokenOptions{
+		Name:        &name,
+		Scopes:      &scopes,
+		AccessLevel: &accessLevel,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	extendKVs := make(map[string]string)
+	extendKVs[AccessTokenID] = strconv.Itoa(projectToken.ID)
+	err = c.secretRepo.SaveProjectAccessToken(ctx, convertRepoName(pid), string(projectToken.Token), DefaultUser, name, extendKVs)
+	if err != nil {
+		return nil, err
+	}
+
+	return projectToken, nil
 }
 
 func (c *CodeRepoUsecase) CreateNode(path string, data interface{}) (*nodestree.Node, error) {
@@ -532,7 +726,7 @@ func (c *CodeRepoUsecase) DeleteCodeRepo(ctx context.Context, options *BizOption
 	}
 	err = c.resourcesUsecase.Delete(ctx, resourceOptions, func(nodes nodestree.Node) (string, error) {
 		if project != nil {
-			resourceName := fmt.Sprintf("%s%d", _RepoPrefix, int(project.Id))
+			resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
 			return resourceName, nil
 		}
 

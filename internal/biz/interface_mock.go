@@ -64,6 +64,21 @@ func (mr *MockCodeRepoMockRecorder) CreateGroup(ctx, gitOptions interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateGroup", reflect.TypeOf((*MockCodeRepo)(nil).CreateGroup), ctx, gitOptions)
 }
 
+// CreateProjectAccessToken mocks base method.
+func (m *MockCodeRepo) CreateProjectAccessToken(ctx context.Context, pid interface{}, opt *CreateProjectAccessTokenOptions) (*ProjectAccessToken, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateProjectAccessToken", ctx, pid, opt)
+	ret0, _ := ret[0].(*ProjectAccessToken)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateProjectAccessToken indicates an expected call of CreateProjectAccessToken.
+func (mr *MockCodeRepoMockRecorder) CreateProjectAccessToken(ctx, pid, opt interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateProjectAccessToken", reflect.TypeOf((*MockCodeRepo)(nil).CreateProjectAccessToken), ctx, pid, opt)
+}
+
 // DeleteCodeRepo mocks base method.
 func (m *MockCodeRepo) DeleteCodeRepo(ctx context.Context, pid interface{}) error {
 	m.ctrl.T.Helper()
@@ -104,6 +119,20 @@ func (m *MockCodeRepo) DeleteGroup(ctx context.Context, gid interface{}) error {
 func (mr *MockCodeRepoMockRecorder) DeleteGroup(ctx, gid interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteGroup", reflect.TypeOf((*MockCodeRepo)(nil).DeleteGroup), ctx, gid)
+}
+
+// DeleteProjectAccessToken mocks base method.
+func (m *MockCodeRepo) DeleteProjectAccessToken(ctx context.Context, pid interface{}, id int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteProjectAccessToken", ctx, pid, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteProjectAccessToken indicates an expected call of DeleteProjectAccessToken.
+func (mr *MockCodeRepoMockRecorder) DeleteProjectAccessToken(ctx, pid, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProjectAccessToken", reflect.TypeOf((*MockCodeRepo)(nil).DeleteProjectAccessToken), ctx, pid, id)
 }
 
 // EnableProjectDeployKey mocks base method.
@@ -180,6 +209,36 @@ func (m *MockCodeRepo) GetGroup(ctx context.Context, gid interface{}) (*Group, e
 func (mr *MockCodeRepoMockRecorder) GetGroup(ctx, gid interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGroup", reflect.TypeOf((*MockCodeRepo)(nil).GetGroup), ctx, gid)
+}
+
+// GetProjectAccessToken mocks base method.
+func (m *MockCodeRepo) GetProjectAccessToken(ctx context.Context, pid interface{}, id int) (*ProjectAccessToken, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProjectAccessToken", ctx, pid, id)
+	ret0, _ := ret[0].(*ProjectAccessToken)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetProjectAccessToken indicates an expected call of GetProjectAccessToken.
+func (mr *MockCodeRepoMockRecorder) GetProjectAccessToken(ctx, pid, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProjectAccessToken", reflect.TypeOf((*MockCodeRepo)(nil).GetProjectAccessToken), ctx, pid, id)
+}
+
+// ListAccessTokens mocks base method.
+func (m *MockCodeRepo) ListAccessTokens(ctx context.Context, pid interface{}, opt *ListOptions) ([]*ProjectAccessToken, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAccessTokens", ctx, pid, opt)
+	ret0, _ := ret[0].([]*ProjectAccessToken)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAccessTokens indicates an expected call of ListAccessTokens.
+func (mr *MockCodeRepoMockRecorder) ListAccessTokens(ctx, pid, opt interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAccessTokens", reflect.TypeOf((*MockCodeRepo)(nil).ListAccessTokens), ctx, pid, opt)
 }
 
 // ListAllGroups mocks base method.
@@ -338,6 +397,21 @@ func (mr *MockSecretrepoMockRecorder) GetDeployKey(ctx, secretOptions interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDeployKey", reflect.TypeOf((*MockSecretrepo)(nil).GetDeployKey), ctx, secretOptions)
 }
 
+// GetProjectAccessToken mocks base method.
+func (m *MockSecretrepo) GetProjectAccessToken(ctx context.Context, secretOptions *SecretOptions) (*AccessTokenSecretData, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProjectAccessToken", ctx, secretOptions)
+	ret0, _ := ret[0].(*AccessTokenSecretData)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetProjectAccessToken indicates an expected call of GetProjectAccessToken.
+func (mr *MockSecretrepoMockRecorder) GetProjectAccessToken(ctx, secretOptions interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProjectAccessToken", reflect.TypeOf((*MockSecretrepo)(nil).GetProjectAccessToken), ctx, secretOptions)
+}
+
 // GetSecret mocks base method.
 func (m *MockSecretrepo) GetSecret(ctx context.Context, secretOptions *SecretOptions) (string, error) {
 	m.ctrl.T.Helper()
@@ -379,6 +453,20 @@ func (m *MockSecretrepo) SaveDeployKey(ctx context.Context, id, key, user, permi
 func (mr *MockSecretrepoMockRecorder) SaveDeployKey(ctx, id, key, user, permission, extendKVs interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveDeployKey", reflect.TypeOf((*MockSecretrepo)(nil).SaveDeployKey), ctx, id, key, user, permission, extendKVs)
+}
+
+// SaveProjectAccessToken mocks base method.
+func (m *MockSecretrepo) SaveProjectAccessToken(ctx context.Context, id, token, user, permission string, extendKVs map[string]string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveProjectAccessToken", ctx, id, token, user, permission, extendKVs)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SaveProjectAccessToken indicates an expected call of SaveProjectAccessToken.
+func (mr *MockSecretrepoMockRecorder) SaveProjectAccessToken(ctx, id, token, user, permission, extendKVs interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveProjectAccessToken", reflect.TypeOf((*MockSecretrepo)(nil).SaveProjectAccessToken), ctx, id, token, user, permission, extendKVs)
 }
 
 // MockGitRepo is a mock of GitRepo interface.

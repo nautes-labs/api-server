@@ -177,9 +177,9 @@ var _ = Describe("Save project pipeline runtime", func() {
 	var (
 		resourceName             = "projectpipelineruntime1"
 		projectForPipeline       = &Project{Name: "pipeline", Id: 1222, HttpUrlToRepo: "ssh://git@gitlab.io/nautes-labs/pipeline.git"}
-		projectForPipelineRepoID = fmt.Sprintf("%s%d", _RepoPrefix, int(projectForPipeline.Id))
+		projectForPipelineRepoID = fmt.Sprintf("%s%d", RepoPrefix, int(projectForPipeline.Id))
 		projectForBase           = &Project{Name: "base", Id: 1223, HttpUrlToRepo: fmt.Sprintf("ssh://git@gitlab.io/nautes-labs/%s.git", resourceName)}
-		projectForBaseRepoID     = fmt.Sprintf("%s%d", _RepoPrefix, int(projectForBase.Id))
+		projectForBaseRepoID     = fmt.Sprintf("%s%d", RepoPrefix, int(projectForBase.Id))
 		fakeResource             = createProjectPiepeLineResource(resourceName)
 		fakeNode                 = createFakeProjectPipelineRuntimeNode(fakeResource)
 		fakeNodes                = createFakeProjectPipelineRuntimeNodes(fakeNode)

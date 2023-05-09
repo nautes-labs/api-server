@@ -238,8 +238,8 @@ func (c *CodeRepoBindingUsecase) ApplyDeploykey(ctx context.Context, spec resour
 	}
 
 	for _, repository := range repositories {
-		repoid := fmt.Sprintf("%s%d", _RepoPrefix, repository.Id)
-		secretData, err := c.GetDeployKeyFromSecretRepo(ctx, repoid, _DefaultUser, spec.Permissions)
+		repoid := fmt.Sprintf("%s%d", RepoPrefix, repository.Id)
+		secretData, err := c.GetDeployKeyFromSecretRepo(ctx, repoid, DefaultUser, spec.Permissions)
 		if err != nil {
 			return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from secret repo, please check if the key under /%s/%s exists or is invalid", spec.Permissions, c.config.Git.GitType, repoid)
 		}
@@ -249,7 +249,7 @@ func (c *CodeRepoBindingUsecase) ApplyDeploykey(ctx context.Context, spec resour
 			return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from git, please check if the key exists or is invalid for the repository %s under organization %s", spec.Permissions, repository.Name, c.groupName)
 		}
 
-		pid, err := utilstrings.ExtractNumber(_RepoPrefix, spec.CodeRepo)
+		pid, err := utilstrings.ExtractNumber(RepoPrefix, spec.CodeRepo)
 		if err != nil {
 			return err
 		}
@@ -301,7 +301,7 @@ func (c *CodeRepoBindingUsecase) GetAuthorizedRepositories(ctx context.Context, 
 
 	var repositories []*Project
 	for _, repo := range codeRepos {
-		pid, err := utilstrings.ExtractNumber(_RepoPrefix, repo.Name)
+		pid, err := utilstrings.ExtractNumber(RepoPrefix, repo.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -317,8 +317,8 @@ func (c *CodeRepoBindingUsecase) GetAuthorizedRepositories(ctx context.Context, 
 
 func (c *CodeRepoBindingUsecase) GetDeployKeyFromSecretRepo(ctx context.Context, repoName, user, permissions string) (*DeployKeySecretData, error) {
 	gitType := c.config.Git.GitType
-	secretsEngine := SecretsEngine
-	secretsKey := SecretsKey
+	secretsEngine := SecretsGitEngine
+	secretsKey := SecretsDeployKey
 	secretPath := fmt.Sprintf("%s/%s/%s/%s", gitType, repoName, user, permissions)
 	secretOptions := &SecretOptions{
 		SecretPath:   secretPath,

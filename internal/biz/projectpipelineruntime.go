@@ -336,5 +336,5 @@ func (p *ProjectPipelineRuntimeUsecase) CreateResource(kind string) interface{} 
 }
 
 func SpliceCodeRepoResourceName(id int) string {
-	return fmt.Sprintf("%s%d", _RepoPrefix, int(id))
+	return fmt.Sprintf("%s%d", RepoPrefix, int(id))
 }

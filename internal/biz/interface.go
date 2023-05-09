@@ -35,15 +35,21 @@ type CodeRepo interface {
 	GetGroup(ctx context.Context, gid interface{}) (*Group, error)
 	ListAllGroups(ctx context.Context) ([]*Group, error)
 	ListGroupCodeRepos(ctx context.Context, gid interface{}) ([]*Project, error)
+	ListAccessTokens(ctx context.Context, pid interface{}, opt *ListOptions) ([]*ProjectAccessToken, error)
+	GetProjectAccessToken(ctx context.Context, pid interface{}, id int) (*ProjectAccessToken, error)
+	CreateProjectAccessToken(ctx context.Context, pid interface{}, opt *CreateProjectAccessTokenOptions) (*ProjectAccessToken, error)
+	DeleteProjectAccessToken(ctx context.Context, pid interface{}, id int) error
 }
 
 type Secretrepo interface {
 	GetSecret(ctx context.Context, secretOptions *SecretOptions) (string, error)
 	GetDeployKey(ctx context.Context, secretOptions *SecretOptions) (*DeployKeySecretData, error)
 	SaveDeployKey(ctx context.Context, id, key, user, permission string, extendKVs map[string]string) error
+	SaveProjectAccessToken(ctx context.Context, id, token, user, permission string, extendKVs map[string]string) error
 	SaveClusterConfig(ctx context.Context, id, config string) error
 	DeleteSecret(ctx context.Context, id int) error
 	AuthorizationSecret(ctx context.Context, id int, destUser, gitType, mountPath string) error
+	GetProjectAccessToken(ctx context.Context, secretOptions *SecretOptions) (*AccessTokenSecretData, error)
 }
 
 type GitRepo interface {

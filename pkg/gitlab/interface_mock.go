@@ -97,6 +97,27 @@ func (mr *MockGitlabOperatorMockRecorder) CreateProject(opt interface{}, options
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateProject", reflect.TypeOf((*MockGitlabOperator)(nil).CreateProject), varargs...)
 }
 
+// CreateProjectAccessToken mocks base method.
+func (m *MockGitlabOperator) CreateProjectAccessToken(pid interface{}, opt *go_gitlab.CreateProjectAccessTokenOptions, options ...go_gitlab.RequestOptionFunc) (*go_gitlab.ProjectAccessToken, *go_gitlab.Response, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{pid, opt}
+	for _, a := range options {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CreateProjectAccessToken", varargs...)
+	ret0, _ := ret[0].(*go_gitlab.ProjectAccessToken)
+	ret1, _ := ret[1].(*go_gitlab.Response)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// CreateProjectAccessToken indicates an expected call of CreateProjectAccessToken.
+func (mr *MockGitlabOperatorMockRecorder) CreateProjectAccessToken(pid, opt interface{}, options ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{pid, opt}, options...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateProjectAccessToken", reflect.TypeOf((*MockGitlabOperator)(nil).CreateProjectAccessToken), varargs...)
+}
+
 // DeleteDeployKey mocks base method.
 func (m *MockGitlabOperator) DeleteDeployKey(pid interface{}, deployKey int, options ...go_gitlab.RequestOptionFunc) (*go_gitlab.Response, error) {
 	m.ctrl.T.Helper()
@@ -150,6 +171,47 @@ func (m *MockGitlabOperator) DeleteProject(pid interface{}) (*go_gitlab.Response
 func (mr *MockGitlabOperatorMockRecorder) DeleteProject(pid interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProject", reflect.TypeOf((*MockGitlabOperator)(nil).DeleteProject), pid)
+}
+
+// DeleteProjectAccessToken mocks base method.
+func (m *MockGitlabOperator) DeleteProjectAccessToken(pid interface{}, id int, options ...go_gitlab.RequestOptionFunc) (*go_gitlab.Response, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{pid, id}
+	for _, a := range options {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeleteProjectAccessToken", varargs...)
+	ret0, _ := ret[0].(*go_gitlab.Response)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteProjectAccessToken indicates an expected call of DeleteProjectAccessToken.
+func (mr *MockGitlabOperatorMockRecorder) DeleteProjectAccessToken(pid, id interface{}, options ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{pid, id}, options...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProjectAccessToken", reflect.TypeOf((*MockGitlabOperator)(nil).DeleteProjectAccessToken), varargs...)
+}
+
+// EnableProjectDeployKey mocks base method.
+func (m *MockGitlabOperator) EnableProjectDeployKey(pid interface{}, deployKey int, options ...go_gitlab.RequestOptionFunc) (*go_gitlab.ProjectDeployKey, *go_gitlab.Response, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{pid, deployKey}
+	for _, a := range options {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "EnableProjectDeployKey", varargs...)
+	ret0, _ := ret[0].(*go_gitlab.ProjectDeployKey)
+	ret1, _ := ret[1].(*go_gitlab.Response)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// EnableProjectDeployKey indicates an expected call of EnableProjectDeployKey.
+func (mr *MockGitlabOperatorMockRecorder) EnableProjectDeployKey(pid, deployKey interface{}, options ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{pid, deployKey}, options...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableProjectDeployKey", reflect.TypeOf((*MockGitlabOperator)(nil).EnableProjectDeployKey), varargs...)
 }
 
 // GetCurrentUser mocks base method.
@@ -231,6 +293,27 @@ func (mr *MockGitlabOperatorMockRecorder) GetProject(pid, opt interface{}, optio
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProject", reflect.TypeOf((*MockGitlabOperator)(nil).GetProject), varargs...)
 }
 
+// GetProjectAccessToken mocks base method.
+func (m *MockGitlabOperator) GetProjectAccessToken(pid interface{}, id int, options ...go_gitlab.RequestOptionFunc) (*go_gitlab.ProjectAccessToken, *go_gitlab.Response, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{pid, id}
+	for _, a := range options {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetProjectAccessToken", varargs...)
+	ret0, _ := ret[0].(*go_gitlab.ProjectAccessToken)
+	ret1, _ := ret[1].(*go_gitlab.Response)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetProjectAccessToken indicates an expected call of GetProjectAccessToken.
+func (mr *MockGitlabOperatorMockRecorder) GetProjectAccessToken(pid, id interface{}, options ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{pid, id}, options...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProjectAccessToken", reflect.TypeOf((*MockGitlabOperator)(nil).GetProjectAccessToken), varargs...)
+}
+
 // ListDeployKeys mocks base method.
 func (m *MockGitlabOperator) ListDeployKeys(pid interface{}, opt *go_gitlab.ListProjectDeployKeysOptions, options ...go_gitlab.RequestOptionFunc) ([]*go_gitlab.ProjectDeployKey, *go_gitlab.Response, error) {
 	m.ctrl.T.Helper()
@@ -292,6 +375,27 @@ func (mr *MockGitlabOperatorMockRecorder) ListGroups(opt interface{}, options ..
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{opt}, options...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListGroups", reflect.TypeOf((*MockGitlabOperator)(nil).ListGroups), varargs...)
+}
+
+// ListProjectAccessToken mocks base method.
+func (m *MockGitlabOperator) ListProjectAccessToken(pid interface{}, opt *go_gitlab.ListProjectAccessTokensOptions, options ...go_gitlab.RequestOptionFunc) ([]*go_gitlab.ProjectAccessToken, *go_gitlab.Response, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{pid, opt}
+	for _, a := range options {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListProjectAccessToken", varargs...)
+	ret0, _ := ret[0].([]*go_gitlab.ProjectAccessToken)
+	ret1, _ := ret[1].(*go_gitlab.Response)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListProjectAccessToken indicates an expected call of ListProjectAccessToken.
+func (mr *MockGitlabOperatorMockRecorder) ListProjectAccessToken(pid, opt interface{}, options ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{pid, opt}, options...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListProjectAccessToken", reflect.TypeOf((*MockGitlabOperator)(nil).ListProjectAccessToken), varargs...)
 }
 
 // NewGitlabClient mocks base method.

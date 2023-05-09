@@ -16,4 +16,5 @@ enum ErrorReason {
   NO_AUTHORIZATION = 5 [(errors.code) = 403];   
   DEPLOYKEY_NOT_FOUND = 6 [(errors.code) = 404];
   SECRET_NOT_FOUND = 7 [(errors.code) = 404];
+  ACCESSTOKEN_NOT_FOUND = 8 [(errors.code) = 404];
 }

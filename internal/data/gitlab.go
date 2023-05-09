@@ -440,6 +440,116 @@ func (g *gitlabRepo) EnableProjectDeployKey(ctx context.Context, pid interface{}
 	}, nil
 }
 
+func (g *gitlabRepo) GetProjectAccessToken(ctx context.Context, pid interface{}, id int) (*biz.ProjectAccessToken, error) {
+	client, err := NewGitlabClient(ctx, g)
+	if err != nil {
+		return nil, err
+	}
+
+	token, res, err := client.GetProjectAccessToken(pid, id)
+	if err != nil && res != nil && res.StatusCode == 404 {
+		return nil, commonv1.ErrorAccesstokenNotFound("failed to get access token, err: %s", err)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &biz.ProjectAccessToken{
+		Name:        token.Name,
+		ID:          token.ID,
+		UserID:      token.UserID,
+		Scopes:      token.Scopes,
+		CreatedAt:   token.CreatedAt,
+		LastUsedAt:  token.LastUsedAt,
+		ExpiresAt:   (*biz.ISOTime)(token.ExpiresAt),
+		Active:      token.Active,
+		Revoked:     token.Revoked,
+		Token:       token.Token,
+		AccessLevel: biz.AccessLevelValue(token.AccessLevel),
+	}, nil
+}
+
+func (g *gitlabRepo) ListAccessTokens(ctx context.Context, pid interface{}, opt *biz.ListOptions) ([]*biz.ProjectAccessToken, error) {
+	client, err := NewGitlabClient(ctx, g)
+	if err != nil {
+		return nil, err
+	}
+
+	accessTokens, res, err := client.ListProjectAccessToken(pid, &gitlab.ListProjectAccessTokensOptions{Page: opt.Page, PerPage: opt.PerPage})
+	if err != nil && res != nil && res.StatusCode == 404 {
+		return nil, commonv1.ErrorAccesstokenNotFound("failed to list access tokens, err: %s", err)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	projectAccessTokens := []*biz.ProjectAccessToken{}
+	for _, token := range accessTokens {
+		projectAccessToken := &biz.ProjectAccessToken{
+			Name:        token.Name,
+			ID:          token.ID,
+			UserID:      token.UserID,
+			Scopes:      token.Scopes,
+			CreatedAt:   token.CreatedAt,
+			LastUsedAt:  token.LastUsedAt,
+			ExpiresAt:   (*biz.ISOTime)(token.ExpiresAt),
+			Active:      token.Active,
+			Revoked:     token.Revoked,
+			Token:       token.Token,
+			AccessLevel: biz.AccessLevelValue(token.AccessLevel),
+		}
+		projectAccessTokens = append(projectAccessTokens, projectAccessToken)
+	}
+
+	return projectAccessTokens, nil
+}
+
+func (g *gitlabRepo) CreateProjectAccessToken(ctx context.Context, pid interface{}, opt *biz.CreateProjectAccessTokenOptions) (*biz.ProjectAccessToken, error) {
+	tokenOptions := &gitlab.CreateProjectAccessTokenOptions{
+		Name:        opt.Name,
+		Scopes:      opt.Scopes,
+		AccessLevel: (*gitlab.AccessLevelValue)(opt.AccessLevel),
+		ExpiresAt:   (*gitlab.ISOTime)(opt.ExpiresAt),
+	}
+
+	client, err := NewGitlabClient(ctx, g)
+	if err != nil {
+		return nil, err
+	}
+	token, _, err := client.CreateProjectAccessToken(pid, tokenOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	return &biz.ProjectAccessToken{
+		Name:        token.Name,
+		ID:          token.ID,
+		UserID:      token.UserID,
+		Scopes:      token.Scopes,
+		CreatedAt:   token.CreatedAt,
+		LastUsedAt:  token.LastUsedAt,
+		ExpiresAt:   (*biz.ISOTime)(token.ExpiresAt),
+		Active:      token.Active,
+		Revoked:     token.Revoked,
+		Token:       token.Token,
+		AccessLevel: biz.AccessLevelValue(token.AccessLevel),
+	}, nil
+}
+
+func (g *gitlabRepo) DeleteProjectAccessToken(ctx context.Context, pid interface{}, id int) error {
+	client, err := NewGitlabClient(ctx, g)
+	if err != nil {
+		return err
+	}
+
+	if _, err := client.DeleteProjectAccessToken(pid, id); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func NewGitlabClient(ctx context.Context, g *gitlabRepo) (gitlabclient.GitlabOperator, error) {
 	token := ctx.Value("token")
 	if token == nil {

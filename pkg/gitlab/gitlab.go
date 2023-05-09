@@ -25,8 +25,6 @@ import (
 )
 
 const (
-	FINGERPRINT        = "fingerprint"
-	DEPLOYID           = "id"
 	_CaCertPath        = "/usr/local/share/ca-certificates/ca.crt"
 	_ApiServerCertPath = "/usr/local/share/ca-certificates/apiserver.crt"
 	_ApiServerKeyPath  = "/usr/local/share/ca-certificates/apiserver.key"
@@ -209,6 +207,42 @@ func (g *GitlabClient) DeleteDeployKey(pid interface{}, deployKey int, options .
 
 func (g *GitlabClient) EnableProjectDeployKey(pid interface{}, deployKey int, options ...gitlab.RequestOptionFunc) (key *gitlab.ProjectDeployKey, res *gitlab.Response, err error) {
 	key, res, err = g.client.DeployKeys.EnableDeployKey(pid, deployKey, options...)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func (g *GitlabClient) GetProjectAccessToken(pid interface{}, id int, options ...gitlab.RequestOptionFunc) (token *gitlab.ProjectAccessToken, res *gitlab.Response, err error) {
+	token, res, err = g.client.ProjectAccessTokens.GetProjectAccessToken(pid, id, options...)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func (g *GitlabClient) ListProjectAccessToken(pid interface{}, opt *gitlab.ListProjectAccessTokensOptions, options ...gitlab.RequestOptionFunc) (tokens []*gitlab.ProjectAccessToken, res *gitlab.Response, err error) {
+	tokens, res, err = g.client.ProjectAccessTokens.ListProjectAccessTokens(pid, opt, options...)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func (g *GitlabClient) CreateProjectAccessToken(pid interface{}, opt *gitlab.CreateProjectAccessTokenOptions, options ...gitlab.RequestOptionFunc) (token *gitlab.ProjectAccessToken, res *gitlab.Response, err error) {
+	token, res, err = g.client.ProjectAccessTokens.CreateProjectAccessToken(pid, opt, options...)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func (g *GitlabClient) DeleteProjectAccessToken(pid interface{}, id int, options ...gitlab.RequestOptionFunc) (res *gitlab.Response, err error) {
+	res, err = g.client.ProjectAccessTokens.RevokeProjectAccessToken(pid, id, options...)
 	if err != nil {
 		return
 	}

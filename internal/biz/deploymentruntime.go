@@ -147,7 +147,7 @@ func (d *DeploymentRuntimeUsecase) SaveDeploymentRuntime(ctx context.Context, op
 		return fmt.Errorf("the referenced code repository %s does not exist", data.Spec.ManifestSource.CodeRepo)
 	}
 
-	data.Spec.ManifestSource.CodeRepo = fmt.Sprintf("%s%d", _RepoPrefix, int(project.Id))
+	data.Spec.ManifestSource.CodeRepo = fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
 	data.Spec.Product = fmt.Sprintf("%s%d", _ProductPrefix, int(group.Id))
 	resourceOptions := &resourceOptions{
 		resourceKind:      nodestree.DeploymentRuntime,

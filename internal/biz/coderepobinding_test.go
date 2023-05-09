@@ -516,9 +516,9 @@ func createFakeCodeRepoBindingNode(resource *resourcev1alpha1.CodeRepoBinding) *
 }
 
 func createFakeContainingCodeRepoBindingNodes(node *nodestree.Node) nodestree.Node {
-	projectID1 := fmt.Sprintf("%s%d", _RepoPrefix, 122)
+	projectID1 := fmt.Sprintf("%s%d", RepoPrefix, 122)
 	codeRepoNode1 := createFakeCodeRepoNode(createFakeCodeRepoResource(projectID1))
-	projectID2 := fmt.Sprintf("%s%d", _RepoPrefix, 123)
+	projectID2 := fmt.Sprintf("%s%d", RepoPrefix, 123)
 	codeRepoNod2 := createFakeCodeRepoNode(createFakeCodeRepoResource(projectID2))
 	return nodestree.Node{
 		Name:  defaultProjectName,

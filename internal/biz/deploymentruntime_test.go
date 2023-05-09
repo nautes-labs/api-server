@@ -82,7 +82,7 @@ var _ = Describe("Get deployment runtime", func() {
 	var (
 		resourceName = "runtime1"
 		toGetProject = &Project{Id: 1222, HttpUrlToRepo: fmt.Sprintf("ssh://git@gitlab.io/nautes-labs/%s.git", resourceName)}
-		repoID       = fmt.Sprintf("%s%d", _RepoPrefix, int(toGetProject.Id))
+		repoID       = fmt.Sprintf("%s%d", RepoPrefix, int(toGetProject.Id))
 		fakeResource = createDeploymentRuntimeResource(resourceName, repoID)
 		fakeNode     = createFakeDeploymentRuntimeNode(fakeResource)
 		fakeNodes    = createFakeDeployRuntimeNodes(fakeNode)
@@ -111,7 +111,7 @@ var _ = Describe("List deployment runtimes", func() {
 	var (
 		resourceName = "runtime1"
 		toGetProject = &Project{Id: 1222, HttpUrlToRepo: fmt.Sprintf("ssh://git@gitlab.io/nautes-labs/%s.git", resourceName)}
-		repoID       = fmt.Sprintf("%s%d", _RepoPrefix, int(toGetProject.Id))
+		repoID       = fmt.Sprintf("%s%d", RepoPrefix, int(toGetProject.Id))
 		fakeResource = createDeploymentRuntimeResource(resourceName, repoID)
 		fakeNode     = createFakeDeploymentRuntimeNode(fakeResource)
 		fakeNodes    = createFakeDeployRuntimeNodes(fakeNode)
@@ -158,7 +158,7 @@ var _ = Describe("Save deployment runtime", func() {
 	var (
 		resourceName          = "runtime1"
 		toGetProject          = &Project{Id: 1222, HttpUrlToRepo: fmt.Sprintf("ssh://git@gitlab.io/nautes-labs/%s.git", resourceName)}
-		repoID                = fmt.Sprintf("%s%d", _RepoPrefix, int(toGetProject.Id))
+		repoID                = fmt.Sprintf("%s%d", RepoPrefix, int(toGetProject.Id))
 		fakeResource          = createDeploymentRuntimeResource(resourceName, repoID)
 		fakeNode              = createFakeDeploymentRuntimeNode(fakeResource)
 		fakeNodes             = createFakeDeployRuntimeNodes(fakeNode)
@@ -359,7 +359,7 @@ var _ = Describe("Delete deployment runtime", func() {
 	var (
 		resourceName = "runtime1"
 		toGetProject = &Project{Id: 1222, HttpUrlToRepo: fmt.Sprintf("ssh://git@gitlab.io/nautes-labs/%s.git", resourceName)}
-		repoID       = fmt.Sprintf("%s%d", _RepoPrefix, int(toGetProject.Id))
+		repoID       = fmt.Sprintf("%s%d", RepoPrefix, int(toGetProject.Id))
 		fakeResource = createDeploymentRuntimeResource(resourceName, repoID)
 		fakeNode     = createFakeDeploymentRuntimeNode(fakeResource)
 		fakeNodes    = createFakeDeployRuntimeNodes(fakeNode)

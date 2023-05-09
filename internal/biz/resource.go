@@ -517,7 +517,7 @@ func (r *ResourcesUsecase) convertRepoNameToCodeRepo(ctx context.Context, produc
 		return "", fmt.Errorf("invalid authorization code repository specified, err: %v", err)
 	}
 
-	return fmt.Sprintf("%s%d", _RepoPrefix, int(project.Id)), nil
+	return fmt.Sprintf("%s%d", RepoPrefix, int(project.Id)), nil
 }
 
 func (r *ResourcesUsecase) convertProductToGroupName(ctx context.Context, productName string) (string, error) {
