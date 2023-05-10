@@ -3,7 +3,6 @@ package biz
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/go-kratos/kratos/v2/log"
 	commonv1 "github.com/nautes-labs/api-server/api/common/v1"
@@ -125,11 +124,6 @@ func (c *CodeRepoBindingUsecase) SaveCodeRepoBinding(ctx context.Context, option
 	}
 
 	if lastSpec != nil {
-		equal := reflect.DeepEqual(*lastSpec, data.Spec)
-		if equal {
-			return nil
-		}
-
 		if err := c.ClearLastDeployKeyResult(ctx, lastSpec); err != nil {
 			return err
 		}
