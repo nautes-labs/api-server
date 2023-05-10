@@ -250,7 +250,7 @@ func (p *ProductUsecase) DeleteProduct(ctx context.Context, productID string) er
 			return err
 		}
 
-		err = p.secretRepo.DeleteSecret(ctx, int(project.Id))
+		err = p.secretRepo.DeleteSecret(ctx, int(project.Id), DefaultUser, string(ReadOnly))
 		if err != nil {
 			return err
 		}

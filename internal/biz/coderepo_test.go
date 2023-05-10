@@ -471,7 +471,9 @@ var _ = Describe("Delete codeRepo", func() {
 	It("will deleted successfully", testUseCase.DeleteResourceSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(toGetCodeRepoPath)).Return(deletedProject, nil)
 		codeRepo.EXPECT().DeleteCodeRepo(gomock.Any(), gomock.Eq(int(deletedProject.Id))).Return(nil)
-		secretRepo.EXPECT().DeleteSecret(gomock.Any(), gomock.Eq(int(deletedProject.Id))).Return(nil)
+		secretRepo.EXPECT().DeleteSecret(gomock.Any(), gomock.Eq(int(deletedProject.Id)), DefaultUser, string(ReadOnly)).Return(nil)
+		secretRepo.EXPECT().DeleteSecret(gomock.Any(), gomock.Eq(int(deletedProject.Id)), DefaultUser, string(ReadWrite)).Return(nil)
+		secretRepo.EXPECT().DeleteSecret(gomock.Any(), gomock.Eq(int(deletedProject.Id)), DefaultUser, string(AccessTokenName)).Return(nil)
 
 		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, nil)
 		err := biz.DeleteCodeRepo(context.Background(), bizOptions)

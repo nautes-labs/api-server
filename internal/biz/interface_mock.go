@@ -369,17 +369,17 @@ func (mr *MockSecretrepoMockRecorder) AuthorizationSecret(ctx, id, destUser, git
 }
 
 // DeleteSecret mocks base method.
-func (m *MockSecretrepo) DeleteSecret(ctx context.Context, id int) error {
+func (m *MockSecretrepo) DeleteSecret(ctx context.Context, id int, user, permission string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteSecret", ctx, id)
+	ret := m.ctrl.Call(m, "DeleteSecret", ctx, id, user, permission)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteSecret indicates an expected call of DeleteSecret.
-func (mr *MockSecretrepoMockRecorder) DeleteSecret(ctx, id interface{}) *gomock.Call {
+func (mr *MockSecretrepoMockRecorder) DeleteSecret(ctx, id, user, permission interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSecret", reflect.TypeOf((*MockSecretrepo)(nil).DeleteSecret), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSecret", reflect.TypeOf((*MockSecretrepo)(nil).DeleteSecret), ctx, id, user, permission)
 }
 
 // GetDeployKey mocks base method.

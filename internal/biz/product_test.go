@@ -397,7 +397,7 @@ var _ = Describe("Delete product", func() {
 		codeRepo.EXPECT().DeleteGroup(gomock.Any(), int(defaultProductGroup.Id)).Return(nil)
 
 		secretRepo := NewMockSecretrepo(ctl)
-		secretRepo.EXPECT().DeleteSecret(gomock.Any(), int(defautlProject.Id)).Return(nil)
+		secretRepo.EXPECT().DeleteSecret(gomock.Any(), int(defautlProject.Id), DefaultUser, string(ReadOnly)).Return(nil)
 
 		gitRepo := NewMockGitRepo(ctl)
 

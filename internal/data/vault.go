@@ -382,14 +382,14 @@ func (v *vaultRepo) SaveClusterConfig(ctx context.Context, id, config string) er
 	return nil
 }
 
-func (v *vaultRepo) DeleteSecret(ctx context.Context, id int) error {
+func (v *vaultRepo) DeleteSecret(ctx context.Context, id int, user, permission string) error {
 	repoID := fmt.Sprintf("%s%d", biz.RepoPrefix, id)
 	opt := &vaultproxyv1.GitRequest{
 		Meta: &vaultproxyv1.GitMeta{
 			ProviderType: string(v.config.Git.GitType),
 			Id:           repoID,
-			Username:     _USERNAME,
-			Permission:   _PERMISSION,
+			Username:     user,
+			Permission:   permission,
 		},
 		// TODO:
 		// This is a bug, Subsequent deletion required.

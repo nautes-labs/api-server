@@ -747,7 +747,17 @@ func (c *CodeRepoUsecase) DeleteCodeRepo(ctx context.Context, options *BizOption
 			return err
 		}
 
-		err = c.secretRepo.DeleteSecret(ctx, int(project.Id))
+		err = c.secretRepo.DeleteSecret(ctx, int(project.Id), DefaultUser, string(ReadOnly))
+		if err != nil {
+			return err
+		}
+
+		err = c.secretRepo.DeleteSecret(ctx, int(project.Id), DefaultUser, string(ReadWrite))
+		if err != nil {
+			return err
+		}
+
+		err = c.secretRepo.DeleteSecret(ctx, int(project.Id), DefaultUser, string(AccessTokenName))
 		if err != nil {
 			return err
 		}

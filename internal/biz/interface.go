@@ -47,7 +47,7 @@ type Secretrepo interface {
 	SaveDeployKey(ctx context.Context, id, key, user, permission string, extendKVs map[string]string) error
 	SaveProjectAccessToken(ctx context.Context, id, token, user, permission string, extendKVs map[string]string) error
 	SaveClusterConfig(ctx context.Context, id, config string) error
-	DeleteSecret(ctx context.Context, id int) error
+	DeleteSecret(ctx context.Context, id int, user, permission string) error
 	AuthorizationSecret(ctx context.Context, id int, destUser, gitType, mountPath string) error
 	GetProjectAccessToken(ctx context.Context, secretOptions *SecretOptions) (*AccessTokenSecretData, error)
 }
