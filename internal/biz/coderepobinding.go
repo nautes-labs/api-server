@@ -346,10 +346,10 @@ func (c *CodeRepoBindingUsecase) CheckReference(options nodestree.CompareOptions
 
 	objKey := client.ObjectKey{
 		Namespace: codeRepoBinding.Spec.Product,
-		Name:      codeRepoBinding.Name,
+		Name:      codeRepoBinding.Spec.CodeRepo,
 	}
 
-	err := k8sClient.Get(context.TODO(), objKey, &resourcev1alpha1.CodeRepoBinding{})
+	err := k8sClient.Get(context.TODO(), objKey, &resourcev1alpha1.CodeRepo{})
 	if err != nil {
 		return true, err
 	}
