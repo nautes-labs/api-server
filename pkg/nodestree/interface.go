@@ -22,6 +22,7 @@ type NodesTree interface {
 	Compare(options CompareOptions) error
 	InsertNodes(nodes, resource *Node) (*Node, error)
 	GetNode(nodes *Node, kind, name string) (node *Node)
+	GetNodes() (*Node, error)
 	RemoveNode(nodes *Node, node *Node) (*Node, error)
 }
 

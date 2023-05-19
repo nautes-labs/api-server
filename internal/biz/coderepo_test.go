@@ -110,7 +110,7 @@ var _ = Describe("Get codeRepo", func() {
 		id, _ := utilstrings.ExtractNumber("product-", fakeResource.Spec.Product)
 		codeRepo.EXPECT().GetGroup(gomock.Any(), id).Return(defaultProductGroup, nil)
 
-		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil)
+		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil, nil)
 		item, _, err := biz.GetCodeRepo(context.Background(), resourceName, defaultGroupName)
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(item).To(Equal(fakeResource))
@@ -119,7 +119,7 @@ var _ = Describe("Get codeRepo", func() {
 	It("will fail when resource is not found", testUseCase.GetResourceFail(func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(toGetCodeRepoPath)).Return(project, nil)
 
-		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, nil)
+		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, nil, nil)
 		_, _, err := biz.GetCodeRepo(context.Background(), resourceName, defaultGroupName)
 		Expect(err).Should(HaveOccurred())
 	}))
@@ -131,7 +131,7 @@ var _ = Describe("List coderepos", func() {
 		fakeResource       = createFakeCodeRepoResource(resourceName)
 		fakeNode           = createFakeCodeRepoNode(fakeResource)
 		fakeNodes          = createFakeCcontainingCodeRepoNodes(fakeNode)
-		codeRepoAndProject = &CodeRepoAndProject{
+		codeRepoAndProject = &CodeRepoWithProject{
 			CodeRepo: fakeResource,
 			Project:  defautlProject,
 		}
@@ -143,7 +143,7 @@ var _ = Describe("List coderepos", func() {
 		codeRepo.EXPECT().GetGroup(gomock.Any(), gid).Return(defaultProductGroup, nil)
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), pid).Return(defautlProject, nil)
 
-		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, nil)
+		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, nil, nil)
 		results, err := biz.ListCodeRepos(ctx, defaultGroupName)
 		Expect(err).ShouldNot(HaveOccurred())
 		for _, result := range results {
@@ -152,7 +152,7 @@ var _ = Describe("List coderepos", func() {
 	}))
 
 	It("does not conform to the template layout", testUseCase.ListResourceNotMatch(fakeNodes, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, nil)
+		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, nil, nil)
 		_, err := biz.ListCodeRepos(ctx, defaultGroupName)
 		Expect(err).Should(HaveOccurred())
 	}))
@@ -160,11 +160,18 @@ var _ = Describe("List coderepos", func() {
 
 var _ = Describe("Save codeRepo", func() {
 	var (
-		resourceName           = "toSaveCodeRepo"
-		fakeResource           = createFakeCodeRepoResource(resourceName)
-		fakeNode               = createFakeCodeRepoNode(fakeResource)
-		fakeNodes              = createFakeCcontainingCodeRepoNodes(fakeNode)
-		toSaveProject          = &Project{Id: 1222, HttpUrlToRepo: "https://gitlab.com/nautes-labs/test.git"}
+		resourceName  = "toSaveCodeRepo"
+		fakeResource  = createFakeCodeRepoResource(resourceName)
+		fakeNode      = createFakeCodeRepoNode(fakeResource)
+		fakeNodes     = createFakeCcontainingCodeRepoNodes(fakeNode)
+		toSaveProject = &Project{
+			Id:            1222,
+			HttpUrlToRepo: "https://gitlab.com/nautes-labs/test.git",
+			Namespace: &ProjectNamespace{
+				ID:   123,
+				Path: defaultGroupName,
+			},
+		}
 		toSaveProjectDeployKey = &ProjectDeployKey{
 			ID:  2013,
 			Key: "FingerprintData",
@@ -225,6 +232,7 @@ var _ = Describe("Save codeRepo", func() {
 			SecretEngine: SecretsGitEngine,
 			SecretKey:    SecretsAccessToken,
 		}
+		codeRepoKind = nodestree.CodeRepo
 	)
 
 	BeforeEach(func() {
@@ -235,7 +243,7 @@ var _ = Describe("Save codeRepo", func() {
 	})
 
 	It("failed to get product info", testUseCase.GetProductFail(func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, nil)
+		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, nil, nil)
 		err := biz.SaveCodeRepo(context.Background(), bizOptions, data, options)
 		Expect(err).Should(HaveOccurred())
 	}))
@@ -244,14 +252,18 @@ var _ = Describe("Save codeRepo", func() {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(toGetCodeRepoPath)).Return(toSaveProject, nil)
 		codeRepo.EXPECT().UpdateCodeRepo(gomock.Any(), gomock.Eq(int(toSaveProject.Id)), options).Return(toSaveProject, nil)
 
-		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, nil)
+		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, nil, nil)
 		err := biz.SaveCodeRepo(context.Background(), bizOptions, data, options)
 		Expect(err).Should(HaveOccurred())
 	}))
 
 	It("will created successfully", testUseCase.CreateResourceSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(toGetCodeRepoPath)).Return(nil, ErrorProjectNotFound)
+		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(defaultProjectPath)).Return(defautlProject, nil)
+		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Any()).Return(toSaveProject, nil).AnyTimes()
+		codeRepo.EXPECT().GetGroup(gomock.Any(), gomock.Eq(int(defaultProductGroup.Id))).Return(defaultProductGroup, nil)
 		codeRepo.EXPECT().CreateCodeRepo(gomock.Any(), gomock.Eq(int(defaultProductGroup.Id)), options).Return(toSaveProject, nil)
+
 		codeRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(toSaveProjectDeployKey, nil).Times(2)
 		codeRepo.EXPECT().ListDeployKeys(gomock.Any(), gomock.Eq(int(toSaveProject.Id)), gomock.Any()).Return(listDeployKeys, nil)
 		codeRepo.EXPECT().DeleteDeployKey(gomock.Any(), gomock.Eq(int(toSaveProject.Id)), int(2014)).Return(nil).AnyTimes()
@@ -264,16 +276,31 @@ var _ = Describe("Save codeRepo", func() {
 		secretRepo.EXPECT().GetProjectAccessToken(gomock.Any(), secretOptions).Return(nil, commonv1.ErrorSecretNotFound("secret data is not found"))
 		secretRepo.EXPECT().SaveProjectAccessToken(gomock.Any(), gomock.Eq(convertRepoName(int(toSaveProject.Id))), gomock.Eq(projectAccessToken.Token), gomock.Any(), gomock.Any(), gomock.Eq(accessTokenExtendKVs)).Return(nil)
 
+		nodestree.EXPECT().GetNodes().Return(&fakeNodes, nil).AnyTimes()
+		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Eq(codeRepoKind), gomock.Any()).Return(fakeNode).AnyTimes()
+
+		cloneRepositoryParam := &CloneRepositoryParam{
+			URL:   toSaveProject.HttpUrlToRepo,
+			User:  _GitUser,
+			Email: _GitEmail,
+		}
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositaryPath, nil).AnyTimes()
+
 		client.EXPECT().List(context.Background(), gomock.Any(), gomock.Any()).Return(nil)
 
-		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, client)
+		codeRepoBindingUsecase := NewCodeRepoCodeRepoBindingUsecase(logger, codeRepo, secretRepo, nodestree, resourceUseCase, nautesConfigs, nil)
+
+		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, codeRepoBindingUsecase, client)
 		err := biz.SaveCodeRepo(context.Background(), bizOptions, data, options)
 		Expect(err).ShouldNot(HaveOccurred())
 	}))
 
 	It("will updated successfully", testUseCase.UpdateResoureSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(toGetCodeRepoPath)).Return(toSaveProject, nil)
+		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(defaultProjectPath)).Return(defautlProject, nil)
+		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Any()).Return(toSaveProject, nil).AnyTimes()
+		codeRepo.EXPECT().GetGroup(gomock.Any(), gomock.Eq(int(defaultProductGroup.Id))).Return(defaultProductGroup, nil)
 		codeRepo.EXPECT().UpdateCodeRepo(gomock.Any(), gomock.Eq(int(toSaveProject.Id)), options).Return(toSaveProject, nil)
+
 		codeRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(toSaveProjectDeployKey, nil).Times(2)
 		codeRepo.EXPECT().ListDeployKeys(gomock.Any(), int(toSaveProject.Id), gomock.Any()).Return(listDeployKeys, nil)
 		codeRepo.EXPECT().DeleteDeployKey(gomock.Any(), int(toSaveProject.Id), int(2014)).Return(nil).AnyTimes()
@@ -284,15 +311,27 @@ var _ = Describe("Save codeRepo", func() {
 		secretRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Eq(convertRepoName(int(toSaveProject.Id))), gomock.Any(), gomock.Any(), gomock.Any(), extendKVs).Return(nil).Times(2)
 		secretRepo.EXPECT().GetProjectAccessToken(gomock.Any(), secretOptions).Return(accessTokenSecretData, nil)
 
-		client.EXPECT().List(context.Background(), gomock.Any(), gomock.Any()).Return(nil)
+		cloneRepositoryParam := &CloneRepositoryParam{
+			URL:   toSaveProject.HttpUrlToRepo,
+			User:  _GitUser,
+			Email: _GitEmail,
+		}
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositaryPath, nil).AnyTimes()
 
-		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, client)
+		nodestree.EXPECT().GetNodes().Return(&fakeNodes, nil).AnyTimes()
+		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Eq(codeRepoKind), gomock.Any()).Return(fakeNode).AnyTimes()
+
+		client.EXPECT().List(context.Background(), gomock.Any(), gomock.Any()).Return(nil)
+		codeRepoBindingUsecase := NewCodeRepoCodeRepoBindingUsecase(logger, codeRepo, secretRepo, nodestree, resourceUseCase, nautesConfigs, nil)
+
+		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, codeRepoBindingUsecase, client)
 		err := biz.SaveCodeRepo(context.Background(), bizOptions, data, options)
 		Expect(err).ShouldNot(HaveOccurred())
 	}))
 
 	It("auto merge conflict, updated successfully", testUseCase.UpdateResourceAndAutoMerge(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(toGetCodeRepoPath)).Return(toSaveProject, nil)
+		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Any()).Return(toSaveProject, nil).AnyTimes()
+		codeRepo.EXPECT().GetGroup(gomock.Any(), gomock.Eq(int(defaultProductGroup.Id))).Return(defaultProductGroup, nil)
 		codeRepo.EXPECT().UpdateCodeRepo(gomock.Any(), gomock.Eq(int(toSaveProject.Id)), options).Return(toSaveProject, nil)
 		codeRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(toSaveProjectDeployKey, nil).Times(2)
 		codeRepo.EXPECT().ListDeployKeys(gomock.Any(), int(toSaveProject.Id), gomock.Any()).Return(listDeployKeys, nil)
@@ -306,9 +345,20 @@ var _ = Describe("Save codeRepo", func() {
 		secretRepo.EXPECT().GetProjectAccessToken(gomock.Any(), secretOptions).Return(nil, commonv1.ErrorSecretNotFound("secret data is not found"))
 		secretRepo.EXPECT().SaveProjectAccessToken(gomock.Any(), gomock.Eq(convertRepoName(int(toSaveProject.Id))), gomock.Eq(projectAccessToken.Token), gomock.Any(), gomock.Any(), gomock.Eq(accessTokenExtendKVs)).Return(nil)
 
-		client.EXPECT().List(context.Background(), gomock.Any(), gomock.Any()).Return(nil)
+		cloneRepositoryParam := &CloneRepositoryParam{
+			URL:   toSaveProject.HttpUrlToRepo,
+			User:  _GitUser,
+			Email: _GitEmail,
+		}
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositaryPath, nil).AnyTimes()
 
-		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, client)
+		nodestree.EXPECT().GetNodes().Return(&fakeNodes, nil).AnyTimes()
+		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Eq(codeRepoKind), gomock.Any()).Return(fakeNode).AnyTimes()
+
+		client.EXPECT().List(context.Background(), gomock.Any(), gomock.Any()).Return(nil)
+		codeRepoBindingUsecase := NewCodeRepoCodeRepoBindingUsecase(logger, codeRepo, secretRepo, nodestree, resourceUseCase, nautesConfigs, client)
+
+		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, codeRepoBindingUsecase, client)
 		err := biz.SaveCodeRepo(context.Background(), bizOptions, data, options)
 		Expect(err).ShouldNot(HaveOccurred())
 	}))
@@ -317,8 +367,9 @@ var _ = Describe("Save codeRepo", func() {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(toGetCodeRepoPath)).Return(nil, ErrorProjectNotFound)
 		codeRepo.EXPECT().CreateCodeRepo(gomock.Any(), gomock.Eq(int(defaultProductGroup.Id)), options).Return(toSaveProject, nil)
 		client.EXPECT().List(context.Background(), gomock.Any(), gomock.Any()).Return(nil)
+		codeRepoBindingUsecase := NewCodeRepoCodeRepoBindingUsecase(logger, codeRepo, secretRepo, nodestree, resourceUseCase, nautesConfigs, client)
 
-		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, client)
+		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, codeRepoBindingUsecase, client)
 		err := biz.SaveCodeRepo(context.Background(), bizOptions, data, options)
 		Expect(err).Should(HaveOccurred())
 	}))
@@ -328,8 +379,9 @@ var _ = Describe("Save codeRepo", func() {
 		codeRepo.EXPECT().CreateCodeRepo(gomock.Any(), gomock.Eq(int(defaultProductGroup.Id)), options).Return(toSaveProject, nil)
 
 		client.EXPECT().List(context.Background(), gomock.Any(), gomock.Any()).Return(nil)
+		codeRepoBindingUsecase := NewCodeRepoCodeRepoBindingUsecase(logger, codeRepo, secretRepo, nodestree, resourceUseCase, nautesConfigs, client)
 
-		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, client)
+		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, codeRepoBindingUsecase, client)
 		err := biz.SaveCodeRepo(context.Background(), bizOptions, data, options)
 		Expect(err).Should(HaveOccurred())
 	}))
@@ -338,8 +390,9 @@ var _ = Describe("Save codeRepo", func() {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(toGetCodeRepoPath)).Return(toSaveProject, nil)
 		codeRepo.EXPECT().UpdateCodeRepo(gomock.Any(), gomock.Eq(int(toSaveProject.Id)), options).Return(toSaveProject, nil)
 		client.EXPECT().List(context.Background(), gomock.Any(), gomock.Any()).Return(nil)
+		codeRepoBindingUsecase := NewCodeRepoCodeRepoBindingUsecase(logger, codeRepo, secretRepo, nodestree, resourceUseCase, nautesConfigs, client)
 
-		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, client)
+		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, codeRepoBindingUsecase, client)
 		err := biz.SaveCodeRepo(context.Background(), bizOptions, data, options)
 		Expect(err).Should(HaveOccurred())
 	}))
@@ -348,15 +401,16 @@ var _ = Describe("Save codeRepo", func() {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(toGetCodeRepoPath)).Return(toSaveProject, nil)
 		codeRepo.EXPECT().UpdateCodeRepo(gomock.Any(), gomock.Eq(int(toSaveProject.Id)), options).Return(toSaveProject, nil)
 		client.EXPECT().List(context.Background(), gomock.Any(), gomock.Any()).Return(nil)
+		codeRepoBindingUsecase := NewCodeRepoCodeRepoBindingUsecase(logger, codeRepo, secretRepo, nodestree, resourceUseCase, nautesConfigs, client)
 
-		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, client)
+		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, codeRepoBindingUsecase, client)
 		err := biz.SaveCodeRepo(context.Background(), bizOptions, data, options)
 		Expect(err).Should(HaveOccurred())
 	}))
 
 	Describe("check reference by resources", func() {
 		It("incorrect product name", testUseCase.CheckReferenceButIncorrectProduct(fakeNodes, func(options nodestree.CompareOptions, nodestree *nodestree.MockNodesTree) {
-			biz := NewCodeRepoUsecase(logger, nil, nil, nodestree, nautesConfigs, nil, nil)
+			biz := NewCodeRepoUsecase(logger, nil, nil, nodestree, nautesConfigs, nil, nil, nil)
 			ok, err := biz.CheckReference(options, fakeNode, nil)
 			Expect(err).Should(HaveOccurred())
 			Expect(ok).To(BeTrue())
@@ -373,7 +427,7 @@ var _ = Describe("Save codeRepo", func() {
 			newResouce.Spec.Webhook.Events = append(newResouce.Spec.Webhook.Events, "errorWebhook")
 			node := createFakeCodeRepoNode(newResouce)
 
-			biz := NewCodeRepoUsecase(logger, nil, nil, nodestree, nautesConfigs, nil, nil)
+			biz := NewCodeRepoUsecase(logger, nil, nil, nodestree, nautesConfigs, nil, nil, nil)
 			ok, err := biz.CheckReference(options, node, nil)
 			Expect(err).Should(HaveOccurred())
 			Expect(ok).To(BeTrue())
@@ -387,7 +441,7 @@ var _ = Describe("Save codeRepo", func() {
 			nodestree := nodestree.NewMockNodesTree(ctl)
 			nodestree.EXPECT().AppendOperators(gomock.Any())
 
-			biz := NewCodeRepoUsecase(logger, nil, nil, nodestree, nautesConfigs, nil, nil)
+			biz := NewCodeRepoUsecase(logger, nil, nil, nodestree, nautesConfigs, nil, nil, nil)
 			ok, err := biz.CheckReference(options, fakeNode, nil)
 			Expect(err).Should(HaveOccurred())
 			Expect(ok).To(BeTrue())
@@ -413,7 +467,7 @@ var _ = Describe("Save codeRepo", func() {
 			projectNodes := createProjectNodes(createProjectNode(createProjectResource(projectName)))
 			options.Nodes.Children = append(options.Nodes.Children, projectNodes.Children...)
 
-			biz := NewCodeRepoUsecase(logger, nil, nil, nodestree, nautesConfigs, nil, nil)
+			biz := NewCodeRepoUsecase(logger, nil, nil, nodestree, nautesConfigs, nil, nil, nil)
 			ok, err := biz.CheckReference(options, fakeNode, client)
 			Expect(err).Should(HaveOccurred())
 			Expect(ok).To(BeTrue())
@@ -439,7 +493,7 @@ var _ = Describe("Save codeRepo", func() {
 			projectNodes := createProjectNodes(createProjectNode(createProjectResource(projectName)))
 			options.Nodes.Children = append(options.Nodes.Children, projectNodes.Children...)
 
-			biz := NewCodeRepoUsecase(logger, nil, nil, nodestree, nautesConfigs, nil, nil)
+			biz := NewCodeRepoUsecase(logger, nil, nil, nodestree, nautesConfigs, nil, nil, nil)
 			ok, err := biz.CheckReference(options, fakeNode, client)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(ok).To(BeTrue())
@@ -449,15 +503,25 @@ var _ = Describe("Save codeRepo", func() {
 
 var _ = Describe("Delete codeRepo", func() {
 	var (
-		resourceName      = "toDeleteCodeRepo"
-		fakeResource      = createFakeCodeRepoResource(resourceName)
-		fakeNode          = createFakeCodeRepoNode(fakeResource)
-		fakeNodes         = createFakeCcontainingCodeRepoNodes(fakeNode)
-		deletedProject    = &Project{Id: 1222}
-		toGetCodeRepoPath = fmt.Sprintf("%s/%s", defaultProductGroup.Path, resourceName)
-		bizOptions        = &BizOptions{
+		resourceName   = "toDeleteCodeRepo"
+		fakeResource   = createFakeCodeRepoResource(resourceName)
+		fakeNode       = createFakeCodeRepoNode(fakeResource)
+		fakeNodes      = createFakeCcontainingCodeRepoNodes(fakeNode)
+		deletedProject = &Project{Id: 1222}
+		bizOptions     = &BizOptions{
 			ResouceName: resourceName,
 			ProductName: defaultGroupName,
+		}
+		codeRepoKind   = nodestree.CodeRepo
+		listDeployKeys = []*ProjectDeployKey{
+			{
+				ID:  2013,
+				Key: "Key1",
+			},
+			{
+				ID:  2014,
+				Key: "Key2",
+			},
 		}
 	)
 
@@ -469,22 +533,28 @@ var _ = Describe("Delete codeRepo", func() {
 	})
 
 	It("will deleted successfully", testUseCase.DeleteResourceSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(toGetCodeRepoPath)).Return(deletedProject, nil)
+		codeRepo.EXPECT().GetGroup(gomock.Any(), gomock.Eq(int(defaultProductGroup.Id))).Return(defaultProductGroup, nil)
+		codeRepo.EXPECT().ListDeployKeys(gomock.Any(), int(deletedProject.Id), gomock.Any()).Return(listDeployKeys, nil)
+		codeRepo.EXPECT().DeleteDeployKey(gomock.Any(), int(deletedProject.Id), gomock.Any()).Return(nil).AnyTimes()
+		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Any()).Return(deletedProject, nil).AnyTimes()
 		codeRepo.EXPECT().DeleteCodeRepo(gomock.Any(), gomock.Eq(int(deletedProject.Id))).Return(nil)
 		secretRepo.EXPECT().DeleteSecret(gomock.Any(), gomock.Eq(int(deletedProject.Id)), DefaultUser, string(ReadOnly)).Return(nil)
 		secretRepo.EXPECT().DeleteSecret(gomock.Any(), gomock.Eq(int(deletedProject.Id)), DefaultUser, string(ReadWrite)).Return(nil)
 		secretRepo.EXPECT().DeleteSecret(gomock.Any(), gomock.Eq(int(deletedProject.Id)), DefaultUser, string(AccessTokenName)).Return(nil)
+		codeRepoBindingUsecase := NewCodeRepoCodeRepoBindingUsecase(logger, codeRepo, secretRepo, nodestree, resourceUseCase, nautesConfigs, client)
 
-		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, nil)
+		cloneRepositoryParam := &CloneRepositoryParam{
+			URL:   deletedProject.HttpUrlToRepo,
+			User:  _GitUser,
+			Email: _GitEmail,
+		}
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositaryPath, nil).AnyTimes()
+
+		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Eq(codeRepoKind), gomock.Any()).Return(fakeNode).AnyTimes()
+		nodestree.EXPECT().GetNodes().Return(&fakeNodes, nil).AnyTimes()
+
+		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, codeRepoBindingUsecase, client)
 		err := biz.DeleteCodeRepo(context.Background(), bizOptions)
 		Expect(err).ShouldNot(HaveOccurred())
-	}))
-
-	It("modify resource but non compliant layout standards", testUseCase.DeleteResourceErrorLayout(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(toGetCodeRepoPath)).Return(deletedProject, nil)
-
-		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, nil)
-		err := biz.DeleteCodeRepo(context.Background(), bizOptions)
-		Expect(err).Should(HaveOccurred())
 	}))
 })

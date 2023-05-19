@@ -945,10 +945,10 @@ func (m *SaveRequest_Body) validate(all bool) error {
 
 	// no validation rules for Product
 
-	if utf8.RuneCountInString(m.GetPermissions()) < 1 {
+	if _, ok := _SaveRequest_Body_Permissions_InLookup[m.GetPermissions()]; !ok {
 		err := SaveRequest_BodyValidationError{
 			field:  "Permissions",
-			reason: "value length must be at least 1 runes",
+			reason: "value must be in list [readonly readwrite]",
 		}
 		if !all {
 			return err
@@ -1044,3 +1044,8 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = SaveRequest_BodyValidationError{}
+
+var _SaveRequest_Body_Permissions_InLookup = map[string]struct{}{
+	"readonly":  {},
+	"readwrite": {},
+}

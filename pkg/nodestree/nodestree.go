@@ -65,12 +65,12 @@ type nodesTree struct {
 	client      client.Client
 	config      *Config
 	operators   []NodesOperator
+	nodes       *Node
 }
 
 type CompareOptions struct {
-	Nodes            Node
-	ProductName      string
-	LocalProjectPath string
+	Nodes       Node
+	ProductName string
 }
 
 func NewNodestree(fileOptions *FileOptions, config *Config, client client.Client) NodesTree {
@@ -217,7 +217,17 @@ func (i *nodesTree) Load(path string) (root Node, err error) {
 		}
 	}
 
+	i.nodes = &root
+
 	return
+}
+
+func (i *nodesTree) GetNodes() (*Node, error) {
+	if i.nodes == nil {
+		return nil, fmt.Errorf("the nodes is nill, please load the nodes")
+	}
+
+	return i.nodes, nil
 }
 
 // explorerRecursive traverse of the file tree

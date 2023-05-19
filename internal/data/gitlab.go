@@ -164,6 +164,15 @@ func (g *gitlabRepo) GetCodeRepo(ctx context.Context, pid interface{}) (*biz.Pro
 		SshUrlToRepo:      project.SSHURLToRepo,
 		HttpUrlToRepo:     project.HTTPURLToRepo,
 		PathWithNamespace: project.PathWithNamespace,
+		Namespace: &biz.ProjectNamespace{
+			ID:        project.Namespace.ID,
+			Name:      project.Namespace.Name,
+			Path:      project.Namespace.Path,
+			Kind:      project.Namespace.Kind,
+			FullPath:  project.Namespace.FullPath,
+			AvatarURL: project.Namespace.AvatarURL,
+			WebURL:    project.Namespace.WebURL,
+		},
 	}, nil
 }
 
@@ -328,6 +337,54 @@ func (g *gitlabRepo) ListAllGroups(ctx context.Context) ([]*biz.Group, error) {
 	}
 
 	return Groups, nil
+}
+
+func (g *gitlabRepo) ListAllDeployKeys(ctx context.Context, opt *biz.ListOptions) ([]*biz.ProjectDeployKey, error) {
+	client, err := NewGitlabClient(ctx, g)
+	if err != nil {
+		return nil, err
+	}
+
+	keys, res, err := client.ListAllDeployKeys(&gitlab.ListInstanceDeployKeysOptions{
+		ListOptions: gitlab.ListOptions{
+			Page:    opt.Page,
+			PerPage: opt.PerPage,
+		},
+	})
+	if err != nil && res != nil && res.StatusCode == 404 {
+		return nil, commonv1.ErrorDeploykeyNotFound("failed to list deploykeys, err: %s", err)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	projectDeployKeys := []*biz.ProjectDeployKey{}
+	projectsWithWriteAccess := []*biz.DeployKeyProject{}
+	for _, key := range keys {
+		for _, deployKeyProject := range key.ProjectsWithWriteAccess {
+			projectsWithWriteAccess = append(projectsWithWriteAccess, &biz.DeployKeyProject{
+				ID:                deployKeyProject.ID,
+				Description:       deployKeyProject.Description,
+				Name:              deployKeyProject.Name,
+				NameWithNamespace: deployKeyProject.NameWithNamespace,
+				Path:              deployKeyProject.Path,
+				PathWithNamespace: deployKeyProject.PathWithNamespace,
+				CreatedAt:         deployKeyProject.CreatedAt,
+			})
+		}
+		projectDeployKey := &biz.ProjectDeployKey{
+			Title:                   key.Title,
+			ID:                      key.ID,
+			Key:                     key.Key,
+			CreatedAt:               key.CreatedAt,
+			Fingerprint:             key.Fingerprint,
+			ProjectsWithWriteAccess: projectsWithWriteAccess,
+		}
+		projectDeployKeys = append(projectDeployKeys, projectDeployKey)
+	}
+
+	return projectDeployKeys, nil
 }
 
 func (g *gitlabRepo) ListDeployKeys(ctx context.Context, pid interface{}, opt *biz.ListOptions) ([]*biz.ProjectDeployKey, error) {

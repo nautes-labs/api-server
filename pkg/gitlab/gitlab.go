@@ -187,6 +187,15 @@ func (g *GitlabClient) ListDeployKeys(pid interface{}, opt *gitlab.ListProjectDe
 	return
 }
 
+func (g *GitlabClient) ListAllDeployKeys(opt *gitlab.ListInstanceDeployKeysOptions, options ...gitlab.RequestOptionFunc) (keys []*gitlab.InstanceDeployKey, res *gitlab.Response, err error) {
+	keys, res, err = g.client.DeployKeys.ListAllDeployKeys(opt, options...)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
 func (g *GitlabClient) AddDeployKey(pid interface{}, opt *gitlab.AddDeployKeyOptions, options ...gitlab.RequestOptionFunc) (key *gitlab.ProjectDeployKey, res *gitlab.Response, err error) {
 	key, res, err = g.client.DeployKeys.AddDeployKey(pid, opt, options...)
 	if err != nil {

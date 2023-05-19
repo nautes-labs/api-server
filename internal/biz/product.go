@@ -39,6 +39,16 @@ type Group struct {
 	ParentId    int32
 }
 
+type ProjectNamespace struct {
+	ID        int
+	Name      string
+	Path      string
+	Kind      string
+	FullPath  string
+	AvatarURL string
+	WebURL    string
+}
+
 type Project struct {
 	Id                int32
 	Name              string
@@ -49,6 +59,7 @@ type Project struct {
 	SshUrlToRepo      string
 	HttpUrlToRepo     string
 	PathWithNamespace string
+	Namespace         *ProjectNamespace
 }
 
 // ProductUsecase is a Product usecase.
@@ -211,12 +222,12 @@ func (p *ProductUsecase) saveDefaultProject(ctx context.Context, group *Group) (
 }
 
 func (p *ProductUsecase) grantAuthorizationDefaultProject(ctx context.Context, project *Project) error {
-	projectDeployKey, err := p.codeRepoUsecase.SaveDeployKey(ctx, int(project.Id), false)
+	projectDeployKey, err := p.codeRepoUsecase.saveDeployKey(ctx, int(project.Id), false)
 	if err != nil {
 		return err
 	}
 
-	if err := p.codeRepoUsecase.RemoveInvalidDeploykey(ctx, int(project.Id), projectDeployKey); err != nil {
+	if err := p.codeRepoUsecase.removeInvalidDeploykey(ctx, int(project.Id), projectDeployKey); err != nil {
 		return err
 	}
 

@@ -97,9 +97,8 @@ func generateNodeInfos(options CompareOptions, configs []configInfo) map[string]
 		for _, config := range configs {
 			if node.IsDir {
 				newOptions := CompareOptions{
-					Nodes:            *node,
-					ProductName:      options.ProductName,
-					LocalProjectPath: options.LocalProjectPath,
+					Nodes:       *node,
+					ProductName: options.ProductName,
 				}
 
 				newMapping := generateNodeInfos(newOptions, configs)

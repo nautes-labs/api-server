@@ -16,6 +16,8 @@ package biz
 
 import (
 	"context"
+
+	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 )
 
 type CodeRepo interface {
@@ -25,6 +27,7 @@ type CodeRepo interface {
 	DeleteCodeRepo(ctx context.Context, pid interface{}) error
 	GetCodeRepo(ctx context.Context, pid interface{}) (*Project, error)
 	ListDeployKeys(ctx context.Context, pid interface{}, opt *ListOptions) ([]*ProjectDeployKey, error)
+	ListAllDeployKeys(ctx context.Context, opt *ListOptions) ([]*ProjectDeployKey, error)
 	GetDeployKey(ctx context.Context, pid interface{}, deployKeyID int) (*ProjectDeployKey, error)
 	EnableProjectDeployKey(ctx context.Context, pid interface{}, deployKey int) (*ProjectDeployKey, error)
 	SaveDeployKey(ctx context.Context, pid interface{}, title string, canPush bool, publicKey []byte) (*ProjectDeployKey, error)
@@ -65,4 +68,9 @@ type GitRepo interface {
 type DexRepo interface {
 	UpdateRedirectURIs(redirectURI string) error
 	RemoveRedirectURIs(redirectURIs string) error
+}
+
+type Kubernetes interface {
+	ListCodeRepo(ctx context.Context) (*resourcev1alpha1.CodeRepoList, error)
+	ListCodeRepoBindings(ctx context.Context) (*resourcev1alpha1.CodeRepoBindingList, error)
 }

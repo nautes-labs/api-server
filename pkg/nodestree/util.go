@@ -67,13 +67,24 @@ func GetResourceValue(c interface{}, field, key string) string {
 	return ""
 }
 
-func ListsResourceNodes(nodes Node, kind string) (list []*Node) {
+type NodeFilterOptions func(node *Node) bool
+
+func ListsResourceNodes(nodes Node, kind string, options ...NodeFilterOptions) (list []*Node) {
 	for _, node := range nodes.Children {
 		if node.IsDir {
-			list = append(list, ListsResourceNodes(*node, kind)...)
+			list = append(list, ListsResourceNodes(*node, kind, options...)...)
 		} else {
 			if node.Kind == kind {
-				list = append(list, node)
+				isAppend := true
+				for _, fn := range options {
+					if !fn(node) {
+						isAppend = false
+						break
+					}
+				}
+				if isAppend {
+					list = append(list, node)
+				}
 			}
 		}
 	}

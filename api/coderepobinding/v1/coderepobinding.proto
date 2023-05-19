@@ -73,7 +73,7 @@ message SaveRequest {
     // If the project list has values, it means that the code repo is authorized to the specified projects.
     repeated string projects = 2 [json_name = "projects"];
     // Authorization Permissions, readwrite or readonly.
-    string permissions = 3 [json_name = "permissions",  (validate.rules).string.min_len = 1];
+    string permissions = 3 [json_name = "permissions",  (validate.rules).string = {in: ["readonly", "readwrite"]}];
     // Authorized Code Repository.
     string coderepo = 4 [json_name = "coderepo", (validate.rules).string.min_len = 1];
   }

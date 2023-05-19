@@ -74,6 +74,21 @@ func (mr *MockNodesTreeMockRecorder) GetNode(nodes, kind, name interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNode", reflect.TypeOf((*MockNodesTree)(nil).GetNode), nodes, kind, name)
 }
 
+// GetNodes mocks base method.
+func (m *MockNodesTree) GetNodes() (*Node, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNodes")
+	ret0, _ := ret[0].(*Node)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNodes indicates an expected call of GetNodes.
+func (mr *MockNodesTreeMockRecorder) GetNodes() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodes", reflect.TypeOf((*MockNodesTree)(nil).GetNodes))
+}
+
 // InsertNodes mocks base method.
 func (m *MockNodesTree) InsertNodes(nodes, resource *Node) (*Node, error) {
 	m.ctrl.T.Helper()

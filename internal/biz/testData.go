@@ -95,10 +95,10 @@ var (
 		Id:                int32(297),
 		Name:              defaultProjectName,
 		Path:              defaultProjectName,
-		WebUrl:            fmt.Sprintf("https://github.com/test-2/%v", defaultProjectName),
-		SshUrlToRepo:      fmt.Sprintf("ssh://git@github.com:2222/test-2/%v.git", defaultProjectName),
-		HttpUrlToRepo:     fmt.Sprintf("https://github.com:2222/test-2/%v.git", defaultProjectName),
-		PathWithNamespace: fmt.Sprintf("%v/%v", defaultProductGroup.Path, defaultProjectName),
+		WebUrl:            fmt.Sprintf("https://github.com/test-2/%s", defaultProjectName),
+		SshUrlToRepo:      fmt.Sprintf("ssh://git@github.com:2222/test-2/%s.git", defaultProjectName),
+		HttpUrlToRepo:     fmt.Sprintf("https://github.com:2222/test-2/%s.git", defaultProjectName),
+		PathWithNamespace: fmt.Sprintf("%s/%s", defaultProductGroup.Path, defaultProjectName),
 	}
 	defaultProjectPath = fmt.Sprintf("%v/%v", defaultProductGroup.Path, defaultProjectName)
 	defaultProductId   = fmt.Sprintf("%s%d", _ProductPrefix, int(defaultProductGroup.Id))

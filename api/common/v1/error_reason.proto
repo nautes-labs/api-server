@@ -17,4 +17,5 @@ enum ErrorReason {
   DEPLOYKEY_NOT_FOUND = 6 [(errors.code) = 404];
   SECRET_NOT_FOUND = 7 [(errors.code) = 404];
   ACCESSTOKEN_NOT_FOUND = 8 [(errors.code) = 404];
+  REFRESH_PERMISSIONS_ACCESS_DENIED = 9 [(errors.code) = 403];
 }

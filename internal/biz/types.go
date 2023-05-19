@@ -79,6 +79,27 @@ type ProjectDeployKey struct {
 	CreatedAt *time.Time `json:"created_at"`
 	// Whether the deploy key has push access
 	CanPush bool `json:"can_push"`
+	// The fingerprint of the deploy key
+	Fingerprint string `json:"fingerprint"`
+	// The projects that have write access to this deploy key
+	ProjectsWithWriteAccess []*DeployKeyProject `json:"projects_with_write_access"`
+}
+
+type DeployKeyProject struct {
+	// The ID of the project
+	ID int `json:"id"`
+	// The description of the project
+	Description string `json:"description"`
+	// The name of the project
+	Name string `json:"name"`
+	// The name of the project with namespace
+	NameWithNamespace string `json:"name_with_namespace"`
+	// The path of the project
+	Path string `json:"path"`
+	// The path of the project with namespace
+	PathWithNamespace string `json:"path_with_namespace"`
+	// The date and time when the project was created
+	CreatedAt *time.Time `json:"created_at"`
 }
 
 type SecretOptions struct {

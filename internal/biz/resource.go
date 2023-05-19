@@ -37,11 +37,11 @@ const (
 	KustomizationFileName                 = "kustomization.yaml"
 	RretryCount           RretryCountType = "RretryCount"
 	_ProductPrefix                        = "product-"
+	_DefaultProjectPath                   = "DefaultProjectPath"
 )
 
 type RretryCountType string
 type getResouceName func(nodes nodestree.Node) (string, error)
-type isDeleteAllowed func(nodes nodestree.Node, resourceName string) (bool, error)
 
 type ResourcesUsecase struct {
 	log        log.Logger
@@ -64,7 +64,7 @@ func NewResourcesUsecase(log log.Logger, codeRepo CodeRepo, secretRepo Secretrep
 }
 
 func (r *ResourcesUsecase) Get(ctx context.Context, resourceKind, productName string, operator nodestree.NodesOperator, getResourceName getResouceName) (*nodestree.Node, error) {
-	product, project, err := r.GetProductAndCodeRepo(ctx, productName)
+	product, project, err := r.GetGroupAndProjectByGroupID(ctx, productName)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (r *ResourcesUsecase) Get(ctx context.Context, resourceKind, productName st
 		return nil, err
 	}
 
-	// defer cleanCodeRepo(localPath)
+	defer cleanCodeRepo(localPath)
 
 	nodes, err := r.nodestree.Load(localPath)
 	if err != nil {
@@ -82,9 +82,8 @@ func (r *ResourcesUsecase) Get(ctx context.Context, resourceKind, productName st
 	}
 
 	options := nodestree.CompareOptions{
-		Nodes:            nodes,
-		ProductName:      fmt.Sprintf("%s%d", _ProductPrefix, int(product.Id)),
-		LocalProjectPath: localPath,
+		Nodes:       nodes,
+		ProductName: fmt.Sprintf("%s%d", _ProductPrefix, int(product.Id)),
 	}
 
 	err = r.nodestree.Compare(options)
@@ -106,7 +105,7 @@ func (r *ResourcesUsecase) Get(ctx context.Context, resourceKind, productName st
 }
 
 func (r *ResourcesUsecase) List(ctx context.Context, gid interface{}, operator nodestree.NodesOperator) (*nodestree.Node, error) {
-	product, project, err := r.GetProductAndCodeRepo(ctx, gid)
+	product, project, err := r.GetGroupAndProjectByGroupID(ctx, gid)
 	if err != nil {
 		return nil, err
 	}
@@ -116,9 +115,7 @@ func (r *ResourcesUsecase) List(ctx context.Context, gid interface{}, operator n
 		return nil, err
 	}
 
-	defer func(path string) {
-		cleanCodeRepo(path)
-	}(localPath)
+	defer cleanCodeRepo(localPath)
 
 	nodes, err := r.nodestree.Load(localPath)
 	if err != nil {
@@ -126,9 +123,8 @@ func (r *ResourcesUsecase) List(ctx context.Context, gid interface{}, operator n
 	}
 
 	options := nodestree.CompareOptions{
-		Nodes:            nodes,
-		ProductName:      fmt.Sprintf("%s%d", _ProductPrefix, int(product.Id)),
-		LocalProjectPath: localPath,
+		Nodes:       nodes,
+		ProductName: fmt.Sprintf("%s%d", _ProductPrefix, int(product.Id)),
 	}
 
 	err = r.nodestree.Compare(options)
@@ -151,7 +147,7 @@ type resourceOptions struct {
 func (r *ResourcesUsecase) Save(ctx context.Context, resourceOptions *resourceOptions, data interface{}) error {
 	var resourceNode *nodestree.Node
 
-	product, project, err := r.GetProductAndCodeRepo(ctx, resourceOptions.productName)
+	product, project, err := r.GetGroupAndProjectByGroupID(ctx, resourceOptions.productName)
 	if err != nil {
 		r.log.Log(-1, "msg", "failed to get product and coderepo data", "err", err)
 		return err
@@ -163,9 +159,7 @@ func (r *ResourcesUsecase) Save(ctx context.Context, resourceOptions *resourceOp
 		return err
 	}
 
-	defer func(path string) {
-		cleanCodeRepo(path)
-	}(localPath)
+	defer cleanCodeRepo(localPath)
 
 	nodes, err := r.nodestree.Load(localPath)
 	if err != nil {
@@ -174,9 +168,8 @@ func (r *ResourcesUsecase) Save(ctx context.Context, resourceOptions *resourceOp
 	}
 
 	options := nodestree.CompareOptions{
-		Nodes:            nodes,
-		ProductName:      fmt.Sprintf("%s%d", _ProductPrefix, int(product.Id)),
-		LocalProjectPath: localPath,
+		Nodes:       nodes,
+		ProductName: fmt.Sprintf("%s%d", _ProductPrefix, int(product.Id)),
 	}
 
 	resourceNode = r.GetNode(&nodes, resourceOptions.resourceKind, resourceOptions.resourceName)
@@ -231,7 +224,7 @@ func (r *ResourcesUsecase) Save(ctx context.Context, resourceOptions *resourceOp
 }
 
 func (r *ResourcesUsecase) Delete(ctx context.Context, resourceOptions *resourceOptions, getResourceName getResouceName) error {
-	product, project, err := r.GetProductAndCodeRepo(ctx, resourceOptions.productName)
+	product, project, err := r.GetGroupAndProjectByGroupID(ctx, resourceOptions.productName)
 	if err != nil {
 		return err
 	}
@@ -251,9 +244,8 @@ func (r *ResourcesUsecase) Delete(ctx context.Context, resourceOptions *resource
 	}
 
 	options := nodestree.CompareOptions{
-		Nodes:            nodes,
-		ProductName:      fmt.Sprintf("%s%d", _ProductPrefix, int(product.Id)),
-		LocalProjectPath: localPath,
+		Nodes:       nodes,
+		ProductName: fmt.Sprintf("%s%d", _ProductPrefix, int(product.Id)),
 	}
 
 	resourceName, err := getResourceName(nodes)
@@ -263,7 +255,7 @@ func (r *ResourcesUsecase) Delete(ctx context.Context, resourceOptions *resource
 
 	resourceNode := r.GetNode(&nodes, resourceOptions.resourceKind, resourceName)
 	if resourceNode == nil {
-		return fmt.Errorf("the %s resource of type %s was not found", resourceName, resourceOptions.resourceKind)
+		return fmt.Errorf("%s resource %s not found or invalid. Please check whether the resource exists under the default project", resourceOptions.resourceKind, resourceName)
 	}
 
 	newNodes, err := r.RemoveNode(&nodes, resourceNode)
@@ -297,6 +289,24 @@ func (r *ResourcesUsecase) Delete(ctx context.Context, resourceOptions *resource
 	return nil
 }
 
+func (c *ResourcesUsecase) loadDefaultProjectNodes(ctx context.Context, productName string) (*nodestree.Node, error) {
+	_, project, err := c.GetGroupAndProjectByGroupID(ctx, productName)
+	if err != nil {
+		return nil, err
+	}
+	path, err := c.CloneCodeRepo(ctx, project.HttpUrlToRepo)
+	if err != nil {
+		return nil, err
+	}
+
+	nodes, err := c.nodestree.Load(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return &nodes, nil
+}
+
 func (r *ResourcesUsecase) InsertNodes(nodestree nodestree.NodesTree, nodes, resource *nodestree.Node) (*nodestree.Node, error) {
 	return nodestree.InsertNodes(nodes, resource)
 }
@@ -304,6 +314,10 @@ func (r *ResourcesUsecase) InsertNodes(nodestree nodestree.NodesTree, nodes, res
 // GetNode get specifial node accroding to resource kind and name
 func (r *ResourcesUsecase) GetNode(nodes *nodestree.Node, kind, resourceName string) *nodestree.Node {
 	return r.nodestree.GetNode(nodes, kind, resourceName)
+}
+
+func (r *ResourcesUsecase) GetNodes() (*nodestree.Node, error) {
+	return r.nodestree.GetNodes()
 }
 
 // RemoveNode delete the specified node accroding to the path
@@ -315,13 +329,13 @@ func (r *ResourcesUsecase) RemoveNode(nodes, node *nodestree.Node) (*nodestree.N
 	return nodes, nil
 }
 
-func (r *ResourcesUsecase) GetProductAndCodeRepo(ctx context.Context, gid interface{}) (*Group, *Project, error) {
+func (r *ResourcesUsecase) GetGroupAndProjectByGroupID(ctx context.Context, gid interface{}) (*Group, *Project, error) {
 	group, err := r.codeRepo.GetGroup(ctx, gid)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	toGetCodeRepo := fmt.Sprintf("%v/%v", group.Path, r.configs.Git.DefaultProductName)
+	toGetCodeRepo := fmt.Sprintf("%s/%s", group.Path, r.configs.Git.DefaultProductName)
 	project, err := r.codeRepo.GetCodeRepo(ctx, toGetCodeRepo)
 	if err != nil {
 		return nil, nil, err

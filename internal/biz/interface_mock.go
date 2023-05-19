@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	v1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 )
 
 // MockCodeRepo is a mock of CodeRepo interface.
@@ -239,6 +240,21 @@ func (m *MockCodeRepo) ListAccessTokens(ctx context.Context, pid interface{}, op
 func (mr *MockCodeRepoMockRecorder) ListAccessTokens(ctx, pid, opt interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAccessTokens", reflect.TypeOf((*MockCodeRepo)(nil).ListAccessTokens), ctx, pid, opt)
+}
+
+// ListAllDeployKeys mocks base method.
+func (m *MockCodeRepo) ListAllDeployKeys(ctx context.Context, opt *ListOptions) ([]*ProjectDeployKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAllDeployKeys", ctx, opt)
+	ret0, _ := ret[0].([]*ProjectDeployKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAllDeployKeys indicates an expected call of ListAllDeployKeys.
+func (mr *MockCodeRepoMockRecorder) ListAllDeployKeys(ctx, opt interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAllDeployKeys", reflect.TypeOf((*MockCodeRepo)(nil).ListAllDeployKeys), ctx, opt)
 }
 
 // ListAllGroups mocks base method.
@@ -658,4 +674,57 @@ func (m *MockDexRepo) UpdateRedirectURIs(redirectURI string) error {
 func (mr *MockDexRepoMockRecorder) UpdateRedirectURIs(redirectURI interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRedirectURIs", reflect.TypeOf((*MockDexRepo)(nil).UpdateRedirectURIs), redirectURI)
+}
+
+// MockKubernetes is a mock of Kubernetes interface.
+type MockKubernetes struct {
+	ctrl     *gomock.Controller
+	recorder *MockKubernetesMockRecorder
+}
+
+// MockKubernetesMockRecorder is the mock recorder for MockKubernetes.
+type MockKubernetesMockRecorder struct {
+	mock *MockKubernetes
+}
+
+// NewMockKubernetes creates a new mock instance.
+func NewMockKubernetes(ctrl *gomock.Controller) *MockKubernetes {
+	mock := &MockKubernetes{ctrl: ctrl}
+	mock.recorder = &MockKubernetesMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockKubernetes) EXPECT() *MockKubernetesMockRecorder {
+	return m.recorder
+}
+
+// ListCodeRepo mocks base method.
+func (m *MockKubernetes) ListCodeRepo(ctx context.Context) (*v1alpha1.CodeRepoList, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListCodeRepo", ctx)
+	ret0, _ := ret[0].(*v1alpha1.CodeRepoList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListCodeRepo indicates an expected call of ListCodeRepo.
+func (mr *MockKubernetesMockRecorder) ListCodeRepo(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCodeRepo", reflect.TypeOf((*MockKubernetes)(nil).ListCodeRepo), ctx)
+}
+
+// ListCodeRepoBindings mocks base method.
+func (m *MockKubernetes) ListCodeRepoBindings(ctx context.Context) (*v1alpha1.CodeRepoBindingList, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListCodeRepoBindings", ctx)
+	ret0, _ := ret[0].(*v1alpha1.CodeRepoBindingList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListCodeRepoBindings indicates an expected call of ListCodeRepoBindings.
+func (mr *MockKubernetesMockRecorder) ListCodeRepoBindings(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCodeRepoBindings", reflect.TypeOf((*MockKubernetes)(nil).ListCodeRepoBindings), ctx)
 }

@@ -45,7 +45,7 @@ var _ = Describe("Get product", func() {
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any())
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, nil, gitRepo, nil, nautesConfigs)
-		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil)
+		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil, nil)
 		product := NewProductUsecase(logger, codeRepo, secretRepo, gitRepo, nautesConfigs, resourcesUsecase, codeRepoUsecase)
 
 		p, err := product.GetProduct(ctx, ProductName)
@@ -63,7 +63,7 @@ var _ = Describe("Get product", func() {
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, nil, gitRepo, nil, nautesConfigs)
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any())
-		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil)
+		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil, nil)
 
 		product := NewProductUsecase(logger, codeRepo, secretRepo, gitRepo, nautesConfigs, resourcesUsecase, codeRepoUsecase)
 
@@ -83,7 +83,7 @@ var _ = Describe("Get product", func() {
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, secretRepo, gitRepo, nil, nautesConfigs)
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any())
-		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil)
+		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil, nil)
 		product := NewProductUsecase(logger, codeRepo, secretRepo, gitRepo, nautesConfigs, resourcesUsecase, codeRepoUsecase)
 
 		result, err := product.GetProduct(ctx, ProductName)
@@ -117,7 +117,7 @@ var _ = Describe("List products", func() {
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, secretRepo, gitRepo, nil, nautesConfigs)
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any())
-		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil)
+		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil, nil)
 		product := NewProductUsecase(logger, codeRepo, secretRepo, gitRepo, nautesConfigs, resourcesUsecase, codeRepoUsecase)
 
 		result, err := product.ListProducts(ctx)
@@ -135,7 +135,7 @@ var _ = Describe("List products", func() {
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, secretRepo, gitRepo, nil, nautesConfigs)
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any())
-		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil)
+		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil, nil)
 		product := NewProductUsecase(logger, codeRepo, secretRepo, gitRepo, nautesConfigs, resourcesUsecase, codeRepoUsecase)
 		result, err := product.ListProducts(ctx)
 		Expect(err).ShouldNot(HaveOccurred())
@@ -203,7 +203,7 @@ var _ = Describe("Save product", func() {
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, secretRepo, gitRepo, nil, nautesConfigs)
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any())
-		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil)
+		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil, nil)
 		product := NewProductUsecase(logger, codeRepo, secretRepo, gitRepo, nautesConfigs, resourcesUsecase, codeRepoUsecase)
 
 		_, _, err := product.SaveProduct(ctx, productName, gitOptions)
@@ -237,7 +237,7 @@ var _ = Describe("Save product", func() {
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, secretRepo, gitRepo, nil, nautesConfigs)
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any())
-		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil)
+		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil, nil)
 		product := NewProductUsecase(logger, codeRepo, secretRepo, gitRepo, nautesConfigs, resourcesUsecase, codeRepoUsecase)
 
 		_, _, err := product.SaveProduct(ctx, productName, gitOptions)
@@ -256,7 +256,7 @@ var _ = Describe("Save product", func() {
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, nil, gitRepo, nil, nautesConfigs)
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any())
-		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, nil, nodestree, nautesConfigs, resourcesUsecase, nil)
+		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, nil, nodestree, nautesConfigs, resourcesUsecase, nil, nil)
 		product := NewProductUsecase(logger, codeRepo, nil, gitRepo, nautesConfigs, resourcesUsecase, codeRepoUsecase)
 
 		_, _, err := product.SaveProduct(ctx, productName, gitOptions)
@@ -276,7 +276,7 @@ var _ = Describe("Save product", func() {
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, secretRepo, gitRepo, nil, nautesConfigs)
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any())
-		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, nil, nodestree, nautesConfigs, resourcesUsecase, nil)
+		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, nil, nodestree, nautesConfigs, resourcesUsecase, nil, nil)
 		product := NewProductUsecase(logger, codeRepo, secretRepo, gitRepo, nautesConfigs, resourcesUsecase, codeRepoUsecase)
 
 		_, _, err := product.SaveProduct(ctx, productName, gitOptions)
@@ -305,7 +305,7 @@ var _ = Describe("Save product", func() {
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, secretRepo, gitRepo, nil, nautesConfigs)
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any())
-		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil)
+		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil, nil)
 		product := NewProductUsecase(logger, codeRepo, secretRepo, gitRepo, nautesConfigs, resourcesUsecase, codeRepoUsecase)
 
 		_, _, err := product.SaveProduct(ctx, productName, gitOptions)
@@ -334,7 +334,7 @@ var _ = Describe("Save product", func() {
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, secretRepo, gitRepo, nil, nautesConfigs)
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any())
-		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil)
+		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil, nil)
 		product := NewProductUsecase(logger, codeRepo, secretRepo, gitRepo, nautesConfigs, resourcesUsecase, codeRepoUsecase)
 
 		_, _, err := product.SaveProduct(ctx, productName, gitOptions)
@@ -366,7 +366,7 @@ var _ = Describe("Save product", func() {
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, secretRepo, gitRepo, nil, nautesConfigs)
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any())
-		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil)
+		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil, nil)
 
 		product := NewProductUsecase(logger, codeRepo, secretRepo, gitRepo, nautesConfigs, resourcesUsecase, codeRepoUsecase)
 
@@ -404,7 +404,7 @@ var _ = Describe("Delete product", func() {
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, secretRepo, gitRepo, nil, nautesConfigs)
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any())
-		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, nil, nodestree, nautesConfigs, resourcesUsecase, nil)
+		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, nil, nodestree, nautesConfigs, resourcesUsecase, nil, nil)
 		product := NewProductUsecase(logger, codeRepo, secretRepo, gitRepo, nautesConfigs, resourcesUsecase, codeRepoUsecase)
 
 		err := product.DeleteProduct(ctx, ProductID)
@@ -423,7 +423,7 @@ var _ = Describe("Delete product", func() {
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, secretRepo, gitRepo, nil, nautesConfigs)
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any())
-		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, nil, nodestree, nautesConfigs, resourcesUsecase, nil)
+		codeRepoUsecase := NewCodeRepoUsecase(logger, codeRepo, nil, nodestree, nautesConfigs, resourcesUsecase, nil, nil)
 		product := NewProductUsecase(logger, codeRepo, secretRepo, gitRepo, nautesConfigs, resourcesUsecase, codeRepoUsecase)
 
 		err := product.DeleteProduct(ctx, ProductID)
