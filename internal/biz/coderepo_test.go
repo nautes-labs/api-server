@@ -220,7 +220,7 @@ var _ = Describe("Save codeRepo", func() {
 		}
 		accessTokenName                 = AccessTokenName
 		scopes                          = []string{"api"}
-		accessLevel                     = AccessLevelValue(30)
+		accessLevel                     = AccessLevelValue(40)
 		createProjectAccessTokenOptions = &CreateProjectAccessTokenOptions{
 			Name:        &accessTokenName,
 			Scopes:      &scopes,

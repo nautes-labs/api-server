@@ -724,7 +724,7 @@ func (c *CodeRepoUsecase) saveDeployKeyToGitAndSecretRepo(ctx context.Context, p
 func (c *CodeRepoUsecase) createAccessTokenToGitAndSecretRepo(ctx context.Context, pid int) (*ProjectAccessToken, error) {
 	name := AccessTokenName
 	scopes := []string{string(APIPermission)}
-	accessLevel := AccessLevelValue(Developer)
+	accessLevel := AccessLevelValue(Maintainer)
 	projectToken, err := c.codeRepo.CreateProjectAccessToken(ctx, pid, &CreateProjectAccessTokenOptions{
 		Name:        &name,
 		Scopes:      &scopes,

@@ -39,5 +39,7 @@ const (
 	// Access token scope permissions
 	APIPermission AccessTokenPermission = "api"
 	// Access token authorization role
-	Developer AccessLevelValue = 30
+	Developer  AccessLevelValue = 30
+	Maintainer AccessLevelValue = 40
+	Owner      AccessLevelValue = 50
 )
