@@ -246,7 +246,7 @@ func explorerRecursive(node *Node, fileOptions *FileOptions, operators []NodesOp
 			Level: node.Level + 1,
 		}
 
-		if ok := fileFiltering(fileOptions, f.Name()); ok {
+		if ok := fileFiltering(fileOptions, f.Name(), tmp); ok {
 			continue
 		}
 
@@ -327,12 +327,16 @@ func convertResource(child *Node, operators []NodesOperator) (cr interface{}, er
 	return cr, nil
 }
 
-func fileFiltering(option *FileOptions, name string) bool {
+func fileFiltering(option *FileOptions, name, pathstr string) bool {
 	if ok := IsInSlice(option.IgnoreFile, name); ok {
 		return true
 	}
 
 	if ok := IsInSlice(option.IgnorePath, name); ok {
+		return true
+	}
+
+	if ok := InContainsDir(pathstr, option.IgnorePath); ok {
 		return true
 	}
 

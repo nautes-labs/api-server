@@ -35,7 +35,9 @@ import (
 )
 
 const (
-	defaultClusterTemplateURL = "https://github.com/nautes-labs/cluster-templates.git"
+	_TenantLabel              = "coderepo.resource.nautes.io/tenant-management"
+	_NautesClusterDir         = "nautes/overlays/production/clusters"
+	DefaultClusterTemplateURL = "https://github.com/nautes-labs/cluster-templates.git"
 	SecretPath                = "default"
 	SecretEngine              = "pki"
 )
@@ -73,6 +75,10 @@ func (c *ClusterUsecase) CloneRepository(ctx context.Context, url string) (strin
 }
 
 func (c *ClusterUsecase) SaveKubeconfig(ctx context.Context, id, server, config string) error {
+	if config == "" {
+		return fmt.Errorf("register physical cluster, kubeconfig is not empty")
+	}
+
 	config, err := c.ConvertKubeconfig(config, server)
 	if err != nil {
 		return err
@@ -131,7 +137,7 @@ func (c *ClusterUsecase) GetCacert(ctx context.Context) (string, error) {
 
 func (c *ClusterUsecase) GetTenantRepository(ctx context.Context) (*Project, error) {
 	codeRepos := &resourcev1alpha1.CodeRepoList{}
-	labelSelector := labels.SelectorFromSet(map[string]string{"coderepo.resource.nautes.io/tenant-management": c.configs.Nautes.TenantName})
+	labelSelector := labels.SelectorFromSet(map[string]string{_TenantLabel: c.configs.Nautes.TenantName})
 	err := c.client.List(context.Background(), codeRepos, &client.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
 		return nil, err
@@ -141,46 +147,45 @@ func (c *ClusterUsecase) GetTenantRepository(ctx context.Context) (*Project, err
 	}
 
 	pid, _ := utilstrings.ExtractNumber("repo-", codeRepos.Items[0].Name)
-	project, err := c.codeRepo.GetCodeRepo(ctx, pid)
+	repository, err := c.codeRepo.GetCodeRepo(ctx, pid)
 	if err != nil {
 		return nil, err
 	}
 
-	return project, nil
+	return repository, nil
 }
 
 func (c *ClusterUsecase) SaveCluster(ctx context.Context, param *cluster.ClusterRegistrationParam, kubeconfig string) error {
-	if ok := cluster.IsVirtualRuntime(param.Cluster); !ok {
+	if cluster.IsPhysical(param.Cluster) {
 		err := c.SaveKubeconfig(ctx, param.Cluster.Name, param.Cluster.Spec.ApiServer, kubeconfig)
 		if err != nil {
-			c.log.Debugf("failed to  saved kubeconfig to secre repo, cluster name: %s", param.Cluster.Name)
+			c.log.Errorf("failed to saved kubeconfig to secre repo, cluster name: %s", param.Cluster.Name)
 			return err
 		}
-		c.log.Infof("successfully saved kubeconfig to secre repo, cluster name: %s", param.Cluster.Name)
 	}
 
 	cacert, err := c.GetCacert(ctx)
 	if err != nil {
-		c.log.Debugf("failed to get cacert to secre repo, cluster name: %s", param.Cluster.Name)
+		c.log.Errorf("failed to get cacert to secre repo, cluster name: %s", param.Cluster.Name)
 		return err
 	}
 
-	url := GetClusterTemplateHttpsURL(c.configs)
-	clusterTemplateLocalPath, err := c.CloneRepository(ctx, url)
+	httpURLToRepo := GetClusterTemplateHttpsURL(c.configs)
+	clusterTemplateLocalPath, err := c.CloneRepository(ctx, httpURLToRepo)
 	if err != nil {
-		c.log.Debugf("failed to clone cluster template repository, cluster name: %s, url: %s", param.Cluster.Name, url)
+		c.log.Errorf("failed to clone cluster template repository, the url %s may be invalid or does not exist", httpURLToRepo)
 		return err
 	}
 	defer cleanCodeRepo(clusterTemplateLocalPath)
 
-	project, err := c.GetTenantRepository(ctx)
+	repository, err := c.GetTenantRepository(ctx)
 	if err != nil {
-		c.log.Debugf("failed to get tenant repository, cluster name: %s", param.Cluster.Name)
+		c.log.Errorf("failed to get tenant repository, cluster name: %s", param.Cluster.Name)
 		return err
 	}
-	tenantRepositoryLocalPath, err := c.CloneRepository(ctx, project.HttpUrlToRepo)
+	tenantRepositoryLocalPath, err := c.CloneRepository(ctx, repository.HttpUrlToRepo)
 	if err != nil {
-		c.log.Debugf("failed to clone tenant repository, cluster name: %s, url: %s", param.Cluster.Name, url)
+		c.log.Errorf("failed to clone tenant repository, the url %s may be invalid or does not exist", repository.HttpUrlToRepo)
 		return err
 	}
 	defer cleanCodeRepo(tenantRepositoryLocalPath)
@@ -188,30 +193,32 @@ func (c *ClusterUsecase) SaveCluster(ctx context.Context, param *cluster.Cluster
 	param.ClusterTemplateRepoLocalPath = clusterTemplateLocalPath
 	param.CaBundle = base64.StdEncoding.EncodeToString([]byte(cacert))
 	param.TenantConfigRepoLocalPath = tenantRepositoryLocalPath
-	param.RepoURL = project.SshUrlToRepo
+	param.RepoURL = repository.SshUrlToRepo
 	param.Configs = c.configs
-	err = c.cluster.InitializeDependencies(param)
+	err = c.cluster.InitializeClusterConfig(param)
 	if err != nil {
 		return err
 	}
 	err = c.cluster.Save()
 	if err != nil {
-		c.log.Debugf("failed to save cluster, cluster name: %s", param.Cluster.Name)
+		c.log.Errorf("failed to save cluster, clustr name: %s", param.Cluster.Name)
 		return err
 	}
 
 	err = c.resourcesUsecase.SaveConfig(ctx, tenantRepositoryLocalPath)
 	if err != nil {
-		c.log.Debugf("failed to save config to git, cluster name: %s", param.Cluster.Name)
+		c.log.Errorf("failed to save config to git, cluster name: %s", param.Cluster.Name)
 		return err
+	}
+
+	if !cluster.IsHostCluser(param.Cluster) {
+		err = c.SaveDexConfig(param, tenantRepositoryLocalPath)
+		if err != nil {
+			return err
+		}
 	}
 
 	c.log.Infof("successfully register cluster, cluster name: %s", param.Cluster.Name)
-
-	err = c.SaveDexConfig(param, tenantRepositoryLocalPath)
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -220,56 +227,57 @@ func (c *ClusterUsecase) DeleteCluster(ctx context.Context, clusterName string) 
 	url := GetClusterTemplateHttpsURL(c.configs)
 	clusterTemplateLocalPath, err := c.CloneRepository(ctx, url)
 	if err != nil {
-		c.log.Debugf("failed to clone cluster template repository, cluster name: %s, url: %s", clusterName, url)
+		c.log.Errorf("failed to clone cluster template repository, cluster name: %s, url: %s", clusterName, url)
 		return err
 	}
 	defer cleanCodeRepo(clusterTemplateLocalPath)
 
 	project, err := c.GetTenantRepository(ctx)
 	if err != nil {
-		c.log.Debugf("failed to get tenant repository, cluster name: %s", clusterName)
+		c.log.Errorf("failed to get tenant repository, cluster name: %s", clusterName)
 		return err
 	}
 	tenantRepositoryLocalPath, err := c.CloneRepository(ctx, project.HttpUrlToRepo)
 	if err != nil {
-		c.log.Debugf("failed to get tenant repository local path, cluster name: %s", clusterName)
+		c.log.Errorf("failed to get tenant repository local path, cluster name: %s", clusterName)
 		return err
 	}
 	defer cleanCodeRepo(tenantRepositoryLocalPath)
 
-	clusterFilePath := fmt.Sprintf("%s/nautes/overlays/production/clusters/%s.yaml", tenantRepositoryLocalPath, clusterName)
-	clusterResouce, err := GetCluster(clusterFilePath)
+	resourceCluster, err := GetCluster(tenantRepositoryLocalPath, clusterName)
 	if err != nil {
-		c.log.Debugf("failed to get cluster cluster resource, cluster name: %s", clusterName)
+		c.log.Errorf("failed to get cluster cluster resource, cluster name: %s", clusterName)
 		return err
 	}
 
 	param := &cluster.ClusterRegistrationParam{
-		Cluster:                      clusterResouce,
+		Cluster:                      resourceCluster,
 		RepoURL:                      project.SshUrlToRepo,
 		Configs:                      c.configs,
 		ClusterTemplateRepoLocalPath: clusterTemplateLocalPath,
 		TenantConfigRepoLocalPath:    tenantRepositoryLocalPath,
 	}
-	err = c.cluster.InitializeDependencies(param)
+	err = c.cluster.InitializeClusterConfig(param)
 	if err != nil {
 		return err
 	}
 
-	err = c.DeleteDexConfig(param)
-	if err != nil {
-		return err
+	if !cluster.IsHostCluser(param.Cluster) {
+		err = c.DeleteDexConfig(param)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = c.cluster.Remove()
 	if err != nil {
-		c.log.Debugf("failed to remove cluster, cluster name: %s", clusterName)
+		c.log.Errorf("failed to remove cluster, cluster name: %s", clusterName)
 		return err
 	}
 
 	err = c.resourcesUsecase.SaveConfig(ctx, tenantRepositoryLocalPath)
 	if err != nil {
-		c.log.Debugf("failed to save config to git, cluster name: %s", clusterName)
+		c.log.Errorf("failed to save config to git, cluster name: %s", clusterName)
 		return err
 	}
 
@@ -279,21 +287,17 @@ func (c *ClusterUsecase) DeleteCluster(ctx context.Context, clusterName string) 
 }
 
 func (c *ClusterUsecase) SaveDexConfig(param *cluster.ClusterRegistrationParam, teantLocalPath string) error {
-	if ok := cluster.IsHostCluser(param.Cluster); ok {
-		return nil
-	}
-
 	// The port of the physical runtime cluster is obtained by user parameters
 	// Obtained by querying the traefik port of the host cluster during virtual runtime
 	var callback string
-	if ok := cluster.IsPhysicalRuntime(param.Cluster); ok {
-		callback = fmt.Sprintf("https://%s:%s/api/dex/callback", param.ArgocdHost, param.Traefik.HttpsNodePort)
+	if ok := cluster.IsPhysical(param.Cluster); ok {
+		callback = concatDexCallback(param.ArgocdHost, param.Traefik.HttpsNodePort)
 	} else {
 		httpsNodePort, err := c.cluster.GetTraefikNodePortToHostCluster(teantLocalPath, param.Cluster.Spec.HostCluster)
 		if err != nil {
 			return err
 		}
-		callback = fmt.Sprintf("https://%s:%s/api/dex/callback", param.ArgocdHost, strconv.Itoa(httpsNodePort))
+		callback = concatDexCallback(param.ArgocdHost, strconv.Itoa(httpsNodePort))
 	}
 
 	err := c.dex.UpdateRedirectURIs(callback)
@@ -304,17 +308,21 @@ func (c *ClusterUsecase) SaveDexConfig(param *cluster.ClusterRegistrationParam, 
 	return nil
 }
 
-func (c *ClusterUsecase) DeleteDexConfig(param *cluster.ClusterRegistrationParam) error {
-	if ok := cluster.IsHostCluser(param.Cluster); ok {
-		return nil
-	}
+const (
+	_DexCallbackPath = "api/dex/callback"
+)
 
+func concatDexCallback(host, port string) string {
+	return fmt.Sprintf("https://%s:%s/%s", host, port, _DexCallbackPath)
+}
+
+func (c *ClusterUsecase) DeleteDexConfig(param *cluster.ClusterRegistrationParam) error {
 	url, err := c.cluster.GetArgocdURL()
 	if err != nil {
 		return err
 	}
 
-	callback := fmt.Sprintf("%s/api/dex/callback", url)
+	callback := fmt.Sprintf("%s/%s", url, _DexCallbackPath)
 	err = c.dex.RemoveRedirectURIs(callback)
 	if err != nil {
 		return err
@@ -328,15 +336,17 @@ func GetClusterTemplateHttpsURL(configs *nautesconfigs.Config) string {
 		return configs.Nautes.RuntimeTemplateSource
 	}
 
-	return defaultClusterTemplateURL
+	return DefaultClusterTemplateURL
 }
 
-func GetCluster(filename string) (*resourcev1alpha1.Cluster, error) {
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
+func GetCluster(tenantRepositoryLocalPath, clusterName string) (*resourcev1alpha1.Cluster, error) {
+	filePath := fmt.Sprintf("%s/%s/%s.yaml", tenantRepositoryLocalPath, _NautesClusterDir, clusterName)
+
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return nil, err
 	}
 
-	content, err := ioutil.ReadFile(filename)
+	content, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}

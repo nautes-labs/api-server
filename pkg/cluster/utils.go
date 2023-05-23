@@ -25,6 +25,7 @@ import (
 	argocdapplicationv1alpha1 "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	argocdapplicationsetv1alpha1 "github.com/argoproj/argo-cd/v2/pkg/apis/applicationset/v1alpha1"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
+	gopkgyaml "gopkg.in/yaml.v2"
 	yaml "sigs.k8s.io/yaml"
 )
 
@@ -92,25 +93,6 @@ func GetApplicationSetElements(data []byte) ([]string, error) {
 	}
 
 	return elements, nil
-}
-
-func AddOrUpdate(list []*RuntimeNameAndApiServer, item *RuntimeNameAndApiServer) []*RuntimeNameAndApiServer {
-	for i, v := range list {
-		if v.Name == item.Name {
-			return append(append(list[:i:i], list[i+1:]...), item)
-		}
-	}
-	return append(list, item)
-}
-
-func DeleteRuntimeByName(runtimeList []*RuntimeNameAndApiServer, name string) []*RuntimeNameAndApiServer {
-	for i, r := range runtimeList {
-		if r.Name == name {
-			runtimeList = append(runtimeList[:i], runtimeList[i+1:]...)
-			break
-		}
-	}
-	return runtimeList
 }
 
 func ReplacePlaceholders(data string, placeholder, value string) string {
@@ -209,9 +191,83 @@ func parseCluster(fileName string) (*resourcev1alpha1.Cluster, error) {
 func getRuntimeType(cluster *resourcev1alpha1.Cluster) string {
 	var physical = "physical"
 	var virtual = "virtual"
-	if ok := IsPhysicalRuntime(cluster); ok {
+	if ok := IsPhysicalDeploymentRuntime(cluster); ok {
 		return physical
 	}
 
 	return virtual
+}
+
+func RemoveStringFromArray(arr []string, target string) []string {
+	for i := 0; i < len(arr); i++ {
+		if arr[i] == target {
+			arr = append(arr[:i], arr[i+1:]...)
+			i--
+		}
+	}
+	return arr
+}
+
+func generateNipHost(perfix, name, ip string) string {
+	return fmt.Sprintf("%s.%s.%s.nip.io", perfix, name, ip)
+}
+
+type Ingress struct {
+	ApiVersion string `yaml:"apiVersion"`
+	Kind       string `yaml:"kind"`
+	Metadata   struct {
+		Name        string `yaml:"name"`
+		Namespace   string `yaml:"namespace"`
+		Annotations struct {
+			IngressClass string `yaml:"kubernetes.io/ingress.class"`
+		} `yaml:"annotations"`
+	} `yaml:"metadata"`
+	Spec struct {
+		TLS []struct {
+			Hosts []string `yaml:"hosts"`
+		} `yaml:"tls"`
+		Rules []struct {
+			Host string `yaml:"host"`
+			HTTP struct {
+				Paths []struct {
+					Path     string `yaml:"path"`
+					PathType string `yaml:"pathType"`
+					Backend  struct {
+						Service struct {
+							Name string `yaml:"name"`
+							Port struct {
+								Number int `yaml:"number"`
+							} `yaml:"port"`
+						} `yaml:"service"`
+					} `yaml:"backend"`
+				} `yaml:"paths"`
+			} `yaml:"http"`
+		} `yaml:"rules"`
+	} `yaml:"spec"`
+}
+
+func parseIngresses(bytes string) ([]Ingress, error) {
+	ingresses := make([]Ingress, 0)
+	decoder := gopkgyaml.NewDecoder(strings.NewReader(bytes))
+
+	for {
+		var ingress Ingress
+		err := decoder.Decode(&ingress)
+		if err != nil {
+			break
+		}
+		ingresses = append(ingresses, ingress)
+	}
+
+	return ingresses, nil
+}
+
+func isExistDir(path string) bool {
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+	}
+	return true
 }

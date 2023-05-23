@@ -20,34 +20,31 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/nautes-labs/api-server/pkg/nodestree"
 	"sigs.k8s.io/kustomize/api/types"
 	yaml "sigs.k8s.io/yaml"
 )
 
-func (r *ClusterRegistration) Remove() error {
-	config, err := NewClusterFileConfig(r.ClusterTemplateRepoLocalPath)
+// Remove this function remove cluster configuration based on cluster type
+func (cr *ClusterRegistration) Remove() error {
+	nodes, err := cr.DeleteClusterByType()
 	if err != nil {
 		return err
 	}
 
-	nodes, err := r.DeleteClusterByType(config)
+	err = cr.SaveClusterConfig(nodes)
 	if err != nil {
 		return err
 	}
 
-	err = r.WriteFileToTenantConfigRepository(nodes)
+	err = cr.DeleteClusterToNautes()
 	if err != nil {
 		return err
 	}
 
-	err = r.DeleteCluster()
-	if err != nil {
-		return err
-	}
-
-	err = r.DeleteFileIfAppSetHasNoElements()
+	err = cr.CleanupAppSetIfEmpty()
 	if err != nil {
 		return err
 	}
@@ -55,84 +52,106 @@ func (r *ClusterRegistration) Remove() error {
 	return nil
 }
 
-func (r *ClusterRegistration) DeleteClusterByType(config *Config) (*nodestree.Node, error) {
+func (cr *ClusterRegistration) DeleteClusterByType() (*nodestree.Node, error) {
 	var nodes nodestree.Node
-	var ignorePath, ignoreFile []string
-	var err error
 
-	switch r.Usage {
-	case _HostClusterType:
-		ignorePath, ignoreFile = config.GetRemoveHostClusterConfig()
-		nodes, err = r.LoadTemplateNodesTree(ignorePath, ignoreFile)
-		if err != nil {
-			return nil, err
-		}
-		err = r.DeleteHostCluster(&nodes)
-		if err != nil {
-			return nil, err
-		}
-	case _PhysicalRuntime:
-		ignorePath, ignoreFile = config.GetRemovePhysicalRuntimeConfig()
-		nodes, err = r.LoadTemplateNodesTree(ignorePath, ignoreFile)
-		if err != nil {
-			return nil, err
-		}
-		err = r.DeleteRuntime(&nodes)
-		if err != nil {
-			return nil, err
-		}
-	case _VirtualRuntime:
-		ignorePath, ignoreFile = config.GetRemoveVirtualRuntimeConfig()
-		nodes, err = r.LoadTemplateNodesTree(ignorePath, ignoreFile)
-		if err != nil {
-			return nil, err
-		}
-		err = r.DeleteRuntime(&nodes)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, errors.New("unknown cluster usage")
+	config, err := NewClusterFileIgnoreConfig(cr.ClusterTemplateRepoLocalPath)
+	if err != nil {
+		return nil, err
+	}
+
+	ignorePaths, ignoreFiles, err := cr.getIgnoreConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	nodes, err = cr.LoadTemplateNodesTree(ignorePaths, ignoreFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	err = cr.deleteRuntimeByType(&nodes)
+	if err != nil {
+		return nil, err
 	}
 
 	return &nodes, nil
 }
 
-func (r *ClusterRegistration) DeleteHostCluster(nodes *nodestree.Node) error {
-	dir := fmt.Sprintf("%s/%s", GetHostClustesrDir(r.TenantConfigRepoLocalPath), r.Cluster.Name)
-	vclustersDir := fmt.Sprintf("%s/vclusters", dir)
-	exist := isDirExist(vclustersDir)
+func (cr *ClusterRegistration) getIgnoreConfig(config *ClusterFileIgnoreConfig) ([]string, []string, error) {
+	switch cr.Usage {
+	case _HostCluster:
+		ignorePaths, ignoreFiles := config.GetRemoveHostClusterConfig()
+		return ignorePaths, ignoreFiles, nil
+	case _PhysicalDeploymentRuntime:
+		ignorePaths, ignoreFiles := config.GetRemovePhysicalDeploymentRuntimeConfig()
+		return ignorePaths, ignoreFiles, nil
+	case _PhysicalProjectPipelineRuntime:
+		ignorePaths, ignoreFiles := config.GetRemovePhysicalProjectPipelineRuntimeConfig()
+		return ignorePaths, ignoreFiles, nil
+	case _VirtualDeploymentRuntime:
+		ignorePaths, ignoreFiles := config.GetRemoveVirtualDeploymentRuntimeConfig()
+		return ignorePaths, ignoreFiles, nil
+	case _VirtualProjectPipelineRuntime:
+		ignorePaths, ignoreFiles := config.GetRemoveVirtualProjectPipelineRuntimeConfig()
+		return ignorePaths, ignoreFiles, nil
+	default:
+		return nil, nil, errors.New("unknown cluster usage")
+	}
+}
+
+func (cr *ClusterRegistration) deleteRuntimeByType(nodes *nodestree.Node) error {
+	switch cr.Usage {
+	case _HostCluster:
+		return cr.DeleteHostCluster(nodes)
+	case _VirtualDeploymentRuntime:
+		return cr.DeleteRuntime(nodes)
+	case _PhysicalDeploymentRuntime:
+		return cr.DeleteRuntime(nodes)
+	case _VirtualProjectPipelineRuntime:
+		return cr.DeleteRuntime(nodes)
+	case _PhysicalProjectPipelineRuntime:
+		return cr.DeleteRuntime(nodes)
+	default:
+		return errors.New("unknown cluster usage")
+	}
+}
+
+func (cr *ClusterRegistration) DeleteHostCluster(nodes *nodestree.Node) error {
+	hostClusterDir := fmt.Sprintf("%s/%s", concatHostClustesrDir(cr.TenantConfigRepoLocalPath), cr.Cluster.Name)
+	vclustersDir := fmt.Sprintf("%s/vclusters", hostClusterDir)
+	exist := isExistDir(vclustersDir)
 	if exist {
-		return fmt.Errorf("unable to delete cluster %s because the host cluster is referenced by other virtual cluster", r.Cluster.Name)
+		return fmt.Errorf("unable to delete cluster %s because the host cluster is referenced by other virtual cluster", cr.Cluster.Name)
 	}
 
-	err := DeleteSpecifyDir(dir)
+	err := DeleteSpecifyDir(hostClusterDir)
 	if err != nil {
 		return err
 	}
 
-	err = r.DeleteClusterToKustomization()
+	err = cr.DeleteClusterToKustomization()
 	if err != nil {
 		return err
 	}
 
-	err = r.GetAndDeleteHostClusterNames()
+	err = cr.GetAndDeleteHostClusterNames()
 	if err != nil {
 		return err
 	}
 
-	err = r.Execute(nodes)
+	err = cr.Execute(nodes)
 	if err != nil {
 		return err
 	}
 
-	r.ReplaceFilePath(nodes)
+	cr.ReplaceTemplatePathWithTenantRepositoryPath(nodes)
 
 	return nil
 }
 
-func (r *ClusterRegistration) DeleteClusterToKustomization() (err error) {
-	kustomizationFilePath := fmt.Sprintf("%s/nautes/overlays/production/clusters/kustomization.yaml", r.TenantConfigRepoLocalPath)
+func (cr *ClusterRegistration) DeleteClusterToKustomization() (err error) {
+	kustomizationFilePath := fmt.Sprintf("%s/nautes/overlays/production/clusters/kustomization.yaml", cr.TenantConfigRepoLocalPath)
 	if _, err := os.Stat(kustomizationFilePath); os.IsNotExist(err) {
 		return err
 	}
@@ -147,70 +166,126 @@ func (r *ClusterRegistration) DeleteClusterToKustomization() (err error) {
 		return err
 	}
 
-	filename := fmt.Sprintf("%s.yaml", r.Cluster.Name)
+	filename := fmt.Sprintf("%s.yaml", cr.Cluster.Name)
 	if len(kustomization.Resources) > 0 {
-		r.ClusterResouceFiles = RemoveStringFromArray(kustomization.Resources, filename)
-	} else {
-		r.ClusterResouceFiles = append(r.ClusterResouceFiles, filename)
+		cr.ClusterResouceFiles = RemoveStringFromArray(kustomization.Resources, filename)
 	}
 
 	return nil
 }
 
-func (r *ClusterRegistration) GetAndDeleteHostClusterNames() error {
-	hostClusterAppsetFilePath := fmt.Sprintf("%s/host-cluster-appset.yaml", GetTenantProductionDir(r.TenantConfigRepoLocalPath))
+func (cr *ClusterRegistration) GetAndDeleteHostClusterNames() error {
+	hostClusterAppsetFilePath := concatHostClusterAppsetFilePath(cr.TenantConfigRepoLocalPath)
 	clusterNames, err := GetHostClusterNames(hostClusterAppsetFilePath)
 	if err != nil {
 		return err
 	}
 
-	r.HostClusterNames = RemoveStringFromArray(clusterNames, r.HostCluster.Name)
+	cr.HostClusterNames = RemoveStringFromArray(clusterNames, cr.HostCluster.Name)
 
 	return nil
 }
 
-func (r *ClusterRegistration) GetAndDeleteVclusterNames() error {
-	vclusterAppsetFilePath := fmt.Sprintf("%s/%s/production/vcluster-appset.yaml", GetHostClustesrDir(r.TenantConfigRepoLocalPath), r.Vcluster.HostCluster)
-	clusterNames, err := GetVclusterNames(vclusterAppsetFilePath)
+// FilterDeletedClusters filter deleted clusters from vclusters and return new ones
+func (cr *ClusterRegistration) FilterDeletedClusters() error {
+	vclusterAppsetFilePath := fmt.Sprintf("%s/%s/%s", concatHostClustesrDir(cr.TenantConfigRepoLocalPath), cr.Vcluster.HostCluster.Name, _VclusterAppSetFile)
+	vclusterNames, err := GetVclusterNames(vclusterAppsetFilePath)
 	if err != nil {
 		return err
 	}
 
-	r.VclusterNames = RemoveStringFromArray(clusterNames, r.Vcluster.Name)
+	cr.VclusterNames = RemoveStringFromArray(vclusterNames, cr.Vcluster.Name)
 
 	return nil
 }
 
-func (r *ClusterRegistration) DeleteRuntime(nodes *nodestree.Node) error {
-	runtimeDir := fmt.Sprintf("%s/%s", GetRuntimesDir(r.TenantConfigRepoLocalPath), r.Runtime.Name)
+func (cr *ClusterRegistration) FilterDeletedProjectPipelineItem() error {
+	path := fmt.Sprintf("%s/%s/production/ingress-tekton-dashborard.yaml", concatHostClustesrDir(cr.TenantConfigRepoLocalPath), cr.Vcluster.HostCluster.Name)
+
+	projectPipelineItems := make([]*ProjectPipelineItem, 0)
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("failed to get project pipeline infomation")
+		}
+	}
+	bytes, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	ingresses, err := parseIngresses(string(bytes))
+	if err != nil {
+		return err
+	}
+	for _, ingress := range ingresses {
+		item := &ProjectPipelineItem{}
+		re := regexp.MustCompile(`(.+?)-tekton-dashborard`)
+		matches := re.FindStringSubmatch(ingress.Metadata.Name)
+		if len(matches) == 0 {
+			return fmt.Errorf("the ingress name %s may be modified and do not conform to specification", ingress.Metadata.Name)
+		}
+		item.Name = strings.TrimSpace(matches[1])
+
+		item.HostClusterName = cr.Vcluster.HostCluster.Name
+
+		item.TektonConfig = &TektonConfig{
+			Host: ingress.Spec.Rules[0].Host,
+			URL:  cr.Vcluster.HostCluster.ApiServer,
+		}
+
+		projectPipelineItems = append(projectPipelineItems, item)
+	}
+
+	for i, projectPipelineItem := range projectPipelineItems {
+		if projectPipelineItem.Name == cr.Vcluster.Name {
+			projectPipelineItems = append(projectPipelineItems[:i], projectPipelineItems[i+1:]...)
+		}
+	}
+
+	cr.HostCluster.ProjectPipelineItems = projectPipelineItems
+
+	return nil
+}
+
+func (cr *ClusterRegistration) DeleteRuntime(nodes *nodestree.Node) error {
+	// Directly delete the specified Runtime file directory.
+	runtimeDir := fmt.Sprintf("%s/%s", concatRuntimesDir(cr.TenantConfigRepoLocalPath), cr.Runtime.Name)
 	err := DeleteSpecifyDir(runtimeDir)
 	if err != nil {
 		return err
 	}
 
-	r.ReplaceFilePath(nodes)
+	// Replace the file node path read from the template configuration library.
+	cr.ReplaceTemplatePathWithTenantRepositoryPath(nodes)
 
-	if r.Usage == _VirtualRuntime {
-		vclustersDir := fmt.Sprintf("%s/%s", GetVclustersDir(r.TenantConfigRepoLocalPath, r.Vcluster.HostCluster.Name), r.Cluster.Name)
+	// The virtual cluster needs to additionally delete the specified Vcluster directory.
+	if cr.Usage == _VirtualDeploymentRuntime || cr.Usage == _VirtualProjectPipelineRuntime {
+		vclustersDir := fmt.Sprintf("%s/%s", concatSpecifiedVclustersDir(cr.TenantConfigRepoLocalPath, cr.Vcluster.HostCluster.Name), cr.Cluster.Name)
 		err := DeleteSpecifyDir(vclustersDir)
 		if err != nil {
 			return err
 		}
 
-		r.OverlayTemplateDirectoryPlaceholder(nodes, _HostClusterDirectoreyPlaceholder, r.Vcluster.HostCluster.Name)
+		// Override template placeholders.
+		OverlayTemplateDirectoryPlaceholder(nodes, _HostClusterDirectoreyPlaceholder, cr.Vcluster.HostCluster.Name)
 
-		err = r.GetAndDeleteVclusterNames()
+		err = cr.FilterDeletedClusters()
 		if err != nil {
 			return err
 		}
 	}
 
-	err = r.DeleteClusterToKustomization()
+	if cr.Usage == _VirtualProjectPipelineRuntime {
+		cr.HostCluster.ProjectPipelineItems = DeleteProjectPipelineItems(cr.HostCluster.ProjectPipelineItems, cr.Cluster.Name)
+	}
+
+	err = cr.DeleteClusterToKustomization()
 	if err != nil {
 		return err
 	}
 
-	err = r.Execute(nodes)
+	err = cr.Execute(nodes)
 	if err != nil {
 		return err
 	}
@@ -218,30 +293,35 @@ func (r *ClusterRegistration) DeleteRuntime(nodes *nodestree.Node) error {
 	return nil
 }
 
-func (r *ClusterRegistration) DeleteFileIfAppSetHasNoElements() error {
-	if len(r.HostClusterNames) == 0 {
-		err := r.DeleteHostClusterAppSet()
-		if err != nil {
-			return err
+func DeleteProjectPipelineItems(itmes []*ProjectPipelineItem, clustrName string) []*ProjectPipelineItem {
+	var result []*ProjectPipelineItem
+
+	for _, item := range itmes {
+		if item.Name != clustrName {
+			result = append(result, item)
 		}
 	}
 
-	if len(r.VclusterNames) == 0 {
-		err := r.DeleteVclusterAppSet()
-		if err != nil {
-			return err
-		}
+	return result
+}
+
+func (cr *ClusterRegistration) CleanupAppSetIfEmpty() error {
+	switch {
+	case cr.Usage == _HostCluster && len(cr.HostClusterNames) == 0:
+		return cr.CleanHostClusterAppSet()
+	case cr.Usage != _HostCluster && len(cr.VclusterNames) == 0:
+		return cr.CleanVclusterAppSet()
 	}
 
 	return nil
 }
 
-func (r *ClusterRegistration) DeleteHostClusterAppSet() error {
-	if r.Usage != _HostClusterType {
+func (cr *ClusterRegistration) CleanHostClusterAppSet() error {
+	if cr.Usage != _HostCluster {
 		return nil
 	}
 
-	hostClusterAppSetPath := fmt.Sprintf("%s/host-cluster-appset.yaml", GetTenantProductionDir(r.TenantConfigRepoLocalPath))
+	hostClusterAppSetPath := fmt.Sprintf("%s/host-cluster-appset.yaml", concatTenantProductionDir(cr.TenantConfigRepoLocalPath))
 	err := DeleteSpecifyFile(hostClusterAppSetPath)
 	if err != nil {
 		return err
@@ -250,12 +330,12 @@ func (r *ClusterRegistration) DeleteHostClusterAppSet() error {
 	return nil
 }
 
-func (r *ClusterRegistration) DeleteRuntimeAppSet() error {
-	if r.Usage == _HostClusterType {
+func (cr *ClusterRegistration) DeleteRuntimeAppSet() error {
+	if cr.Usage == _HostCluster {
 		return nil
 	}
 
-	tenantProductionDir := GetTenantProductionDir(r.TenantConfigRepoLocalPath)
+	tenantProductionDir := concatTenantProductionDir(cr.TenantConfigRepoLocalPath)
 	err := filepath.Walk(tenantProductionDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -285,12 +365,12 @@ func IsValidRuntimeAppSetFilename(filename string) bool {
 	return match
 }
 
-func (r *ClusterRegistration) DeleteVclusterAppSet() error {
-	if r.Usage != _VirtualRuntime {
+func (cr *ClusterRegistration) CleanVclusterAppSet() error {
+	if cr.Usage != _VirtualDeploymentRuntime {
 		return nil
 	}
 
-	vclusterAppSetPath := fmt.Sprintf("%s/%s/production/vcluster-appset.yaml", GetHostClustesrDir(r.TenantConfigRepoLocalPath), r.Vcluster.HostCluster.Name)
+	vclusterAppSetPath := fmt.Sprintf("%s/%s/%s", concatHostClustesrDir(cr.TenantConfigRepoLocalPath), cr.Vcluster.HostCluster.Name, _VclusterAppSetFile)
 	err := DeleteSpecifyFile(vclusterAppSetPath)
 	if err != nil {
 		return err
@@ -308,7 +388,7 @@ func DeleteSpecifyDir(dir string) error {
 	}
 
 	if !fileInfo.IsDir() {
-		return fmt.Errorf("'%s' is not a directory", dir)
+		return fmt.Errorf("'%s' is not a directory, not allowed to delete", dir)
 	}
 
 	return os.RemoveAll(dir)
@@ -323,14 +403,14 @@ func DeleteSpecifyFile(filename string) error {
 	}
 
 	if fileInfo.IsDir() {
-		return fmt.Errorf("'%s' is a directory", filename)
+		return fmt.Errorf("'%s' is a directory, not allowed to delete", filename)
 	}
 
 	return os.Remove(filename)
 }
 
-func (r *ClusterRegistration) DeleteCluster() error {
-	filename := fmt.Sprintf("%s/%s.yaml", GetClustersDir(r.TenantConfigRepoLocalPath), r.Cluster.Name)
+func (cr *ClusterRegistration) DeleteClusterToNautes() error {
+	filename := fmt.Sprintf("%s/%s.yaml", concatClustersDir(cr.TenantConfigRepoLocalPath), cr.Cluster.Name)
 	_, err := os.Stat(filename)
 	if os.IsNotExist(err) {
 		return nil
@@ -339,24 +419,4 @@ func (r *ClusterRegistration) DeleteCluster() error {
 	}
 
 	return os.Remove(filename)
-}
-
-func isDirExist(path string) bool {
-	_, err := os.Stat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false
-		}
-	}
-	return true
-}
-
-func RemoveStringFromArray(arr []string, target string) []string {
-	for i := 0; i < len(arr); i++ {
-		if arr[i] == target {
-			arr = append(arr[:i], arr[i+1:]...)
-			i--
-		}
-	}
-	return arr
 }

@@ -15,7 +15,9 @@
 package nodestree
 
 import (
+	"os"
 	"reflect"
+	"strings"
 
 	structs "github.com/fatih/structs"
 )
@@ -45,6 +47,34 @@ func IsInSlice(slice []string, s string) (isIn bool) {
 	}
 
 	return
+}
+
+func InContainsDir(str string, fields []string) (isIn bool) {
+	ok := isFilePath(str)
+	if ok {
+		return false
+	}
+	isIn = false
+	for _, f := range fields {
+		if strings.Contains(str, f) {
+			isIn = true
+			break
+		}
+	}
+
+	return
+}
+
+func isFilePath(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+		return false
+	}
+
+	return !info.IsDir()
 }
 
 func GetResourceValue(c interface{}, field, key string) string {

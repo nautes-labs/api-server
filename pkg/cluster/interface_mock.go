@@ -63,18 +63,18 @@ func (mr *MockClusterRegistrationOperatorMockRecorder) GetTraefikNodePortToHostC
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTraefikNodePortToHostCluster", reflect.TypeOf((*MockClusterRegistrationOperator)(nil).GetTraefikNodePortToHostCluster), tenantLocalPath, hostCluster)
 }
 
-// InitializeDependencies mocks base method.
-func (m *MockClusterRegistrationOperator) InitializeDependencies(param *ClusterRegistrationParam) error {
+// InitializeClusterConfig mocks base method.
+func (m *MockClusterRegistrationOperator) InitializeClusterConfig(param *ClusterRegistrationParam) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InitializeDependencies", param)
+	ret := m.ctrl.Call(m, "InitializeClusterConfig", param)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// InitializeDependencies indicates an expected call of InitializeDependencies.
-func (mr *MockClusterRegistrationOperatorMockRecorder) InitializeDependencies(param interface{}) *gomock.Call {
+// InitializeClusterConfig indicates an expected call of InitializeClusterConfig.
+func (mr *MockClusterRegistrationOperatorMockRecorder) InitializeClusterConfig(param interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitializeDependencies", reflect.TypeOf((*MockClusterRegistrationOperator)(nil).InitializeDependencies), param)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitializeClusterConfig", reflect.TypeOf((*MockClusterRegistrationOperator)(nil).InitializeClusterConfig), param)
 }
 
 // Remove mocks base method.

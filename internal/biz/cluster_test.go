@@ -142,7 +142,7 @@ var _ = Describe("Save cluster", func() {
 		resourceusecase := NewResourcesUsecase(logger, codeRepo, secretRepo, gitRepo, nil, nautesConfigs)
 
 		clusteroperator := clusterregistration.NewMockClusterRegistrationOperator(ctl)
-		clusteroperator.EXPECT().InitializeDependencies(gomock.Any()).Return(nil)
+		clusteroperator.EXPECT().InitializeClusterConfig(gomock.Any()).Return(nil)
 		clusteroperator.EXPECT().Save().Return(nil)
 
 		dex := NewMockDexRepo(ctl)
@@ -265,7 +265,7 @@ var _ = Describe("Save cluster", func() {
 		resourceusecase := NewResourcesUsecase(logger, codeRepo, secretRepo, gitRepo, nil, nautesConfigs)
 
 		clusteroperator := clusterregistration.NewMockClusterRegistrationOperator(ctl)
-		clusteroperator.EXPECT().InitializeDependencies(gomock.Any()).Return(nil)
+		clusteroperator.EXPECT().InitializeClusterConfig(gomock.Any()).Return(nil)
 		clusteroperator.EXPECT().Save().Return(nil)
 
 		dex := NewMockDexRepo(ctl)
@@ -299,7 +299,7 @@ var _ = Describe("Save cluster", func() {
 		resourceusecase := NewResourcesUsecase(logger, codeRepo, secretRepo, gitRepo, nil, nautesConfigs)
 
 		clusteroperator := clusterregistration.NewMockClusterRegistrationOperator(ctl)
-		clusteroperator.EXPECT().InitializeDependencies(gomock.Any()).Return(nil)
+		clusteroperator.EXPECT().InitializeClusterConfig(gomock.Any()).Return(nil)
 		clusteroperator.EXPECT().Save().Return(nil)
 		clusteroperator.EXPECT().GetTraefikNodePortToHostCluster(gomock.Any(), gomock.Any()).Return(30456, nil)
 
@@ -312,6 +312,8 @@ var _ = Describe("Save cluster", func() {
 	})
 
 	It("failed to get tenant repository", func() {
+		param.Cluster = virtualCluster
+
 		client := kubernetes.NewMockClient(ctl)
 		client.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("codeRepo is not found"))
 
@@ -336,6 +338,8 @@ var _ = Describe("Save cluster", func() {
 	})
 
 	It("failed to saved cluster", func() {
+		param.Cluster = physcialCluster
+
 		client := kubernetes.NewMockClient(ctl)
 		client.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
@@ -345,6 +349,7 @@ var _ = Describe("Save cluster", func() {
 
 		secretRepo := NewMockSecretrepo(ctl)
 		secretRepo.EXPECT().GetSecret(gomock.Any(), cacertSecretOptions).Return("cacert", nil)
+		secretRepo.EXPECT().SaveClusterConfig(gomock.Any(), param.Cluster.Name, gomock.Any()).Return(nil)
 
 		gitRepo := NewMockGitRepo(ctl)
 		gitRepo.EXPECT().Clone(gomock.Any(), clusterTemplateCloneParam).Return(clusterTemplateLocalPath, nil)
@@ -353,7 +358,7 @@ var _ = Describe("Save cluster", func() {
 		resourceusecase := NewResourcesUsecase(logger, codeRepo, secretRepo, gitRepo, nil, nautesConfigs)
 
 		clusteroperator := clusterregistration.NewMockClusterRegistrationOperator(ctl)
-		clusteroperator.EXPECT().InitializeDependencies(gomock.Any()).Return(nil)
+		clusteroperator.EXPECT().InitializeClusterConfig(gomock.Any()).Return(nil)
 		clusteroperator.EXPECT().Save().Return(fmt.Errorf("failed save cluster"))
 
 		dex := NewMockDexRepo(ctl)
@@ -404,6 +409,8 @@ var _ = Describe("Delete cluster", func() {
 			HttpUrlToRepo:     tenantRepositoryHttpsURL,
 			PathWithNamespace: fmt.Sprintf("%v/%v", defaultProductGroup.Path, defaultProjectName),
 		}
+		argocdURL = "argocd.test.10.231.322.312.nip.io"
+		callback  = fmt.Sprintf("%s/%s", argocdURL, _DexCallbackPath)
 	)
 
 	It("successfully deleted cluster", func() {
@@ -429,12 +436,12 @@ var _ = Describe("Delete cluster", func() {
 		resourceusecase := NewResourcesUsecase(logger, codeRepo, secretRepo, gitRepo, nil, nautesConfigs)
 
 		clusteroperator := clusterregistration.NewMockClusterRegistrationOperator(ctl)
-		clusteroperator.EXPECT().InitializeDependencies(gomock.Any()).Return(nil)
+		clusteroperator.EXPECT().InitializeClusterConfig(gomock.Any()).Return(nil)
+		clusteroperator.EXPECT().GetArgocdURL().Return(argocdURL, nil)
 		clusteroperator.EXPECT().Remove().Return(nil)
-		clusteroperator.EXPECT().GetArgocdURL().Return("url", nil)
 
 		dex := NewMockDexRepo(ctl)
-		dex.EXPECT().RemoveRedirectURIs(gomock.Any()).Return(nil)
+		dex.EXPECT().RemoveRedirectURIs(callback).Return(nil)
 
 		clusterusecase := NewClusterUsecase(logger, codeRepo, secretRepo, resourceusecase, nautesConfigs, client, clusteroperator, dex)
 		err := clusterusecase.DeleteCluster(context.Background(), cluster.Name)
@@ -460,12 +467,12 @@ var _ = Describe("Delete cluster", func() {
 		resourceusecase := NewResourcesUsecase(logger, codeRepo, secretRepo, gitRepo, nil, nautesConfigs)
 
 		clusteroperator := clusterregistration.NewMockClusterRegistrationOperator(ctl)
-		clusteroperator.EXPECT().InitializeDependencies(gomock.Any()).Return(nil)
+		clusteroperator.EXPECT().InitializeClusterConfig(gomock.Any()).Return(nil)
 		clusteroperator.EXPECT().Remove().Return(fmt.Errorf("failed to delete cluster"))
-		clusteroperator.EXPECT().GetArgocdURL().Return("url", nil)
+		clusteroperator.EXPECT().GetArgocdURL().Return(argocdURL, nil)
 
 		dex := NewMockDexRepo(ctl)
-		dex.EXPECT().RemoveRedirectURIs(gomock.Any()).Return(nil)
+		dex.EXPECT().RemoveRedirectURIs(callback).Return(nil)
 
 		clusterusecase := NewClusterUsecase(logger, codeRepo, secretRepo, resourceusecase, nautesConfigs, client, clusteroperator, dex)
 		err := clusterusecase.DeleteCluster(context.Background(), cluster.Name)

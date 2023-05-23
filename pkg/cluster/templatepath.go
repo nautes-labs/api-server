@@ -16,26 +16,38 @@ package cluster
 
 import "fmt"
 
-func GetHostClusterAppsetFilePath(dir string) string {
-	return fmt.Sprintf("%s/tenant/production/host-cluster-appset.yaml", dir)
+const (
+	_ClustersDir                = "nautes/overlays/production/clusters"
+	_TenantProductionDir        = "tenant/production"
+	_HostClusterAppSetFile      = "tenant/production/host-cluster-appset.yaml"
+	_HostClusterAppSetFileName  = "host-cluster-appset.yaml"
+	_IngressTektonDashboardFile = "oauth2-proxy/overlays/production/ingress-tekton-dashborard.yaml"
+)
+
+func concatHostClustesrDir(root string) string {
+	return fmt.Sprintf("%s/%s", root, _HostClustersDir)
 }
 
-func GetHostClustesrDir(dir string) string {
-	return fmt.Sprintf("%s/host-clusters", dir)
+func concatRuntimesDir(root string) string {
+	return fmt.Sprintf("%s/%s", root, _RuntimesDir)
 }
 
-func GetRuntimesDir(dir string) string {
-	return fmt.Sprintf("%s/runtimes", dir)
+func concatClustersDir(root string) string {
+	return fmt.Sprintf("%s/%s", root, _ClustersDir)
 }
 
-func GetClustersDir(dir string) string {
-	return fmt.Sprintf("%s/nautes/overlays/production/clusters", dir)
+func concatTenantProductionDir(root string) string {
+	return fmt.Sprintf("%s/%s", root, _TenantProductionDir)
 }
 
-func GetTenantProductionDir(dir string) string {
-	return fmt.Sprintf("%s/tenant/production", dir)
+func concatSpecifiedVclustersDir(root, hostClusterName string) string {
+	return fmt.Sprintf("%s/%s/%s/%s", root, _HostClustersDir, hostClusterName, _VclustersDir)
 }
 
-func GetVclustersDir(dir, subDir string) string {
-	return fmt.Sprintf("%s/host-clusters/%s/vclusters", dir, subDir)
+func concatTektonDashborardFilePath(root, hostCluster string) string {
+	return fmt.Sprintf("%s/%s/%s/%s", root, _HostClustersDir, hostCluster, _IngressTektonDashboardFile)
+}
+
+func concatHostClusterAppsetFilePath(root string) string {
+	return fmt.Sprintf("%s/%s", root, _HostClusterAppSetFile)
 }

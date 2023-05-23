@@ -15,7 +15,7 @@
 package cluster
 
 type ClusterRegistrationOperator interface {
-	InitializeDependencies(param *ClusterRegistrationParam) error
+	InitializeClusterConfig(param *ClusterRegistrationParam) error
 	GetArgocdURL() (string, error)
 	GetTraefikNodePortToHostCluster(tenantLocalPath, hostCluster string) (int, error)
 	Save() error
