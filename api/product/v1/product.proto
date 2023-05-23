@@ -4,35 +4,7 @@ package api.product.v1;
 
 import "google/api/annotations.proto";
 import "validate/validate.proto";
-import "openapi/v3/annotations.proto";
 
-option (openapi.v3.document) = {
-  info: {
-    title: "Product API";
-    version: "0.3.0";
-    license: {
-      name: "Apache License 2.0";
-      url: "http://www.apache.org/licenses/LICENSE-2.0";
-    }
-  }
-  components: {
-    security_schemes: {
-      additional_properties: [
-        {
-          name: "BearerAuth";
-          value: {
-            security_scheme: {
-              name: "Authorization";
-              type: "http";
-              in: "header";
-              scheme: "Bearer";
-            }
-          }
-        }
-      ]
-    }
-  }
-};
 
 option go_package = "github.com/nautes-labs/api-server/api/product/v1;v1";
 
@@ -41,40 +13,10 @@ service Product {
     option (google.api.http) = {
       get: "/api/v1/products/{product_name}"
     };
-    option(openapi.v3.operation) = {
-        operation_id: "GetProduct";
-        security: [
-          {
-            additional_properties: [
-              {
-                name: "BearerAuth";
-                value: {
-                  value: []
-                }
-              }
-            ]
-          }
-        ]
-    };
   }
   rpc ListProducts (ListProductsRequest) returns (ListProductsReply) {
     option (google.api.http) = {
       get: "/api/v1/products"
-    };
-    option(openapi.v3.operation) = {
-        operation_id: "ListProducts";
-        security: [
-          {
-            additional_properties: [
-              {
-                name: "BearerAuth";
-                value: {
-                  value: []
-                }
-              }
-            ]
-          }
-        ]
     };
   }
   rpc SaveProduct (SaveProductRequest) returns (SaveProductReply) {
@@ -82,40 +24,10 @@ service Product {
       post: "/api/v1/products/{product_name}"
       body: "*"
     };
-    option(openapi.v3.operation) = {
-        operation_id: "SaveProduct";
-        security: [
-          {
-            additional_properties: [
-              {
-                name: "BearerAuth";
-                value: {
-                  value: []
-                }
-              }
-            ]
-          }
-        ]
-    };
   }
   rpc DeleteProduct (DeleteProductRequest) returns (DeleteProductReply) {
     option (google.api.http) = {
       delete: "/api/v1/products/{product_name}"
-    };
-    option(openapi.v3.operation) = {
-        operation_id: "DeleteProduct";
-        security: [
-          {
-            additional_properties: [
-              {
-                name: "BearerAuth";
-                value: {
-                  value: []
-                }
-              }
-            ]
-          }
-        ]
     };
   }
 }

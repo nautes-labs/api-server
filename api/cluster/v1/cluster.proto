@@ -6,35 +6,6 @@ option go_package = "github.com/nautes-labs/api-server/api/cluster/v1;v1";
 
 import "google/api/annotations.proto";
 import "validate/validate.proto";
-import "openapi/v3/annotations.proto";
-
-option (openapi.v3.document) = {
-  info: {
-    title: "Cluster API";
-    version: "0.3.0";
-    license: {
-      name: "Apache License 2.0";
-      url: "http://www.apache.org/licenses/LICENSE-2.0";
-    }
-  }
-  components: {
-    security_schemes: {
-      additional_properties: [
-        {
-          name: "BearerAuth";
-          value: {
-            security_scheme: {
-              name: "Authorization";
-              type: "http";
-              in: "header";
-              scheme: "Bearer";
-            }
-          }
-        }
-      ]
-    }
-  }
-};
 
 service Cluster {
   rpc SaveCluster (SaveRequest) returns (SaveReply) {
@@ -42,40 +13,10 @@ service Cluster {
       post: "/api/v1/clusters/{clusterName}"
       body: "body"
     };
-    option(openapi.v3.operation) = {
-        operation_id: "SaveCluster";
-        security: [
-          {
-            additional_properties: [
-              {
-                name: "BearerAuth";
-                value: {
-                  value: []
-                }
-              }
-            ]
-          }
-        ]
-    };
   }
   rpc DeleteCluster (DeleteRequest) returns (DeleteReply) {
     option (google.api.http) = {
       delete: "/api/v1/clusters/{clusterName}"
-    };
-    option(openapi.v3.operation) = {
-        operation_id: "DeleteCluster";
-        security: [
-          {
-            additional_properties: [
-              {
-                name: "BearerAuth";
-                value: {
-                  value: []
-                }
-              }
-            ]
-          }
-        ]
     };
   }
 }

@@ -6,75 +6,17 @@ option go_package = "github.com/nautes-labs/api-server/api/coderepo/v1;v1";
 
 import "google/api/annotations.proto";
 import "validate/validate.proto";
-import "openapi/v3/annotations.proto";
 
-option (openapi.v3.document) = {
-  info: {
-    title: "Code Repository API";
-    version: "0.3.0";
-    license: {
-      name: "Apache License 2.0";
-      url: "http://www.apache.org/licenses/LICENSE-2.0";
-    }
-  }
-  components: {
-    security_schemes: {
-      additional_properties: [
-        {
-          name: "BearerAuth";
-          value: {
-            security_scheme: {
-              name: "Authorization";
-              type: "http";
-              in: "header";
-              scheme: "Bearer";
-            }
-          }
-        }
-      ]
-    }
-  }
-};
 
 service CodeRepo {
   rpc GetCodeRepo (GetRequest) returns (GetReply) {
     option (google.api.http) = {
       get: "/api/v1/products/{productName}/coderepos/{coderepoName}"
     };
-    option(openapi.v3.operation) = {
-        operation_id: "GetCodeRepo";
-        security: [
-          {
-            additional_properties: [
-              {
-                name: "BearerAuth";
-                value: {
-                  value: []
-                }
-              }
-            ]
-          }
-        ]
-    };
   }
   rpc ListCodeRepos (ListsRequest) returns (ListsReply) {
     option (google.api.http) = {
       get: "/api/v1/products/{productName}/coderepos"
-    };
-    option(openapi.v3.operation) = {
-        operation_id: "ListCodeRepos";
-        security: [
-          {
-            additional_properties: [
-              {
-                name: "BearerAuth";
-                value: {
-                  value: []
-                }
-              }
-            ]
-          }
-        ]
     };
   }
   rpc SaveCodeRepo (SaveRequest) returns (SaveReply) {
@@ -82,43 +24,14 @@ service CodeRepo {
       post: "/api/v1/products/{productName}/coderepos/{coderepoName}"
       body: "body"
     };
-    option(openapi.v3.operation) = {
-        operation_id: "SaveCodeRepo";
-        security: [
-          {
-            additional_properties: [
-              {
-                name: "BearerAuth";
-                value: {
-                  value: []
-                }
-              }
-            ]
-          }
-        ]
-    };
   }
   rpc DeleteCodeRepo (DeleteRequest) returns (DeleteReply) {
     option (google.api.http) = {
       delete: "/api/v1/products/{productName}/coderepos/{coderepoName}"
     };
-    option(openapi.v3.operation) = {
-        operation_id: "DeleteCodeRepo";
-        security: [
-          {
-            additional_properties: [
-              {
-                name: "BearerAuth";
-                value: {
-                  value: []
-                }
-              }
-            ]
-          }
-        ]
-    };
   }
 }
+
 
 // Request message for listing items
 message ListsRequest {

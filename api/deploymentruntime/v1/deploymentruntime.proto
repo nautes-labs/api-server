@@ -6,75 +6,17 @@ option go_package = "github.com/nautes-labs/api-server/api/deploymentruntime/v1;
 
 import "google/api/annotations.proto";
 import "validate/validate.proto";
-import "openapi/v3/annotations.proto";
 
-option (openapi.v3.document) = {
-  info: {
-    title: "Deployment Runtime API";
-    version: "0.3.0";
-    license: {
-      name: "Apache License 2.0";
-      url: "http://www.apache.org/licenses/LICENSE-2.0";
-    }
-  }
-  components: {
-    security_schemes: {
-      additional_properties: [
-        {
-          name: "BearerAuth";
-          value: {
-            security_scheme: {
-              name: "Authorization";
-              type: "http";
-              in: "header";
-              scheme: "Bearer";
-            }
-          }
-        }
-      ]
-    }
-  }
-};
 
 service Deploymentruntime {
   rpc GetDeploymentRuntime (GetRequest) returns (GetReply) {
     option (google.api.http) = {
       get: "/api/v1/products/{productName}/deploymentruntimes/{deploymentruntimeName}"
     };
-    option(openapi.v3.operation) = {
-        operation_id: "GetDeploymentRuntime";
-        security: [
-          {
-            additional_properties: [
-              {
-                name: "BearerAuth";
-                value: {
-                  value: []
-                }
-              }
-            ]
-          }
-        ]
-    };
   }
   rpc ListDeploymentRuntimes (ListsRequest) returns (ListsReply) {
     option (google.api.http) = {
       get: "/api/v1/products/{productName}/deploymentruntimes"
-    };
-    option(openapi.v3.operation) = {
-        operation_id: "ListDeploymentRuntimes";
-        security: [
-          {
-            additional_properties: [
-              {
-                name: "BearerAuth";
-                value: {
-                  value: []
-                }
-              }
-            ]
-          }
-        ]
     };
   }
   rpc SaveDeploymentRuntime (SaveRequest) returns (SaveReply) {
@@ -82,40 +24,10 @@ service Deploymentruntime {
       post: "/api/v1/products/{productName}/deploymentruntimes/{deploymentruntimeName}"
       body: "body"
     };
-    option(openapi.v3.operation) = {
-        operation_id: "SaveDeploymentRuntime";
-        security: [
-          {
-            additional_properties: [
-              {
-                name: "BearerAuth";
-                value: {
-                  value: []
-                }
-              }
-            ]
-          }
-        ]
-    };
   }
   rpc DeleteDeploymentRuntime (DeleteRequest) returns (DeleteReply) {
     option (google.api.http) = {
       delete: "/api/v1/products/{productName}/deploymentruntimes/{deploymentruntimeName}"
-    };
-    option(openapi.v3.operation) = {
-        operation_id: "DeleteDeploymentRuntime";
-        security: [
-          {
-            additional_properties: [
-              {
-                name: "BearerAuth";
-                value: {
-                  value: []
-                }
-              }
-            ]
-          }
-        ]
     };
   }
 }

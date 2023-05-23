@@ -6,75 +6,17 @@ option go_package = "github.com/nautes-labs/api-server/api/environment/v1;v1";
 
 import "google/api/annotations.proto";
 import "validate/validate.proto";
-import "openapi/v3/annotations.proto";
 
-option (openapi.v3.document) = {
-  info: {
-    title: "Environment API";
-    version: "0.3.0";
-    license: {
-      name: "Apache License 2.0";
-      url: "http://www.apache.org/licenses/LICENSE-2.0";
-    }
-  }
-  components: {
-    security_schemes: {
-      additional_properties: [
-        {
-          name: "BearerAuth";
-          value: {
-            security_scheme: {
-              name: "Authorization";
-              type: "http";
-              in: "header";
-              scheme: "Bearer";
-            }
-          }
-        }
-      ]
-    }
-  }
-};
 
 service Environment {
   rpc GetEnvironment (GetRequest) returns (GetReply) {
     option (google.api.http) = {
       get: "/api/v1/products/{productName}/environments/{environmentName}"
     };
-    option(openapi.v3.operation) = {
-        operation_id: "GetEnvironment";
-        security: [
-          {
-            additional_properties: [
-              {
-                name: "BearerAuth";
-                value: {
-                  value: []
-                }
-              }
-            ]
-          }
-        ]
-    };
   }
   rpc ListEnvironments (ListsRequest) returns (ListsReply) {
     option (google.api.http) = {
       get: "/api/v1/products/{productName}/environments"
-    };
-    option(openapi.v3.operation) = {
-        operation_id: "ListEnvironments";
-        security: [
-          {
-            additional_properties: [
-              {
-                name: "BearerAuth";
-                value: {
-                  value: []
-                }
-              }
-            ]
-          }
-        ]
     };
   }
   rpc SaveEnvironment (SaveRequest) returns (SaveReply) {
@@ -82,40 +24,10 @@ service Environment {
       post: "/api/v1/products/{productName}/environments/{environmentName}"
       body: "body"
     };
-    option(openapi.v3.operation) = {
-        operation_id: "SaveEnvironment";
-        security: [
-          {
-            additional_properties: [
-              {
-                name: "BearerAuth";
-                value: {
-                  value: []
-                }
-              }
-            ]
-          }
-        ]
-    };
   }
   rpc DeleteEnvironment (DeleteRequest) returns (DeleteReply) {
     option (google.api.http) = {
       delete: "/api/v1/products/{productName}/environments/{environmentName}"
-    };
-    option(openapi.v3.operation) = {
-        operation_id: "DeleteEnvironment";
-        security: [
-          {
-            additional_properties: [
-              {
-                name: "BearerAuth";
-                value: {
-                  value: []
-                }
-              }
-            ]
-          }
-        ]
     };
   }
 }
