@@ -48,7 +48,6 @@ var (
 			DefaultDeployKeyType: "rsa",
 		},
 		Deploy: nautesconfigs.DeployApp{
-			Type: "argocd",
 			ArgoCD: nautesconfigs.ArgoCD{
 				Namespace: "argocd",
 				Kustomize: nautesconfigs.Kustomize{
