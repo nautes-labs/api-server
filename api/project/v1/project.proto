@@ -6,16 +6,75 @@ option go_package = "github.com/nautes-labs/api-server/api/project/v1;v1";
 
 import "google/api/annotations.proto";
 import "validate/validate.proto";
+import "openapi/v3/annotations.proto";
+
+option (openapi.v3.document) = {
+  info: {
+    title: "Project API";
+    version: "0.3.0";
+    license: {
+      name: "Apache License 2.0";
+      url: "http://www.apache.org/licenses/LICENSE-2.0";
+    }
+  }
+  components: {
+    security_schemes: {
+      additional_properties: [
+        {
+          name: "BearerAuth";
+          value: {
+            security_scheme: {
+              name: "Authorization";
+              type: "http";
+              in: "header";
+              scheme: "Bearer";
+            }
+          }
+        }
+      ]
+    }
+  }
+};
 
 service Project {
   rpc GetProject (GetRequest) returns (GetReply) {
     option (google.api.http) = {
       get: "/api/v1/products/{product_name}/projects/{project_name}"
     };
+    option(openapi.v3.operation) = {
+        operation_id: "GetProject";
+        security: [
+          {
+            additional_properties: [
+              {
+                name: "BearerAuth";
+                value: {
+                  value: []
+                }
+              }
+            ]
+          }
+        ]
+    };
   }
   rpc ListProjects (ListsRequest) returns (ListsReply) {
     option (google.api.http) = {
       get: "/api/v1/products/{product_name}/projects"
+    };
+    option(openapi.v3.operation) = {
+        operation_id: "ListProjects";
+        security: [
+          {
+            additional_properties: [
+              {
+                name: "BearerAuth";
+                value: {
+                  value: []
+                }
+              }
+            ]
+          }
+        ]
     };
   }
   rpc SaveProject (SaveRequest) returns (SaveReply) {
@@ -23,10 +82,40 @@ service Project {
       post: "/api/v1/products/{product_name}/projects/{project_name}"
       body: "body"
     };
+    option(openapi.v3.operation) = {
+        operation_id: "SaveProject";
+        security: [
+          {
+            additional_properties: [
+              {
+                name: "BearerAuth";
+                value: {
+                  value: []
+                }
+              }
+            ]
+          }
+        ]
+    };
   }
   rpc DeleteProject (DeleteRequest) returns (DeleteReply) {
     option (google.api.http) = {
       delete: "/api/v1/products/{product_name}/projects/{project_name}"
+    };
+    option(openapi.v3.operation) = {
+        operation_id: "DeleteProject";
+        security: [
+          {
+            additional_properties: [
+              {
+                name: "BearerAuth";
+                value: {
+                  value: []
+                }
+              }
+            ]
+          }
+        ]
     };
   }
 }

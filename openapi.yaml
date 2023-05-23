@@ -3,14 +3,17 @@
 
 openapi: 3.0.3
 info:
-    title: ""
-    version: 0.0.1
+    title: Project Pipeline Runtime API
+    license:
+        name: Apache License 2.0
+        url: http://www.apache.org/licenses/LICENSE-2.0
+    version: 0.3.0
 paths:
     /api/v1/clusters/{cluster_name}:
         post:
             tags:
                 - Cluster
-            operationId: Cluster_SaveCluster
+            operationId: SaveCluster
             parameters:
                 - name: cluster_name
                   in: path
@@ -36,10 +39,12 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.cluster.v1.SaveReply'
+            security:
+                - BearerAuth: []
         delete:
             tags:
                 - Cluster
-            operationId: Cluster_DeleteCluster
+            operationId: DeleteCluster
             parameters:
                 - name: cluster_name
                   in: path
@@ -64,11 +69,13 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.cluster.v1.DeleteReply'
+            security:
+                - BearerAuth: []
     /api/v1/products:
         get:
             tags:
                 - Product
-            operationId: Product_ListProducts
+            operationId: ListProducts
             responses:
                 "200":
                     description: OK
@@ -76,11 +83,13 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.product.v1.ListProductsReply'
+            security:
+                - BearerAuth: []
     /api/v1/products/{product_name}:
         get:
             tags:
                 - Product
-            operationId: Product_GetProduct
+            operationId: GetProduct
             parameters:
                 - name: product_name
                   in: path
@@ -95,10 +104,12 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.product.v1.GetProductReply'
+            security:
+                - BearerAuth: []
         post:
             tags:
                 - Product
-            operationId: Product_SaveProduct
+            operationId: SaveProduct
             parameters:
                 - name: product_name
                   in: path
@@ -119,10 +130,12 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.product.v1.SaveProductReply'
+            security:
+                - BearerAuth: []
         delete:
             tags:
                 - Product
-            operationId: Product_DeleteProduct
+            operationId: DeleteProduct
             parameters:
                 - name: product_name
                   in: path
@@ -137,11 +150,13 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.product.v1.DeleteProductReply'
+            security:
+                - BearerAuth: []
     /api/v1/products/{product_name}/coderepobindings:
         get:
             tags:
                 - CodeRepoBinding
-            operationId: CodeRepoBinding_ListCodeRepoBindings
+            operationId: ListCodeRepoBindings
             parameters:
                 - name: product_name
                   in: path
@@ -156,11 +171,13 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.coderepobinding.v1.ListsReply'
+            security:
+                - BearerAuth: []
     /api/v1/products/{product_name}/coderepobindings/{coderepo_binding_name}:
         get:
             tags:
                 - CodeRepoBinding
-            operationId: CodeRepoBinding_GetCodeRepoBinding
+            operationId: GetCodeRepoBinding
             parameters:
                 - name: product_name
                   in: path
@@ -179,10 +196,12 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.coderepobinding.v1.GetReply'
+            security:
+                - BearerAuth: []
         post:
             tags:
                 - CodeRepoBinding
-            operationId: CodeRepoBinding_SaveCodeRepoBinding
+            operationId: SaveCodeRepoBinding
             parameters:
                 - name: product_name
                   in: path
@@ -214,10 +233,12 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.coderepobinding.v1.SaveReply'
+            security:
+                - BearerAuth: []
         delete:
             tags:
                 - CodeRepoBinding
-            operationId: CodeRepoBinding_DeleteCodeRepoBinding
+            operationId: DeleteCodeRepoBinding
             parameters:
                 - name: product_name
                   in: path
@@ -240,11 +261,13 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.coderepobinding.v1.DeleteReply'
+            security:
+                - BearerAuth: []
     /api/v1/products/{product_name}/coderepos:
         get:
             tags:
                 - CodeRepo
-            operationId: CodeRepo_ListCodeRepos
+            operationId: ListCodeRepos
             parameters:
                 - name: product_name
                   in: path
@@ -259,11 +282,13 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.coderepo.v1.ListsReply'
+            security:
+                - BearerAuth: []
     /api/v1/products/{product_name}/coderepos/{coderepo_name}:
         get:
             tags:
                 - CodeRepo
-            operationId: CodeRepo_GetCodeRepo
+            operationId: GetCodeRepo
             parameters:
                 - name: product_name
                   in: path
@@ -282,10 +307,12 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.coderepo.v1.GetReply'
+            security:
+                - BearerAuth: []
         post:
             tags:
                 - CodeRepo
-            operationId: CodeRepo_SaveCodeRepo
+            operationId: SaveCodeRepo
             parameters:
                 - name: product_name
                   in: path
@@ -314,10 +341,12 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.coderepo.v1.SaveReply'
+            security:
+                - BearerAuth: []
         delete:
             tags:
                 - CodeRepo
-            operationId: CodeRepo_DeleteCodeRepo
+            operationId: DeleteCodeRepo
             parameters:
                 - name: product_name
                   in: path
@@ -340,11 +369,13 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.coderepo.v1.DeleteReply'
+            security:
+                - BearerAuth: []
     /api/v1/products/{product_name}/deploymentruntimes:
         get:
             tags:
                 - Deploymentruntime
-            operationId: Deploymentruntime_ListDeploymentRuntimes
+            operationId: ListDeploymentRuntimes
             parameters:
                 - name: product_name
                   in: path
@@ -359,11 +390,13 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.deploymentruntime.v1.ListsReply'
+            security:
+                - BearerAuth: []
     /api/v1/products/{product_name}/deploymentruntimes/{deploymentruntime_name}:
         get:
             tags:
                 - Deploymentruntime
-            operationId: Deploymentruntime_GetDeploymentRuntime
+            operationId: GetDeploymentRuntime
             parameters:
                 - name: product_name
                   in: path
@@ -384,10 +417,12 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.deploymentruntime.v1.GetReply'
+            security:
+                - BearerAuth: []
         post:
             tags:
                 - Deploymentruntime
-            operationId: Deploymentruntime_SaveDeploymentRuntime
+            operationId: SaveDeploymentRuntime
             parameters:
                 - name: product_name
                   in: path
@@ -419,10 +454,12 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.deploymentruntime.v1.SaveReply'
+            security:
+                - BearerAuth: []
         delete:
             tags:
                 - Deploymentruntime
-            operationId: Deploymentruntime_DeleteDeploymentRuntime
+            operationId: DeleteDeploymentRuntime
             parameters:
                 - name: product_name
                   in: path
@@ -448,11 +485,13 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.deploymentruntime.v1.DeleteReply'
+            security:
+                - BearerAuth: []
     /api/v1/products/{product_name}/environments:
         get:
             tags:
                 - Environment
-            operationId: Environment_ListEnvironments
+            operationId: ListEnvironments
             parameters:
                 - name: product_name
                   in: path
@@ -467,11 +506,13 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.environment.v1.ListsReply'
+            security:
+                - BearerAuth: []
     /api/v1/products/{product_name}/environments/{enviroment_name}:
         get:
             tags:
                 - Environment
-            operationId: Environment_GetEnvironment
+            operationId: GetEnvironment
             parameters:
                 - name: product_name
                   in: path
@@ -492,11 +533,13 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.environment.v1.GetReply'
+            security:
+                - BearerAuth: []
     /api/v1/products/{product_name}/environments/{environment_name}:
         post:
             tags:
                 - Environment
-            operationId: Environment_SaveEnvironment
+            operationId: SaveEnvironment
             parameters:
                 - name: product_name
                   in: path
@@ -528,10 +571,12 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.environment.v1.SaveReply'
+            security:
+                - BearerAuth: []
         delete:
             tags:
                 - Environment
-            operationId: Environment_DeleteEnvironment
+            operationId: DeleteEnvironment
             parameters:
                 - name: product_name
                   in: path
@@ -557,11 +602,13 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.environment.v1.DeleteReply'
+            security:
+                - BearerAuth: []
     /api/v1/products/{product_name}/projectpipelineruntimes:
         get:
             tags:
                 - ProjectPipelineRuntime
-            operationId: ProjectPipelineRuntime_ListProjectPipelineRuntimes
+            operationId: ListProjectPipelineRuntimes
             parameters:
                 - name: product_name
                   in: path
@@ -576,11 +623,13 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.projectpipelineruntime.v1.ListsReply'
+            security:
+                - BearerAuth: []
     /api/v1/products/{product_name}/projectpipelineruntimes/{project_pipeline_runtime_name}:
         get:
             tags:
                 - ProjectPipelineRuntime
-            operationId: ProjectPipelineRuntime_GetProjectPipelineRuntime
+            operationId: GetProjectPipelineRuntime
             parameters:
                 - name: product_name
                   in: path
@@ -601,10 +650,12 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.projectpipelineruntime.v1.GetReply'
+            security:
+                - BearerAuth: []
         post:
             tags:
                 - ProjectPipelineRuntime
-            operationId: ProjectPipelineRuntime_SaveProjectPipelineRuntime
+            operationId: SaveProjectPipelineRuntime
             parameters:
                 - name: product_name
                   in: path
@@ -636,10 +687,12 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.projectpipelineruntime.v1.SaveReply'
+            security:
+                - BearerAuth: []
         delete:
             tags:
                 - ProjectPipelineRuntime
-            operationId: ProjectPipelineRuntime_DeleteProjectPipelineRuntime
+            operationId: DeleteProjectPipelineRuntime
             parameters:
                 - name: product_name
                   in: path
@@ -665,11 +718,13 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.projectpipelineruntime.v1.DeleteReply'
+            security:
+                - BearerAuth: []
     /api/v1/products/{product_name}/projects:
         get:
             tags:
                 - Project
-            operationId: Project_ListProjects
+            operationId: ListProjects
             parameters:
                 - name: product_name
                   in: path
@@ -684,11 +739,13 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.project.v1.ListsReply'
+            security:
+                - BearerAuth: []
     /api/v1/products/{product_name}/projects/{project_name}:
         get:
             tags:
                 - Project
-            operationId: Project_GetProject
+            operationId: GetProject
             parameters:
                 - name: product_name
                   in: path
@@ -709,10 +766,12 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.project.v1.GetReply'
+            security:
+                - BearerAuth: []
         post:
             tags:
                 - Project
-            operationId: Project_SaveProject
+            operationId: SaveProject
             parameters:
                 - name: product_name
                   in: path
@@ -744,10 +803,12 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.project.v1.SaveReply'
+            security:
+                - BearerAuth: []
         delete:
             tags:
                 - Project
-            operationId: Project_DeleteProject
+            operationId: DeleteProject
             parameters:
                 - name: product_name
                   in: path
@@ -773,6 +834,8 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.project.v1.DeleteReply'
+            security:
+                - BearerAuth: []
 components:
     schemas:
         api.cluster.v1.DeleteReply:
@@ -1469,6 +1532,47 @@ components:
                     type: string
                     description: 'Isolation definition of pipeline runtime related resources: shared(default) or exclusive'
             description: Message containing the body of the request.
+    securitySchemes:
+        BearerAuth:
+            type: http
+            name: Authorization
+            in: header
+            scheme: Bearer
+        BearerAuth:
+            type: http
+            name: Authorization
+            in: header
+            scheme: Bearer
+        BearerAuth:
+            type: http
+            name: Authorization
+            in: header
+            scheme: Bearer
+        BearerAuth:
+            type: http
+            name: Authorization
+            in: header
+            scheme: Bearer
+        BearerAuth:
+            type: http
+            name: Authorization
+            in: header
+            scheme: Bearer
+        BearerAuth:
+            type: http
+            name: Authorization
+            in: header
+            scheme: Bearer
+        BearerAuth:
+            type: http
+            name: Authorization
+            in: header
+            scheme: Bearer
+        BearerAuth:
+            type: http
+            name: Authorization
+            in: header
+            scheme: Bearer
 tags:
     - name: Cluster
     - name: CodeRepo

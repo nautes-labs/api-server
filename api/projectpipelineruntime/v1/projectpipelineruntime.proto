@@ -6,17 +6,75 @@ option go_package = "github.com/nautes-labs/api-server/api/projectpipelineruntim
 
 import "google/api/annotations.proto";
 import "validate/validate.proto";
+import "openapi/v3/annotations.proto";
 
+option (openapi.v3.document) = {
+  info: {
+    title: "Project Pipeline Runtime API";
+    version: "0.3.0";
+    license: {
+      name: "Apache License 2.0";
+      url: "http://www.apache.org/licenses/LICENSE-2.0";
+    }
+  }
+  components: {
+    security_schemes: {
+      additional_properties: [
+        {
+          name: "BearerAuth";
+          value: {
+            security_scheme: {
+              name: "Authorization";
+              type: "http";
+              in: "header";
+              scheme: "Bearer";
+            }
+          }
+        }
+      ]
+    }
+  }
+};
 
 service ProjectPipelineRuntime {
   rpc GetProjectPipelineRuntime (GetRequest) returns (GetReply) {
     option (google.api.http) = {
       get: "/api/v1/products/{product_name}/projectpipelineruntimes/{project_pipeline_runtime_name}"
     };
+    option(openapi.v3.operation) = {
+        operation_id: "GetProjectPipelineRuntime";
+        security: [
+          {
+            additional_properties: [
+              {
+                name: "BearerAuth";
+                value: {
+                  value: []
+                }
+              }
+            ]
+          }
+        ]
+    };
   }
   rpc ListProjectPipelineRuntimes (ListsRequest) returns (ListsReply) {
     option (google.api.http) = {
       get: "/api/v1/products/{product_name}/projectpipelineruntimes"
+    };
+    option(openapi.v3.operation) = {
+        operation_id: "ListProjectPipelineRuntimes";
+        security: [
+          {
+            additional_properties: [
+              {
+                name: "BearerAuth";
+                value: {
+                  value: []
+                }
+              }
+            ]
+          }
+        ]
     };
   }
   rpc SaveProjectPipelineRuntime (SaveRequest) returns (SaveReply) {
@@ -24,10 +82,40 @@ service ProjectPipelineRuntime {
       post: "/api/v1/products/{product_name}/projectpipelineruntimes/{project_pipeline_runtime_name}"
       body: "body"
     };
+    option(openapi.v3.operation) = {
+        operation_id: "SaveProjectPipelineRuntime";
+        security: [
+          {
+            additional_properties: [
+              {
+                name: "BearerAuth";
+                value: {
+                  value: []
+                }
+              }
+            ]
+          }
+        ]
+    };
   }
   rpc DeleteProjectPipelineRuntime (DeleteRequest) returns (DeleteReply) {
     option (google.api.http) = {
       delete: "/api/v1/products/{product_name}/projectpipelineruntimes/{project_pipeline_runtime_name}"
+    };
+    option(openapi.v3.operation) = {
+        operation_id: "DeleteProjectPipelineRuntime";
+        security: [
+          {
+            additional_properties: [
+              {
+                name: "BearerAuth";
+                value: {
+                  value: []
+                }
+              }
+            ]
+          }
+        ]
     };
   }
 }
