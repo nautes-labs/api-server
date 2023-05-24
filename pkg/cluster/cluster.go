@@ -124,9 +124,6 @@ func (cr *ClusterRegistration) getPojectPipelineItems(param *ClusterRegistration
 	if err != nil {
 		return nil, err
 	}
-	if httpsNodePort == 0 {
-		return nil, fmt.Errorf("failed to get https node port when get project pipeline configuration")
-	}
 
 	ingressFilePath := concatTektonDashborardFilePath(param.TenantConfigRepoLocalPath, hostClusterName)
 	_, err = os.Stat(ingressFilePath)
@@ -262,11 +259,24 @@ func (cr *ClusterRegistration) getRuntime(cluster *resourcev1alpha1.Cluster, par
 		return nil, err
 	}
 
+	primaryDomain := cluster.Spec.PrimaryDomain
+	if primaryDomain == "" {
+		if !utilstrings.IsIPPortURL(cluster.Spec.ApiServer) {
+			primaryDomain = cluster.Spec.ApiServer
+		} else {
+			hostClusterIP, err := utilstrings.ParseUrl(cluster.Spec.ApiServer)
+			if err != nil {
+				return nil, fmt.Errorf("failed to resolve cluster server, err: %s", err)
+			}
+			primaryDomain = fmt.Sprintf("%s.%s", hostClusterIP, _NIPDomainSuffix)
+		}
+	}
+
 	return &Runtime{
 		Name:          fmt.Sprintf("%s-%s", cluster.Name, _RuntimeSuffix),
 		ClusterName:   cluster.Name,
 		Type:          getRuntimeType(cluster),
-		PrimaryDomain: cluster.Spec.PrimaryDomain,
+		PrimaryDomain: primaryDomain,
 		MountPath:     cluster.Name,
 		ApiServer:     cluster.Spec.ApiServer,
 		ArgocdConfig:  argocdConfig,
