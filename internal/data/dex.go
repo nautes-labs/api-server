@@ -24,6 +24,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	_DexCallbackPath = "api/dex/callback"
+)
+
 type ConfigMap struct {
 	Data map[string]string `yaml:"data"`
 }
@@ -62,11 +66,13 @@ type Dex struct {
 	k8sClient client.Client
 }
 
-func (d *Dex) UpdateRedirectURIs(redirectURIs string) error {
+func (d *Dex) UpdateRedirectURIs(url string) error {
 	cm, err := d.GetDexConfig()
 	if err != nil {
 		return err
 	}
+
+	redirectURIs := concatDexCallback(url)
 
 	cm.Data["config.yaml"], err = UpdateConfigURIs(cm.Data["config.yaml"], redirectURIs)
 	if err != nil {
@@ -81,11 +87,13 @@ func (d *Dex) UpdateRedirectURIs(redirectURIs string) error {
 	return nil
 }
 
-func (d *Dex) RemoveRedirectURIs(redirectURIs string) error {
+func (d *Dex) RemoveRedirectURIs(url string) error {
 	cm, err := d.GetDexConfig()
 	if err != nil {
 		return err
 	}
+
+	redirectURIs := concatDexCallback(url)
 
 	cm.Data["config.yaml"], err = RemoveConfigURIs(cm.Data["config.yaml"], redirectURIs)
 	if err != nil {
@@ -152,4 +160,8 @@ func RemoveConfigURIs(configYAML string, redirectURIs string) (string, error) {
 	}
 
 	return string(configYAMLBytes), nil
+}
+
+func concatDexCallback(url string) string {
+	return fmt.Sprintf("%s/%s", url, _DexCallbackPath)
 }

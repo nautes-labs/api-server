@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strconv"
 
 	"github.com/go-kratos/kratos/v2/log"
 	cluster "github.com/nautes-labs/api-server/pkg/cluster"
@@ -287,20 +286,15 @@ func (c *ClusterUsecase) DeleteCluster(ctx context.Context, clusterName string) 
 }
 
 func (c *ClusterUsecase) SaveDexConfig(param *cluster.ClusterRegistrationParam, teantLocalPath string) error {
-	// The port of the physical runtime cluster is obtained by user parameters
-	// Obtained by querying the traefik port of the host cluster during virtual runtime
-	var callback string
-	if ok := cluster.IsPhysical(param.Cluster); ok {
-		callback = concatDexCallback(param.ArgocdHost, param.Traefik.HttpsNodePort)
-	} else {
-		httpsNodePort, err := c.cluster.GetTraefikNodePortToHostCluster(teantLocalPath, param.Cluster.Spec.HostCluster)
-		if err != nil {
-			return err
-		}
-		callback = concatDexCallback(param.ArgocdHost, strconv.Itoa(httpsNodePort))
+	url, err := c.cluster.GetArgocdURL()
+	if err != nil {
+		return err
+	}
+	if url == "" {
+		return fmt.Errorf("failed to get argocd url when saved dex config")
 	}
 
-	err := c.dex.UpdateRedirectURIs(callback)
+	err = c.dex.UpdateRedirectURIs(url)
 	if err != nil {
 		return err
 	}
@@ -308,22 +302,16 @@ func (c *ClusterUsecase) SaveDexConfig(param *cluster.ClusterRegistrationParam, 
 	return nil
 }
 
-const (
-	_DexCallbackPath = "api/dex/callback"
-)
-
-func concatDexCallback(host, port string) string {
-	return fmt.Sprintf("https://%s:%s/%s", host, port, _DexCallbackPath)
-}
-
 func (c *ClusterUsecase) DeleteDexConfig(param *cluster.ClusterRegistrationParam) error {
 	url, err := c.cluster.GetArgocdURL()
 	if err != nil {
 		return err
 	}
+	if url == "" {
+		return fmt.Errorf("failed to get argocd url when delete dex config")
+	}
 
-	callback := fmt.Sprintf("%s/%s", url, _DexCallbackPath)
-	err = c.dex.RemoveRedirectURIs(callback)
+	err = c.dex.RemoveRedirectURIs(url)
 	if err != nil {
 		return err
 	}
