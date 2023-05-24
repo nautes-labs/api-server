@@ -48,7 +48,7 @@ func createProjectPiepeLineResource(name string) *resourcev1alpha1.ProjectPipeli
 			Isolation:      "shared",
 			Pipelines: []resourcev1alpha1.Pipeline{
 				{
-					Name:  "dev",
+					Name:  "pipeline1",
 					Label: "test",
 					Path:  "dev",
 				},
@@ -192,7 +192,7 @@ var _ = Describe("Save project pipeline runtime", func() {
 				Isolation:      "shared",
 				Pipelines: []resourcev1alpha1.Pipeline{
 					{
-						Name:  "dev",
+						Name:  "pipeline1",
 						Label: "test",
 						Path:  "dev",
 					},

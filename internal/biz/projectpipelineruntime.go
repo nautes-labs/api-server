@@ -235,7 +235,7 @@ func (p *ProjectPipelineRuntimeUsecase) CheckReference(options nodestree.Compare
 
 	projectPipelineRuntime, ok := node.Content.(*resourcev1alpha1.ProjectPipelineRuntime)
 	if !ok {
-		return true, fmt.Errorf("node %s resource type error", node.Name)
+		return true, fmt.Errorf("wrong type found for %s node", node.Name)
 	}
 
 	ok, err := p.isRepeatPipelinePath(projectPipelineRuntime)
@@ -283,15 +283,23 @@ func (p *ProjectPipelineRuntimeUsecase) CheckReference(options nodestree.Compare
 		return true, err
 	}
 
+	client := &PipelineRuntimeValidateClient{nodes: options.Nodes}
+	projectPipelineRuntime.Namespace = options.ProductName
+	_, err = projectPipelineRuntime.Validate(client)
+	if err != nil {
+		return true, err
+	}
+
 	return true, nil
 }
 
 func (p *ProjectPipelineRuntimeUsecase) isRepeatPipelinePath(runtime *resourcev1alpha1.ProjectPipelineRuntime) (bool, error) {
-	len := len(runtime.Spec.Pipelines)
+	pipelines := runtime.Spec.Pipelines
+	length := len(pipelines)
 
-	for i := 0; i < len-1; i++ {
-		for j := i + 1; j < len; j++ {
-			if runtime.Spec.Pipelines[i].Path == runtime.Spec.Pipelines[j].Path {
+	for i := 0; i < length-1; i++ {
+		for j := i + 1; j < length; j++ {
+			if pipelines[i].Path == pipelines[j].Path {
 				return true, fmt.Errorf("ProjectPipelineRuntime %s uses the same code repository for both codeSource and pipelineSource under %s directory, as found in the global validation", runtime.Name, runtime.Spec.Project)
 			}
 		}
@@ -302,24 +310,32 @@ func (p *ProjectPipelineRuntimeUsecase) isRepeatPipelinePath(runtime *resourcev1
 
 func (e *ProjectPipelineRuntimeUsecase) compare(nodes nodestree.Node) (bool, error) {
 	resourceNodes := nodestree.ListsResourceNodes(nodes, nodestree.ProjectPipelineRuntime)
+
 	for i := 0; i < len(resourceNodes); i++ {
+		v1, ok := resourceNodes[i].Content.(*resourcev1alpha1.ProjectPipelineRuntime)
+		if !ok {
+			continue
+		}
+
 		for j := i + 1; j < len(resourceNodes); j++ {
-			if v1, ok := resourceNodes[i].Content.(*resourcev1alpha1.ProjectPipelineRuntime); ok {
-				if v2, ok := resourceNodes[j].Content.(*resourcev1alpha1.ProjectPipelineRuntime); ok {
-					ok, err := v1.Compare(v2)
-					if err != nil {
-						return true, err
-					}
-					if ok {
-						n1 := resourceNodes[i].Name
-						n2 := resourceNodes[j].Name
-						p1 := nodestree.GetResourceValue(resourceNodes[i].Content, "Spec", "Project")
-						p2 := nodestree.GetResourceValue(resourceNodes[j].Content, "Spec", "Project")
-						d1 := fmt.Sprintf("%s/%s", p1, n1)
-						d2 := fmt.Sprintf("%s/%s", p2, n2)
-						return true, fmt.Errorf("duplicate pipeline found in verify the validity of the global template, respectively %s and %s", d1, d2)
-					}
-				}
+			v2, ok := resourceNodes[j].Content.(*resourcev1alpha1.ProjectPipelineRuntime)
+			if !ok {
+				continue
+			}
+
+			ok, err := v1.Compare(v2)
+			if err != nil {
+				return true, err
+			}
+
+			if ok {
+				n1 := resourceNodes[i].Name
+				n2 := resourceNodes[j].Name
+				p1 := nodestree.GetResourceValue(resourceNodes[i].Content, "Spec", "Project")
+				p2 := nodestree.GetResourceValue(resourceNodes[j].Content, "Spec", "Project")
+				d1 := fmt.Sprintf("%s/%s", p1, n1)
+				d2 := fmt.Sprintf("%s/%s", p2, n2)
+				return true, fmt.Errorf("duplicate pipeline found in verify the validity of the global template, respectively %s and %s", d1, d2)
 			}
 		}
 	}
@@ -337,4 +353,40 @@ func (p *ProjectPipelineRuntimeUsecase) CreateResource(kind string) interface{} 
 
 func SpliceCodeRepoResourceName(id int) string {
 	return fmt.Sprintf("%s%d", RepoPrefix, int(id))
+}
+
+type PipelineRuntimeValidateClient struct {
+	nodes nodestree.Node
+}
+
+func (p *PipelineRuntimeValidateClient) GetCodeRepoList(repoName string) (*resourcev1alpha1.CodeRepoList, error) {
+	resourceNodes := nodestree.ListsResourceNodes(p.nodes, nodestree.CodeRepo)
+	list := &resourcev1alpha1.CodeRepoList{}
+	for _, node := range resourceNodes {
+		val, ok := node.Content.(*resourcev1alpha1.CodeRepo)
+		if !ok {
+			return nil, fmt.Errorf("wrong type found for %s node", node.Name)
+		}
+		if val.Name == repoName {
+			list.Items = append(list.Items, *val)
+		}
+	}
+
+	return list, nil
+}
+
+func (p *PipelineRuntimeValidateClient) GetCodeRepoBindingList(productName, repoName string) (*resourcev1alpha1.CodeRepoBindingList, error) {
+	resourceNodes := nodestree.ListsResourceNodes(p.nodes, nodestree.CodeRepoBinding)
+	list := &resourcev1alpha1.CodeRepoBindingList{}
+	for _, node := range resourceNodes {
+		val, ok := node.Content.(*resourcev1alpha1.CodeRepoBinding)
+		if !ok {
+			return nil, fmt.Errorf("wrong type found for %s node", node.Name)
+		}
+		if val.Spec.Product == productName && val.Spec.CodeRepo == repoName {
+			list.Items = append(list.Items, *val)
+		}
+	}
+
+	return list, nil
 }
