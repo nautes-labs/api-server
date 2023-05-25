@@ -496,7 +496,7 @@ func (c *CodeRepoBindingUsecase) recycleAuthorization(ctx context.Context, proje
 
 		codeRepos, err = nodesToCodeRepoists(nodes, func(codeRepo *resourcev1alpha1.CodeRepo) bool {
 			for _, project := range tmpProjects {
-				if codeRepo.Spec.Project == project {
+				if codeRepo.Spec.Project == "" || codeRepo.Spec.Project == project {
 					return true
 				}
 			}

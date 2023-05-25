@@ -317,6 +317,11 @@ func (r *ResourcesUsecase) loadDefaultProjectNodes(ctx context.Context, productN
 		return nil, err
 	}
 
+	err = r.nodestree.FilterIgnoreByLayout(path)
+	if err != nil {
+		return nil, err
+	}
+
 	nodes, err := r.nodestree.Load(path)
 	if err != nil {
 		return nil, err
