@@ -195,8 +195,8 @@ var _ = Describe("Save product", func() {
 		secretRepo.EXPECT().AuthorizationSecret(gomock.Any(), gomock.Eq(int(defautlProject.Id)), _ProductDestUser, string(nautesConfigs.Git.GitType), nautesConfigs.Secret.Vault.MountPath).Return(nil)
 
 		gitRepo := NewMockGitRepo(ctl)
-		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositaryPath, nil)
-		gitRepo.EXPECT().SaveConfig(gomock.Any(), gomock.Eq(localRepositaryPath)).Return(nil)
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil)
+		gitRepo.EXPECT().SaveConfig(gomock.Any(), gomock.Eq(localRepositoryPath)).Return(nil)
 		gitRepo.EXPECT().Fetch(gomock.Any(), gomock.Any(), "origin").Return("any", nil)
 		gitRepo.EXPECT().Diff(gomock.Any(), gomock.Any(), "main", "remotes/origin/main").Return("", nil)
 
@@ -297,8 +297,8 @@ var _ = Describe("Save product", func() {
 		secretRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any()).Return(deployKeySecretData, nil)
 
 		gitRepo := NewMockGitRepo(ctl)
-		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositaryPath, nil)
-		gitRepo.EXPECT().SaveConfig(gomock.Any(), gomock.Eq(localRepositaryPath)).Return(nil)
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil)
+		gitRepo.EXPECT().SaveConfig(gomock.Any(), gomock.Eq(localRepositoryPath)).Return(nil)
 		gitRepo.EXPECT().Fetch(gomock.Any(), gomock.Any(), "origin").Return("any", nil)
 		gitRepo.EXPECT().Diff(gomock.Any(), gomock.Any(), "main", "remotes/origin/main").Return("", nil)
 
@@ -326,8 +326,8 @@ var _ = Describe("Save product", func() {
 		secretRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Eq(convertRepoName(int(defautlProject.Id))), gomock.Any(), gomock.Any(), gomock.Any(), extendKVs).Return(fmt.Errorf("unable to save secret"))
 
 		gitRepo := NewMockGitRepo(ctl)
-		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositaryPath, nil)
-		gitRepo.EXPECT().SaveConfig(gomock.Any(), gomock.Eq(localRepositaryPath)).Return(nil)
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil)
+		gitRepo.EXPECT().SaveConfig(gomock.Any(), gomock.Eq(localRepositoryPath)).Return(nil)
 		gitRepo.EXPECT().Fetch(gomock.Any(), gomock.Any(), "origin").Return("any", nil)
 		gitRepo.EXPECT().Diff(gomock.Any(), gomock.Any(), "main", "remotes/origin/main").Return("", nil)
 
@@ -358,8 +358,8 @@ var _ = Describe("Save product", func() {
 		secretRepo.EXPECT().AuthorizationSecret(gomock.Any(), gomock.Eq(int(defautlProject.Id)), _ProductDestUser, string(nautesConfigs.Git.GitType), nautesConfigs.Secret.Vault.MountPath).Return(fmt.Errorf("Failed to authorization"))
 
 		gitRepo := NewMockGitRepo(ctl)
-		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositaryPath, nil)
-		gitRepo.EXPECT().SaveConfig(gomock.Any(), gomock.Eq(localRepositaryPath)).Return(nil)
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil)
+		gitRepo.EXPECT().SaveConfig(gomock.Any(), gomock.Eq(localRepositoryPath)).Return(nil)
 		gitRepo.EXPECT().Fetch(gomock.Any(), gomock.Any(), "origin").Return("any", nil)
 		gitRepo.EXPECT().Diff(gomock.Any(), gomock.Any(), "main", "remotes/origin/main").Return("", nil)
 

@@ -76,6 +76,11 @@ func (r *ResourcesUsecase) Get(ctx context.Context, resourceKind, productName st
 
 	defer cleanCodeRepo(localPath)
 
+	err = r.nodestree.FilterIgnoreByLayout(localPath)
+	if err != nil {
+		return nil, err
+	}
+
 	nodes, err := r.nodestree.Load(localPath)
 	if err != nil {
 		return nil, err
@@ -116,6 +121,11 @@ func (r *ResourcesUsecase) List(ctx context.Context, gid interface{}, operator n
 	}
 
 	defer cleanCodeRepo(localPath)
+
+	err = r.nodestree.FilterIgnoreByLayout(localPath)
+	if err != nil {
+		return nil, err
+	}
 
 	nodes, err := r.nodestree.Load(localPath)
 	if err != nil {
@@ -160,6 +170,11 @@ func (r *ResourcesUsecase) Save(ctx context.Context, resourceOptions *resourceOp
 	}
 
 	defer cleanCodeRepo(localPath)
+
+	err = r.nodestree.FilterIgnoreByLayout(localPath)
+	if err != nil {
+		return err
+	}
 
 	nodes, err := r.nodestree.Load(localPath)
 	if err != nil {
@@ -234,9 +249,12 @@ func (r *ResourcesUsecase) Delete(ctx context.Context, resourceOptions *resource
 		return err
 	}
 
-	defer func(path string) {
-		cleanCodeRepo(path)
-	}(localPath)
+	defer cleanCodeRepo(localPath)
+
+	err = r.nodestree.FilterIgnoreByLayout(localPath)
+	if err != nil {
+		return err
+	}
 
 	nodes, err := r.nodestree.Load(localPath)
 	if err != nil {
@@ -289,17 +307,17 @@ func (r *ResourcesUsecase) Delete(ctx context.Context, resourceOptions *resource
 	return nil
 }
 
-func (c *ResourcesUsecase) loadDefaultProjectNodes(ctx context.Context, productName string) (*nodestree.Node, error) {
-	_, project, err := c.GetGroupAndProjectByGroupID(ctx, productName)
+func (r *ResourcesUsecase) loadDefaultProjectNodes(ctx context.Context, productName string) (*nodestree.Node, error) {
+	_, project, err := r.GetGroupAndProjectByGroupID(ctx, productName)
 	if err != nil {
 		return nil, err
 	}
-	path, err := c.CloneCodeRepo(ctx, project.HttpUrlToRepo)
+	path, err := r.CloneCodeRepo(ctx, project.HttpUrlToRepo)
 	if err != nil {
 		return nil, err
 	}
 
-	nodes, err := c.nodestree.Load(path)
+	nodes, err := r.nodestree.Load(path)
 	if err != nil {
 		return nil, err
 	}

@@ -56,7 +56,7 @@ func createEnvironmentNode(resource *resourcev1alpha1.Environment) *nodestree.No
 	return &nodestree.Node{
 		Name:    resource.Name,
 		Kind:    nodestree.Enviroment,
-		Path:    fmt.Sprintf("%s/%s/%s.yaml", localRepositaryPath, _EnvSubDir, resource.Name),
+		Path:    fmt.Sprintf("%s/%s/%s.yaml", localRepositoryPath, _EnvSubDir, resource.Name),
 		Level:   3,
 		Content: resource,
 	}

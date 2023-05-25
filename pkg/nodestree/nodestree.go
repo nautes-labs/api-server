@@ -87,6 +87,18 @@ func NewNodestree(fileOptions *FileOptions, config *Config, client client.Client
 	}
 }
 
+func (in *nodesTree) AppendIgnoreFilePath(paths []string) {
+	in.fileOptions.IgnorePath = append(in.fileOptions.IgnorePath, paths...)
+}
+
+func (in *nodesTree) GetFileOptions() *FileOptions {
+	return in.fileOptions
+}
+
+func (in *nodesTree) GetResourceLayoutConfigs() *Config {
+	return in.config
+}
+
 // Compare comparison between file tree and standard layout
 func (in *nodesTree) Compare(options CompareOptions) error {
 	config, err := NewConfig()
@@ -191,6 +203,41 @@ func (in *nodesTree) RemoveNode(nodes *Node, targetNode *Node) (*Node, error) {
 
 func (i *nodesTree) AppendOperators(operator NodesOperator) {
 	i.operators = append(i.operators, operator)
+}
+
+func (r *nodesTree) FilterIgnoreByLayout(path string) error {
+	ignorePaths := make([]string, 0)
+	layoutConfigs := r.GetResourceLayoutConfigs()
+
+	layoutNames := make(map[string]struct{})
+	for _, config := range layoutConfigs.Sub {
+		layoutNames[config.Name] = struct{}{}
+	}
+
+	dir, err := os.Open(path)
+	if err != nil {
+		fmt.Printf("failed to open dir: %s", err)
+		return err
+	}
+	defer dir.Close()
+
+	subDirs, err := dir.Readdirnames(-1)
+	if err != nil {
+		fmt.Printf("failed to read sub dir: %s", err)
+		return err
+	}
+
+	ignorePaths = make([]string, 0, len(subDirs))
+
+	for _, subdir := range subDirs {
+		if _, exists := layoutNames[subdir]; !exists {
+			ignorePaths = append(ignorePaths, subdir)
+		}
+	}
+
+	r.AppendIgnoreFilePath(ignorePaths)
+
+	return nil
 }
 
 func (i *nodesTree) Load(path string) (root Node, err error) {
@@ -321,7 +368,7 @@ func convertResource(child *Node, operators []NodesOperator) (cr interface{}, er
 	}
 
 	if cr == nil {
-		return nil, fmt.Errorf("unable to create %s type instance resource, please check the CreateResource method of the resource", resource.Kind)
+		return nil, fmt.Errorf("when loading the nodes tree, unable to generate resource node tree of type '%s'", resource.Kind)
 	}
 
 	return cr, nil

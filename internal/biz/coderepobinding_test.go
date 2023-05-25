@@ -50,13 +50,14 @@ var _ = Describe("Get CodeRepoBinding", func() {
 		codeRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(projectDeployKey, nil).AnyTimes()
 
 		gitRepo := NewMockGitRepo(ctl)
-		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositaryPath, nil).AnyTimes()
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil).AnyTimes()
 
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any()).AnyTimes()
-		nodestree.EXPECT().Load(gomock.Eq(localRepositaryPath)).Return(fakeNodes, nil).AnyTimes()
+		nodestree.EXPECT().Load(gomock.Eq(localRepositoryPath)).Return(fakeNodes, nil).AnyTimes()
 		nodestree.EXPECT().Compare(gomock.Any()).Return(nil).AnyTimes()
 		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Any(), gomock.Any()).Return(fakeNode).AnyTimes()
+		nodestree.EXPECT().FilterIgnoreByLayout(localRepositoryPath).Return(nil).AnyTimes()
 
 		secretRepo := NewMockSecretrepo(ctl)
 		secretRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any()).Return(deployKeySecretData, nil).AnyTimes()
@@ -84,13 +85,14 @@ var _ = Describe("Get CodeRepoBinding", func() {
 		codeRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(projectDeployKey, nil).AnyTimes()
 
 		gitRepo := NewMockGitRepo(ctl)
-		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositaryPath, nil).AnyTimes()
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil).AnyTimes()
 
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any()).AnyTimes()
-		nodestree.EXPECT().Load(gomock.Eq(localRepositaryPath)).Return(fakeErrorKindNodes, nil).AnyTimes()
+		nodestree.EXPECT().Load(gomock.Eq(localRepositoryPath)).Return(fakeErrorKindNodes, nil).AnyTimes()
 		nodestree.EXPECT().Compare(gomock.Any()).Return(nil).AnyTimes()
 		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Any(), gomock.Any()).Return(fakeErrorKindNode).AnyTimes()
+		nodestree.EXPECT().FilterIgnoreByLayout(localRepositoryPath).Return(nil).AnyTimes()
 
 		secretRepo := NewMockSecretrepo(ctl)
 		secretRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any()).Return(deployKeySecretData, nil).AnyTimes()
@@ -144,13 +146,14 @@ var _ = Describe("List CodeRepoBinding", func() {
 		codeRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(projectDeployKey, nil).AnyTimes()
 
 		gitRepo := NewMockGitRepo(ctl)
-		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositaryPath, nil).AnyTimes()
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil).AnyTimes()
 
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any()).AnyTimes()
-		nodestree.EXPECT().Load(gomock.Eq(localRepositaryPath)).Return(fakeNodes, nil).AnyTimes()
+		nodestree.EXPECT().Load(gomock.Eq(localRepositoryPath)).Return(fakeNodes, nil).AnyTimes()
 		nodestree.EXPECT().Compare(gomock.Any()).Return(nil).AnyTimes()
 		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Any(), gomock.Any()).Return(fakeNode).AnyTimes()
+		nodestree.EXPECT().FilterIgnoreByLayout(localRepositoryPath).Return(nil).AnyTimes()
 
 		secretRepo := NewMockSecretrepo(ctl)
 		secretRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any()).Return(deployKeySecretData, nil).AnyTimes()
@@ -180,13 +183,14 @@ var _ = Describe("List CodeRepoBinding", func() {
 		codeRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(projectDeployKey, nil).AnyTimes()
 
 		gitRepo := NewMockGitRepo(ctl)
-		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositaryPath, nil).AnyTimes()
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil).AnyTimes()
 
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any()).AnyTimes()
-		nodestree.EXPECT().Load(gomock.Eq(localRepositaryPath)).Return(fakeErrorKindNodes, nil).AnyTimes()
+		nodestree.EXPECT().Load(gomock.Eq(localRepositoryPath)).Return(fakeErrorKindNodes, nil).AnyTimes()
 		nodestree.EXPECT().Compare(gomock.Any()).Return(nil).AnyTimes()
 		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Any(), gomock.Any()).Return(fakeErrorKindNode).AnyTimes()
+		nodestree.EXPECT().FilterIgnoreByLayout(localRepositoryPath).Return(nil).AnyTimes()
 
 		secretRepo := NewMockSecretrepo(ctl)
 		secretRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any()).Return(deployKeySecretData, nil).AnyTimes()
@@ -264,19 +268,20 @@ var _ = Describe("Save CodeRepoBinding", func() {
 		codeRepo.EXPECT().EnableProjectDeployKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(projectDeployKey, nil).AnyTimes()
 
 		gitRepo := NewMockGitRepo(ctl)
-		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositaryPath, nil).AnyTimes()
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil).AnyTimes()
 		gitRepo.EXPECT().SaveConfig(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		gitRepo.EXPECT().Fetch(gomock.Any(), gomock.Any(), "origin").Return("any", nil).AnyTimes()
 		gitRepo.EXPECT().Diff(gomock.Any(), gomock.Any(), "main", "remotes/origin/main").Return("", nil).AnyTimes()
 
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any()).AnyTimes()
-		nodestree.EXPECT().Load(gomock.Eq(localRepositaryPath)).Return(fakeNodes2, nil).AnyTimes()
+		nodestree.EXPECT().Load(gomock.Eq(localRepositoryPath)).Return(fakeNodes2, nil).AnyTimes()
 		nodestree.EXPECT().Compare(gomock.Any()).Return(nil).AnyTimes()
 		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Eq(CodeRepoBindingKind), gomock.Any()).Return(fakeNode1).AnyTimes()
 		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Eq(codeRepoKind), gomock.Any()).Return(fakeNode3).AnyTimes()
 		nodestree.EXPECT().GetNodes().Return(&fakeNodes2, nil)
 		nodestree.EXPECT().InsertNodes(gomock.Any(), gomock.Any()).Return(&fakeNodes2, nil).AnyTimes()
+		nodestree.EXPECT().FilterIgnoreByLayout(localRepositoryPath).Return(nil).AnyTimes()
 
 		secretRepo := NewMockSecretrepo(ctl)
 		secretRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any()).Return(deployKeySecretData, nil).AnyTimes()
@@ -312,19 +317,20 @@ var _ = Describe("Save CodeRepoBinding", func() {
 		codeRepo.EXPECT().EnableProjectDeployKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(projectDeployKey, nil).AnyTimes()
 
 		gitRepo := NewMockGitRepo(ctl)
-		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositaryPath, nil).AnyTimes()
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil).AnyTimes()
 		gitRepo.EXPECT().SaveConfig(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		gitRepo.EXPECT().Fetch(gomock.Any(), gomock.Any(), "origin").Return("any", nil).AnyTimes()
 		gitRepo.EXPECT().Diff(gomock.Any(), gomock.Any(), "main", "remotes/origin/main").Return("", nil).AnyTimes()
 
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any()).AnyTimes()
-		nodestree.EXPECT().Load(gomock.Eq(localRepositaryPath)).Return(fakeNodes2, nil).AnyTimes()
+		nodestree.EXPECT().Load(gomock.Eq(localRepositoryPath)).Return(fakeNodes2, nil).AnyTimes()
 		nodestree.EXPECT().Compare(gomock.Any()).Return(nil).AnyTimes()
 		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Eq(CodeRepoBindingKind), gomock.Any()).Return(fakeNode1).AnyTimes()
 		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Eq(codeRepoKind), gomock.Any()).Return(fakeNode3).AnyTimes()
 		nodestree.EXPECT().GetNodes().Return(&fakeNodes2, nil)
 		nodestree.EXPECT().InsertNodes(gomock.Any(), gomock.Any()).Return(&fakeNodes2, nil).AnyTimes()
+		nodestree.EXPECT().FilterIgnoreByLayout(localRepositoryPath).Return(nil).AnyTimes()
 
 		secretRepo := NewMockSecretrepo(ctl)
 		secretRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any()).Return(deployKeySecretData, nil).AnyTimes()
@@ -360,19 +366,20 @@ var _ = Describe("Save CodeRepoBinding", func() {
 		codeRepo.EXPECT().EnableProjectDeployKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(projectDeployKey, nil).AnyTimes()
 
 		gitRepo := NewMockGitRepo(ctl)
-		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositaryPath, nil).AnyTimes()
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil).AnyTimes()
 		gitRepo.EXPECT().SaveConfig(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		gitRepo.EXPECT().Fetch(gomock.Any(), gomock.Any(), "origin").Return("any", nil).AnyTimes()
 		gitRepo.EXPECT().Diff(gomock.Any(), gomock.Any(), "main", "remotes/origin/main").Return("", nil).AnyTimes()
 
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any()).AnyTimes()
-		nodestree.EXPECT().Load(gomock.Eq(localRepositaryPath)).Return(fakeNodes1, nil).AnyTimes()
+		nodestree.EXPECT().Load(gomock.Eq(localRepositoryPath)).Return(fakeNodes1, nil).AnyTimes()
 		nodestree.EXPECT().Compare(gomock.Any()).Return(nil).AnyTimes()
 		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Eq(CodeRepoBindingKind), gomock.Any()).Return(fakeNode1).AnyTimes()
 		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Eq(codeRepoKind), gomock.Any()).Return(fakeNode3).AnyTimes()
 		nodestree.EXPECT().GetNodes().Return(&fakeNodes2, nil)
 		nodestree.EXPECT().InsertNodes(gomock.Any(), gomock.Any()).Return(&fakeNodes1, nil).AnyTimes()
+		nodestree.EXPECT().FilterIgnoreByLayout(localRepositoryPath).Return(nil).AnyTimes()
 
 		secretRepo := NewMockSecretrepo(ctl)
 		secretRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any()).Return(deployKeySecretData, nil).AnyTimes()
@@ -442,19 +449,20 @@ var _ = Describe("Delete CodeRepoBinding", func() {
 		codeRepo.EXPECT().EnableProjectDeployKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(projectDeployKey, nil).AnyTimes()
 
 		gitRepo := NewMockGitRepo(ctl)
-		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositaryPath, nil).AnyTimes()
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil).AnyTimes()
 		gitRepo.EXPECT().SaveConfig(gomock.Any(), gomock.Any()).Return(nil)
 		gitRepo.EXPECT().Fetch(gomock.Any(), gomock.Any(), "origin").Return("any", nil)
 		gitRepo.EXPECT().Diff(gomock.Any(), gomock.Any(), "main", "remotes/origin/main").Return("", nil)
 
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any()).AnyTimes()
-		nodestree.EXPECT().Load(gomock.Eq(localRepositaryPath)).Return(fakeNodes, nil).AnyTimes()
+		nodestree.EXPECT().Load(gomock.Eq(localRepositoryPath)).Return(fakeNodes, nil).AnyTimes()
 		nodestree.EXPECT().Compare(gomock.Any()).Return(nil).AnyTimes()
 		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Eq(CodeRepoBindingKind), gomock.Any()).Return(fakeNode).AnyTimes()
 		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Eq(codeRepoKind), gomock.Any()).Return(fakeNodes2).AnyTimes()
 		nodestree.EXPECT().GetNodes().Return(&fakeNodes, nil)
 		nodestree.EXPECT().RemoveNode(&fakeNodes, fakeNode).Return(&emptyNodes, nil)
+		nodestree.EXPECT().FilterIgnoreByLayout(localRepositoryPath).Return(nil).AnyTimes()
 
 		secretRepo := NewMockSecretrepo(ctl)
 		secretRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any()).Return(deployKeySecretData, nil).AnyTimes()
@@ -483,19 +491,20 @@ var _ = Describe("Delete CodeRepoBinding", func() {
 		codeRepo.EXPECT().DeleteDeployKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("failed to delete deploykey."))
 
 		gitRepo := NewMockGitRepo(ctl)
-		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositaryPath, nil).AnyTimes()
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil).AnyTimes()
 		gitRepo.EXPECT().SaveConfig(gomock.Any(), gomock.Any()).Return(nil)
 		gitRepo.EXPECT().Fetch(gomock.Any(), gomock.Any(), "origin").Return("any", nil)
 		gitRepo.EXPECT().Diff(gomock.Any(), gomock.Any(), "main", "remotes/origin/main").Return("", nil)
 
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any()).AnyTimes()
-		nodestree.EXPECT().Load(gomock.Eq(localRepositaryPath)).Return(fakeNodes, nil).AnyTimes()
+		nodestree.EXPECT().Load(gomock.Eq(localRepositoryPath)).Return(fakeNodes, nil).AnyTimes()
 		nodestree.EXPECT().Compare(gomock.Any()).Return(nil).AnyTimes()
 		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Eq(CodeRepoBindingKind), gomock.Any()).Return(fakeNode).AnyTimes()
 		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Eq(codeRepoKind), gomock.Any()).Return(fakeNodes2).AnyTimes()
 		nodestree.EXPECT().GetNodes().Return(&fakeNodes, nil)
 		nodestree.EXPECT().RemoveNode(&fakeNodes, fakeNode).Return(&emptyNodes, nil)
+		nodestree.EXPECT().FilterIgnoreByLayout(localRepositoryPath).Return(nil).AnyTimes()
 
 		secretRepo := NewMockSecretrepo(ctl)
 		secretRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any()).Return(deployKeySecretData, nil).AnyTimes()
@@ -549,7 +558,7 @@ func createFakeCodeRepoBindingResource(name, project string) *resourcev1alpha1.C
 func createFakeCodeRepoBindingNode(resource *resourcev1alpha1.CodeRepoBinding) *nodestree.Node {
 	return &nodestree.Node{
 		Name:    resource.Name,
-		Path:    fmt.Sprintf("%s/%s/%s/%s.yaml", localRepositaryPath, _CodeReposSubDir, resource.Name, resource.Name),
+		Path:    fmt.Sprintf("%s/%s/%s/%s.yaml", localRepositoryPath, _CodeReposSubDir, resource.Name, resource.Name),
 		Level:   4,
 		Content: resource,
 		Kind:    nodestree.CodeRepoBinding,
@@ -575,7 +584,7 @@ func createFakeContainingCodeRepoBindingNodes(node *nodestree.Node) nodestree.No
 				Children: []*nodestree.Node{
 					{
 						Name:  node.Name,
-						Path:  fmt.Sprintf("%s/%s/%s", localRepositaryPath, _CodeReposSubDir, codeRepoNode1.Name),
+						Path:  fmt.Sprintf("%s/%s/%s", localRepositoryPath, _CodeReposSubDir, codeRepoNode1.Name),
 						IsDir: true,
 						Level: 3,
 						Children: []*nodestree.Node{

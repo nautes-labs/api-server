@@ -60,7 +60,7 @@ func createFakeCodeRepoResource(name string) *resourcev1alpha1.CodeRepo {
 func createFakeCodeRepoNode(resource *resourcev1alpha1.CodeRepo) *nodestree.Node {
 	return &nodestree.Node{
 		Name:    resource.Name,
-		Path:    fmt.Sprintf("%s/%s/%s/%s.yaml", localRepositaryPath, _CodeReposSubDir, resource.Name, resource.Name),
+		Path:    fmt.Sprintf("%s/%s/%s/%s.yaml", localRepositoryPath, _CodeReposSubDir, resource.Name, resource.Name),
 		Level:   4,
 		Content: resource,
 		Kind:    nodestree.CodeRepo,
@@ -82,7 +82,7 @@ func createFakeCcontainingCodeRepoNodes(node *nodestree.Node) nodestree.Node {
 				Children: []*nodestree.Node{
 					{
 						Name:  node.Name,
-						Path:  fmt.Sprintf("%s/%s/%s", localRepositaryPath, _CodeReposSubDir, node.Name),
+						Path:  fmt.Sprintf("%s/%s/%s", localRepositoryPath, _CodeReposSubDir, node.Name),
 						IsDir: true,
 						Level: 3,
 						Children: []*nodestree.Node{
@@ -284,7 +284,7 @@ var _ = Describe("Save codeRepo", func() {
 			User:  _GitUser,
 			Email: _GitEmail,
 		}
-		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositaryPath, nil).AnyTimes()
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil).AnyTimes()
 
 		client.EXPECT().List(context.Background(), gomock.Any(), gomock.Any()).Return(nil)
 
@@ -316,7 +316,7 @@ var _ = Describe("Save codeRepo", func() {
 			User:  _GitUser,
 			Email: _GitEmail,
 		}
-		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositaryPath, nil).AnyTimes()
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil).AnyTimes()
 
 		nodestree.EXPECT().GetNodes().Return(&fakeNodes, nil).AnyTimes()
 		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Eq(codeRepoKind), gomock.Any()).Return(fakeNode).AnyTimes()
@@ -350,7 +350,7 @@ var _ = Describe("Save codeRepo", func() {
 			User:  _GitUser,
 			Email: _GitEmail,
 		}
-		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositaryPath, nil).AnyTimes()
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil).AnyTimes()
 
 		nodestree.EXPECT().GetNodes().Return(&fakeNodes, nil).AnyTimes()
 		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Eq(codeRepoKind), gomock.Any()).Return(fakeNode).AnyTimes()
@@ -548,7 +548,7 @@ var _ = Describe("Delete codeRepo", func() {
 			User:  _GitUser,
 			Email: _GitEmail,
 		}
-		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositaryPath, nil).AnyTimes()
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil).AnyTimes()
 
 		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Eq(codeRepoKind), gomock.Any()).Return(fakeNode).AnyTimes()
 		nodestree.EXPECT().GetNodes().Return(&fakeNodes, nil).AnyTimes()

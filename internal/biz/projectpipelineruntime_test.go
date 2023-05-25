@@ -84,7 +84,7 @@ func createFakeProjectPipelineRuntimeNode(resource *resourcev1alpha1.ProjectPipe
 	return &nodestree.Node{
 		Name:    resource.Name,
 		Kind:    nodestree.ProjectPipelineRuntime,
-		Path:    fmt.Sprintf("%s/%s/%s/%s.yaml", localRepositaryPath, _ProjectsDir, _DefaultProjectName, resource.Name),
+		Path:    fmt.Sprintf("%s/%s/%s/%s.yaml", localRepositoryPath, _ProjectsDir, _DefaultProjectName, resource.Name),
 		Level:   4,
 		Content: resource,
 	}

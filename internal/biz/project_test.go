@@ -52,7 +52,7 @@ func createProjectNode(resource *resourcev1alpha1.Project) *nodestree.Node {
 	return &nodestree.Node{
 		Name:    resource.Name,
 		Kind:    nodestree.Project,
-		Path:    fmt.Sprintf("%s/%s/%s/%s.yaml", localRepositaryPath, _ProjectsDir, resource.Name, resource.Name),
+		Path:    fmt.Sprintf("%s/%s/%s/%s.yaml", localRepositoryPath, _ProjectsDir, resource.Name, resource.Name),
 		Level:   4,
 		Content: resource,
 	}

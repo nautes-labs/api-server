@@ -60,6 +60,20 @@ func (mr *MockNodesTreeMockRecorder) Compare(options interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Compare", reflect.TypeOf((*MockNodesTree)(nil).Compare), options)
 }
 
+// FilterIgnoreByLayout mocks base method.
+func (m *MockNodesTree) FilterIgnoreByLayout(path string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FilterIgnoreByLayout", path)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// FilterIgnoreByLayout indicates an expected call of FilterIgnoreByLayout.
+func (mr *MockNodesTreeMockRecorder) FilterIgnoreByLayout(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FilterIgnoreByLayout", reflect.TypeOf((*MockNodesTree)(nil).FilterIgnoreByLayout), path)
+}
+
 // GetNode mocks base method.
 func (m *MockNodesTree) GetNode(nodes *Node, kind, name string) *Node {
 	m.ctrl.T.Helper()

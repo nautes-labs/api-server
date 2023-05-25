@@ -109,5 +109,5 @@ var (
 		Level:    1,
 		Children: []*nodestree.Node{},
 	}
-	localRepositaryPath = fmt.Sprintf("/tmp/defaultProjectDir/%s", defaultProjectName)
+	localRepositoryPath = fmt.Sprintf("/tmp/defaultProjectDir/%s", defaultProjectName)
 )
