@@ -496,6 +496,7 @@ func (c *CodeRepoBindingUsecase) recycleAuthorization(ctx context.Context, proje
 
 		codeRepos, err = nodesToCodeRepoists(nodes, func(codeRepo *resourcev1alpha1.CodeRepo) bool {
 			for _, project := range tmpProjects {
+				// Recycle when the project in the repository is empty or outside the projectscope range.
 				if codeRepo.Spec.Project == "" || codeRepo.Spec.Project == project {
 					return true
 				}
