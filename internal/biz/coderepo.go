@@ -315,6 +315,19 @@ func (c *CodeRepoUsecase) refreshAuthorization(ctx context.Context, productName,
 			continue
 		}
 
+		if cp.CodeRepo.Spec.Project == currentProjectName {
+			err = c.codeRepoBindingUsecase.refreshAuthorization(ctx, *nodes, cp.CodeRepo.Name)
+			if err != nil {
+				if commonv1.IsNoAuthorization(err) {
+					errorMessages = append(errorMessages, err.Error())
+				} else {
+					return err
+				}
+			}
+
+			return nil
+		}
+
 		codeRepoBindings, err := c.codeRepoBindingUsecase.getCodeRepoBindings(*nodes, cp.CodeRepo.Name)
 		if err != nil {
 			return err

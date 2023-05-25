@@ -160,7 +160,7 @@ var _ = Describe("List coderepos", func() {
 
 var _ = Describe("Save codeRepo", func() {
 	var (
-		resourceName  = "toSaveCodeRepo"
+		resourceName  = "repo-1222"
 		fakeResource  = createFakeCodeRepoResource(resourceName)
 		fakeNode      = createFakeCodeRepoNode(fakeResource)
 		fakeNodes     = createFakeCcontainingCodeRepoNodes(fakeNode)
@@ -265,7 +265,7 @@ var _ = Describe("Save codeRepo", func() {
 		codeRepo.EXPECT().CreateCodeRepo(gomock.Any(), gomock.Eq(int(defaultProductGroup.Id)), options).Return(toSaveProject, nil)
 
 		codeRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(toSaveProjectDeployKey, nil).Times(2)
-		codeRepo.EXPECT().ListDeployKeys(gomock.Any(), gomock.Eq(int(toSaveProject.Id)), gomock.Any()).Return(listDeployKeys, nil)
+		codeRepo.EXPECT().ListDeployKeys(gomock.Any(), gomock.Eq(int(toSaveProject.Id)), gomock.Any()).Return(listDeployKeys, nil).AnyTimes()
 		codeRepo.EXPECT().DeleteDeployKey(gomock.Any(), gomock.Eq(int(toSaveProject.Id)), int(2014)).Return(nil).AnyTimes()
 		codeRepo.EXPECT().GetProjectAccessToken(gomock.Any(), gomock.Eq(int(toSaveProject.Id)), gomock.Any()).Return(projectAccessToken, nil).AnyTimes()
 		codeRepo.EXPECT().CreateProjectAccessToken(gomock.Any(), gomock.Eq(int(toSaveProject.Id)), gomock.Eq(createProjectAccessTokenOptions)).Return(projectAccessToken, nil)
@@ -302,7 +302,7 @@ var _ = Describe("Save codeRepo", func() {
 		codeRepo.EXPECT().UpdateCodeRepo(gomock.Any(), gomock.Eq(int(toSaveProject.Id)), options).Return(toSaveProject, nil)
 
 		codeRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(toSaveProjectDeployKey, nil).Times(2)
-		codeRepo.EXPECT().ListDeployKeys(gomock.Any(), int(toSaveProject.Id), gomock.Any()).Return(listDeployKeys, nil)
+		codeRepo.EXPECT().ListDeployKeys(gomock.Any(), int(toSaveProject.Id), gomock.Any()).Return(listDeployKeys, nil).AnyTimes()
 		codeRepo.EXPECT().DeleteDeployKey(gomock.Any(), int(toSaveProject.Id), int(2014)).Return(nil).AnyTimes()
 		codeRepo.EXPECT().GetProjectAccessToken(gomock.Any(), gomock.Eq(int(toSaveProject.Id)), gomock.Any()).Return(projectAccessToken, nil).AnyTimes()
 		codeRepo.EXPECT().ListAccessTokens(gomock.Any(), gomock.Eq(int(toSaveProject.Id)), gomock.Any()).Return(projectAccessTokens, nil).AnyTimes()
@@ -334,7 +334,7 @@ var _ = Describe("Save codeRepo", func() {
 		codeRepo.EXPECT().GetGroup(gomock.Any(), gomock.Eq(int(defaultProductGroup.Id))).Return(defaultProductGroup, nil)
 		codeRepo.EXPECT().UpdateCodeRepo(gomock.Any(), gomock.Eq(int(toSaveProject.Id)), options).Return(toSaveProject, nil)
 		codeRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(toSaveProjectDeployKey, nil).Times(2)
-		codeRepo.EXPECT().ListDeployKeys(gomock.Any(), int(toSaveProject.Id), gomock.Any()).Return(listDeployKeys, nil)
+		codeRepo.EXPECT().ListDeployKeys(gomock.Any(), int(toSaveProject.Id), gomock.Any()).Return(listDeployKeys, nil).AnyTimes()
 		codeRepo.EXPECT().DeleteDeployKey(gomock.Any(), int(toSaveProject.Id), int(2014)).Return(nil).AnyTimes()
 		codeRepo.EXPECT().GetProjectAccessToken(gomock.Any(), gomock.Eq(int(toSaveProject.Id)), gomock.Any()).Return(projectAccessToken, nil).AnyTimes()
 		codeRepo.EXPECT().CreateProjectAccessToken(gomock.Any(), gomock.Eq(int(toSaveProject.Id)), gomock.Eq(createProjectAccessTokenOptions)).Return(projectAccessToken, nil)

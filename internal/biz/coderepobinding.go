@@ -307,6 +307,11 @@ func (c *CodeRepoBindingUsecase) processAuthorization(ctx context.Context, nodes
 		return err
 	}
 
+	err = c.AuthorizeForSameProjectRepository(ctx, nodes, permissions, codeRepo.Spec.Project)
+	if err != nil {
+		return err
+	}
+
 	scopes := c.calculateAuthorizationScopes(ctx, codeRepoBindings, permissions, codeRepo.Spec.Project)
 	for _, scope := range scopes {
 		if scope.isProductPermission {
@@ -331,6 +336,68 @@ func (c *CodeRepoBindingUsecase) processAuthorization(ctx context.Context, nodes
 		err := c.recycleAuthorization(ctx, nil, nodes, pid, permissions, "")
 		if err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *CodeRepoBindingUsecase) AuthorizeForSameProjectRepository(ctx context.Context, nodes nodestree.Node, permissions, currentProject string) error {
+	codeRepos := nodestree.ListsResourceNodes(nodes, nodestree.CodeRepo)
+	repoCount := len(codeRepos)
+	for i := 0; i < repoCount-1; i++ {
+		for j := i + 1; j < repoCount; j++ {
+			repo1, ok := codeRepos[i].Content.(*resourcev1alpha1.CodeRepo)
+			if !ok {
+				return fmt.Errorf("failed to convert code repository")
+			}
+			repo2, ok := codeRepos[j].Content.(*resourcev1alpha1.CodeRepo)
+			if !ok {
+				return fmt.Errorf("failed to convert code repository")
+			}
+			if repo1.Spec.Project == currentProject && repo1.Spec.Project == repo2.Spec.Project {
+				id1, err := utilstrings.ExtractNumber(RepoPrefix, repo1.Name)
+				if err != nil {
+					return err
+				}
+				id2, err := utilstrings.ExtractNumber(RepoPrefix, repo2.Name)
+				if err != nil {
+					return err
+				}
+
+				deployKey1, err := c.GetDeployKeyFromSecretRepo(ctx, repo1.Name, DefaultUser, permissions)
+				if err != nil {
+					if commonv1.IsDeploykeyNotFound(err) {
+						return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from secret repo, please check if the key under /%s/%s exists or is invalid", permissions, c.config.Git.GitType, repo1.Name)
+					}
+					return err
+				}
+				deployKey2, err := c.GetDeployKeyFromSecretRepo(ctx, repo2.Name, DefaultUser, permissions)
+				if err != nil {
+					if commonv1.IsDeploykeyNotFound(err) {
+						return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from secret repo, please check if the key under /%s/%s exists or is invalid", permissions, c.config.Git.GitType, repo2.Name)
+					}
+					return err
+				}
+
+				deployKey1Info, err := c.codeRepo.GetDeployKey(ctx, id1, deployKey1.ID)
+				if err != nil {
+					return err
+				}
+				deployKey2Info, err := c.codeRepo.GetDeployKey(ctx, id2, deployKey2.ID)
+				if err != nil {
+					return err
+				}
+
+				_, err = c.codeRepo.EnableProjectDeployKey(ctx, id1, deployKey2Info.ID)
+				if err != nil {
+					return err
+				}
+				_, err = c.codeRepo.EnableProjectDeployKey(ctx, id2, deployKey1Info.ID)
+				if err != nil {
+					return err
+				}
+			}
 		}
 	}
 

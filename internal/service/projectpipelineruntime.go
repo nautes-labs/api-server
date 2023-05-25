@@ -44,20 +44,29 @@ func (s *ProjectPipelineRuntimeService) covertCodeRepoValueToReply(projectPipeli
 
 	var eventSources []*projectpipelineruntimev1.EventSource
 	for _, source := range projectPipelineRuntime.Spec.EventSources {
-		eventSources = append(eventSources, &projectpipelineruntimev1.EventSource{
-			Name: source.Name,
-			Gitlab: &projectpipelineruntimev1.Gitlab{
+		event := &projectpipelineruntimev1.EventSource{}
+		if source.Name != "" {
+			event.Name = source.Name
+		}
+
+		if source.Gitlab != nil {
+			event.Gitlab = &projectpipelineruntimev1.Gitlab{
 				RepoName: source.Gitlab.RepoName,
 				Revision: source.Gitlab.Revision,
 				Events:   source.Gitlab.Events,
-			},
-			Calendar: &projectpipelineruntimev1.Calendar{
+			}
+		}
+
+		if event.Calendar != nil {
+			event.Calendar = &projectpipelineruntimev1.Calendar{
 				Schedule:       source.Calendar.Schedule,
 				Interval:       source.Calendar.Interval,
 				ExclusionDates: source.Calendar.ExclusionDates,
 				Timezone:       source.Calendar.Timezone,
-			},
-		})
+			}
+		}
+
+		eventSources = append(eventSources, event)
 	}
 
 	var pipelineTriggers []*projectpipelineruntimev1.PipelineTriggers
@@ -166,19 +175,30 @@ func (s *ProjectPipelineRuntimeService) convertPipelines(pipelines []*projectpip
 
 func (s *ProjectPipelineRuntimeService) convertEventSources(events []*projectpipelineruntimev1.EventSource) (eventSources []resourcev1alpha1.EventSource) {
 	for _, eventSource := range events {
-		resourceEventSource := resourcev1alpha1.EventSource{
-			Name: eventSource.Name,
-			Gitlab: &resourcev1alpha1.Gitlab{
+		var gitlab *resourcev1alpha1.Gitlab
+		var calendar *resourcev1alpha1.Calendar
+
+		if eventSource.Gitlab != nil {
+			gitlab = &resourcev1alpha1.Gitlab{
 				RepoName: eventSource.Gitlab.RepoName,
 				Revision: eventSource.Gitlab.Revision,
 				Events:   eventSource.Gitlab.Events,
-			},
-			Calendar: &resourcev1alpha1.Calendar{
+			}
+		}
+
+		if eventSource.Calendar != nil {
+			calendar = &resourcev1alpha1.Calendar{
 				Schedule:       eventSource.Calendar.Schedule,
 				Interval:       eventSource.Calendar.Interval,
 				ExclusionDates: eventSource.Calendar.ExclusionDates,
 				Timezone:       eventSource.Calendar.Timezone,
-			},
+			}
+		}
+
+		resourceEventSource := resourcev1alpha1.EventSource{
+			Name:     eventSource.Name,
+			Gitlab:   gitlab,
+			Calendar: calendar,
 		}
 
 		eventSources = append(eventSources, resourceEventSource)
