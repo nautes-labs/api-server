@@ -49,21 +49,6 @@ func NewProjectPipelineRuntimeUsecase(logger log.Logger, codeRepo CodeRepo, node
 	return runtime
 }
 
-func (p *ProjectPipelineRuntimeUsecase) convertCodeRepoToRepoName(ctx context.Context, runtime *resourcev1alpha1.ProjectPipelineRuntime) error {
-	if runtime.Spec.PipelineSource == "" {
-		return fmt.Errorf("the pipelineSource field value of projectPipelineRuntime %s should not be empty", runtime.Name)
-	}
-	if runtime.Spec.PipelineSource != "" {
-		repoName, err := p.resourcesUsecase.convertCodeRepoToRepoName(ctx, runtime.Spec.PipelineSource)
-		if err != nil {
-			return err
-		}
-		runtime.Spec.PipelineSource = repoName
-	}
-
-	return nil
-}
-
 func (p *ProjectPipelineRuntimeUsecase) GetProjectPipelineRuntime(ctx context.Context, projectPipelineName, productName string) (*resourcev1alpha1.ProjectPipelineRuntime, error) {
 	resourceNode, err := p.resourcesUsecase.Get(ctx, nodestree.ProjectPipelineRuntime, productName, p, func(nodes nodestree.Node) (string, error) {
 		return projectPipelineName, nil
@@ -146,18 +131,6 @@ func (p *ProjectPipelineRuntimeUsecase) SaveProjectPipelineRuntime(ctx context.C
 	return nil
 }
 
-func (p *ProjectPipelineRuntimeUsecase) IsRepositoryExist(ctx context.Context, productName, repoName string) (*Project, error) {
-	project, err := p.resourcesUsecase.GetCodeRepo(ctx, productName, repoName)
-	if err != nil {
-		if ok := commonv1.IsProjectNotFound(err); ok {
-			return nil, projectpipelineruntimev1.ErrorPipelineResourceNotFound("failed to get repository %s in product %s", repoName, productName)
-		} else {
-			return nil, err
-		}
-	}
-	return project, nil
-}
-
 func (p *ProjectPipelineRuntimeUsecase) DeleteProjectPipelineRuntime(ctx context.Context, options *BizOptions) error {
 	resourceOptions := &resourceOptions{
 		resourceKind:      nodestree.ProjectPipelineRuntime,
@@ -170,6 +143,44 @@ func (p *ProjectPipelineRuntimeUsecase) DeleteProjectPipelineRuntime(ctx context
 	})
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (p *ProjectPipelineRuntimeUsecase) IsRepositoryExist(ctx context.Context, productName, repoName string) (*Project, error) {
+	project, err := p.resourcesUsecase.GetCodeRepo(ctx, productName, repoName)
+	if err != nil {
+		if ok := commonv1.IsProjectNotFound(err); ok {
+			return nil, projectpipelineruntimev1.ErrorPipelineResourceNotFound("failed to get repository %s in product %s", repoName, productName)
+		} else {
+			return nil, err
+		}
+	}
+	return project, nil
+}
+
+func (p *ProjectPipelineRuntimeUsecase) convertCodeRepoToRepoName(ctx context.Context, runtime *resourcev1alpha1.ProjectPipelineRuntime) error {
+	if runtime.Spec.PipelineSource == "" {
+		return fmt.Errorf("the pipelineSource field value of projectPipelineRuntime %s should not be empty", runtime.Name)
+	}
+
+	if runtime.Spec.PipelineSource != "" {
+		repoName, err := p.resourcesUsecase.convertCodeRepoToRepoName(ctx, runtime.Spec.PipelineSource)
+		if err != nil {
+			return err
+		}
+		runtime.Spec.PipelineSource = repoName
+	}
+
+	for _, event := range runtime.Spec.EventSources {
+		if event.Gitlab != nil {
+			repoName, err := p.resourcesUsecase.convertCodeRepoToRepoName(ctx, event.Gitlab.RepoName)
+			if err != nil {
+				return err
+			}
+			event.Gitlab.RepoName = repoName
+		}
 	}
 
 	return nil

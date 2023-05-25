@@ -51,6 +51,12 @@ func (s *ProjectPipelineRuntimeService) covertCodeRepoValueToReply(projectPipeli
 				Revision: source.Gitlab.Revision,
 				Events:   source.Gitlab.Events,
 			},
+			Calendar: &projectpipelineruntimev1.Calendar{
+				Schedule:       source.Calendar.Schedule,
+				Interval:       source.Calendar.Interval,
+				ExclusionDates: source.Calendar.ExclusionDates,
+				Timezone:       source.Calendar.Timezone,
+			},
 		})
 	}
 

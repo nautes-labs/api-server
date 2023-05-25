@@ -130,6 +130,7 @@ var _ = Describe("Get project pipeline runtime", func() {
 		tmp.Spec.PipelineSource = "repo-1"
 		tmp.Spec.EventSources[0].Gitlab.RepoName = "repo-2"
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), 1).Return(defautlProject, nil)
+		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), 2).Return(defautlProject, nil)
 
 		biz := NewProjectPipelineRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
 		result, err := biz.GetProjectPipelineRuntime(context.Background(), resourceName, defaultGroupName)
@@ -156,7 +157,7 @@ var _ = Describe("List project pipeline runtimes", func() {
 		tmp.Spec.PipelineSource = "repo-1"
 		tmp.Spec.EventSources[0].Gitlab.RepoName = "repo-2"
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), 1).Return(defautlProject, nil)
-		// codeRepo.EXPECT().GetCodeRepo(gomock.Any(), 2).Return(defautlProject, nil)
+		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), 2).Return(defautlProject, nil)
 
 		biz := NewProjectPipelineRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
 		results, err := biz.ListProjectPipelineRuntimes(ctx, defaultGroupName)
