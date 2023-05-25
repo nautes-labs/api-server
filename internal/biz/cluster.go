@@ -245,8 +245,8 @@ func (c *ClusterUsecase) DeleteCluster(ctx context.Context, clusterName string) 
 
 	resourceCluster, err := GetCluster(tenantRepositoryLocalPath, clusterName)
 	if err != nil {
-		c.log.Errorf("failed to get cluster cluster resource, cluster name: %s", clusterName)
-		return err
+		c.log.Errorf("cluster %s does not exist or is invalid", clusterName)
+		return fmt.Errorf("cluster %s does not exist or is invalid", clusterName)
 	}
 
 	param := &cluster.ClusterRegistrationParam{
