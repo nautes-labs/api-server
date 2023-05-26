@@ -275,7 +275,7 @@ func (cr *ClusterRegistration) getRuntime(cluster *resourcev1alpha1.Cluster, par
 	return &Runtime{
 		Name:          fmt.Sprintf("%s-%s", cluster.Name, _RuntimeSuffix),
 		ClusterName:   cluster.Name,
-		Type:          getRuntimeType(cluster),
+		Type:          string(cluster.Spec.ClusterType),
 		PrimaryDomain: primaryDomain,
 		MountPath:     cluster.Name,
 		ApiServer:     cluster.Spec.ApiServer,

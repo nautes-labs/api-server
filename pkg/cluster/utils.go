@@ -188,16 +188,6 @@ func parseCluster(fileName string) (*resourcev1alpha1.Cluster, error) {
 	return &cluster, nil
 }
 
-func getRuntimeType(cluster *resourcev1alpha1.Cluster) string {
-	var physical = "physical"
-	var virtual = "virtual"
-	if ok := IsPhysicalDeploymentRuntime(cluster); ok {
-		return physical
-	}
-
-	return virtual
-}
-
 func RemoveStringFromArray(arr []string, target string) []string {
 	for i := 0; i < len(arr); i++ {
 		if arr[i] == target {
