@@ -817,13 +817,13 @@ components:
                 kubeconfig:
                     type: string
                     description: kubeconfig specifies the Kubeconfig file of the cluster.
-                workerType:
+                worker_type:
                     type: string
                     description: pipeline or deployment, when the cluster usage is 'worker', the WorkType is required.
-                primaryDomain:
+                primary_domain:
                     type: string
                     description: PrimaryDomain is used to build the domain of components within the cluster.
-                tektonHost:
+                tekton_host:
                     type: string
                     description: TektonHost is the domain for the tekton dashboard, and it must be a subdomain of the PrimaryDomain
             description: Body represents the body of the save request.

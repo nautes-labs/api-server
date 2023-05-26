@@ -57,11 +57,11 @@ message SaveRequest {
     // kubeconfig specifies the Kubeconfig file of the cluster.
     string kubeconfig = 10 [json_name = "kubeconfig"];
     // pipeline or deployment, when the cluster usage is 'worker', the WorkType is required.
-    string workerType = 11 [json_name = "workerType"];
+    string workerType = 11 [json_name = "worker_type"];
     // PrimaryDomain is used to build the domain of components within the cluster.
-    string primaryDomain = 12 [json_name = "primaryDomain"];
+    string primaryDomain = 12 [json_name = "primary_domain"];
     // TektonHost is the domain for the tekton dashboard, and it must be a subdomain of the PrimaryDomain
-    string tektonHost = 13 [json_name = "tektonHost"];
+    string tektonHost = 13 [json_name = "tekton_host"];
   }
   // clusterName specifies the name of the cluster.
   string clusterName = 2 [json_name = "cluster_name"];
