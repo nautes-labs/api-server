@@ -289,7 +289,7 @@ func (c *CodeRepoUsecase) getCodeRepo(ctx context.Context, productName, codeRepo
 	node := c.nodestree.GetNode(nodes, nodestree.CodeRepo, codeRepoName)
 	codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
 	if !ok {
-		return nil, fmt.Errorf("wrong type found for %s node", node.Name)
+		return nil, fmt.Errorf(" type found for %s node", node.Name)
 	}
 
 	return codeRepo, nil
@@ -303,20 +303,21 @@ func (c *CodeRepoUsecase) refreshAuthorization(ctx context.Context, productName,
 		return err
 	}
 
-	cps, err := c.ListCodeRepos(ctx, productName)
-	if err != nil {
-		return err
-	}
+	codeReposNodes := nodestree.ListsResourceNodes(*nodes, nodestree.CodeRepo)
 
 	var errorMessages []string
-	for _, cp := range cps {
-		ok := utilstrings.ContainsString(skipRepositories, cp.CodeRepo.Name)
+	for _, node := range codeReposNodes {
+		codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
+		if !ok {
+			return fmt.Errorf("wrong type found for %s node when refresh Authorization", node.Name)
+		}
+		ok = utilstrings.ContainsString(skipRepositories, codeRepo.Name)
 		if ok {
 			continue
 		}
 
-		if cp.CodeRepo.Spec.Project == currentProjectName {
-			err = c.codeRepoBindingUsecase.refreshAuthorization(ctx, *nodes, cp.CodeRepo.Name)
+		if codeRepo.Spec.Project == currentProjectName {
+			err = c.codeRepoBindingUsecase.refreshAuthorization(ctx, *nodes, codeRepo.Name)
 			if err != nil {
 				if commonv1.IsNoAuthorization(err) {
 					errorMessages = append(errorMessages, err.Error())
@@ -328,7 +329,7 @@ func (c *CodeRepoUsecase) refreshAuthorization(ctx context.Context, productName,
 			return nil
 		}
 
-		codeRepoBindings, err := c.codeRepoBindingUsecase.getCodeRepoBindings(*nodes, cp.CodeRepo.Name)
+		codeRepoBindings, err := c.codeRepoBindingUsecase.getCodeRepoBindings(*nodes, codeRepo.Name)
 		if err != nil {
 			return err
 		}
@@ -343,14 +344,14 @@ func (c *CodeRepoUsecase) refreshAuthorization(ctx context.Context, productName,
 			// If product-level authorization or code repository project permissions are found, refresh them.
 			if len(codeRepoBinding.Spec.Projects) == 0 ||
 				utilstrings.ContainsString(codeRepoBinding.Spec.Projects, currentProjectName) ||
-				(cp.CodeRepo.Spec.Project != "" && cp.CodeRepo.Spec.Project == currentProjectName) {
+				(codeRepo.Spec.Project != "" && codeRepo.Spec.Project == currentProjectName) {
 				refreshRequired = true
 				break
 			}
 		}
 
 		if refreshRequired {
-			err = c.codeRepoBindingUsecase.refreshAuthorization(ctx, *nodes, cp.CodeRepo.Name)
+			err = c.codeRepoBindingUsecase.refreshAuthorization(ctx, *nodes, codeRepo.Name)
 			if err != nil {
 				if commonv1.IsNoAuthorization(err) {
 					errorMessages = append(errorMessages, err.Error())

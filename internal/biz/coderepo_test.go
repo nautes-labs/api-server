@@ -261,7 +261,6 @@ var _ = Describe("Save codeRepo", func() {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(toGetCodeRepoPath)).Return(nil, ErrorProjectNotFound)
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(defaultProjectPath)).Return(defautlProject, nil)
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Any()).Return(toSaveProject, nil).AnyTimes()
-		codeRepo.EXPECT().GetGroup(gomock.Any(), gomock.Eq(int(defaultProductGroup.Id))).Return(defaultProductGroup, nil)
 		codeRepo.EXPECT().CreateCodeRepo(gomock.Any(), gomock.Eq(int(defaultProductGroup.Id)), options).Return(toSaveProject, nil)
 
 		codeRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(toSaveProjectDeployKey, nil).Times(2)
@@ -298,7 +297,6 @@ var _ = Describe("Save codeRepo", func() {
 	It("will updated successfully", testUseCase.UpdateResoureSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(defaultProjectPath)).Return(defautlProject, nil)
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Any()).Return(toSaveProject, nil).AnyTimes()
-		codeRepo.EXPECT().GetGroup(gomock.Any(), gomock.Eq(int(defaultProductGroup.Id))).Return(defaultProductGroup, nil)
 		codeRepo.EXPECT().UpdateCodeRepo(gomock.Any(), gomock.Eq(int(toSaveProject.Id)), options).Return(toSaveProject, nil)
 
 		codeRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(toSaveProjectDeployKey, nil).Times(2)
@@ -331,7 +329,6 @@ var _ = Describe("Save codeRepo", func() {
 
 	It("auto merge conflict, updated successfully", testUseCase.UpdateResourceAndAutoMerge(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Any()).Return(toSaveProject, nil).AnyTimes()
-		codeRepo.EXPECT().GetGroup(gomock.Any(), gomock.Eq(int(defaultProductGroup.Id))).Return(defaultProductGroup, nil)
 		codeRepo.EXPECT().UpdateCodeRepo(gomock.Any(), gomock.Eq(int(toSaveProject.Id)), options).Return(toSaveProject, nil)
 		codeRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(toSaveProjectDeployKey, nil).Times(2)
 		codeRepo.EXPECT().ListDeployKeys(gomock.Any(), int(toSaveProject.Id), gomock.Any()).Return(listDeployKeys, nil).AnyTimes()
@@ -533,7 +530,6 @@ var _ = Describe("Delete codeRepo", func() {
 	})
 
 	It("will deleted successfully", testUseCase.DeleteResourceSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		codeRepo.EXPECT().GetGroup(gomock.Any(), gomock.Eq(int(defaultProductGroup.Id))).Return(defaultProductGroup, nil)
 		codeRepo.EXPECT().ListDeployKeys(gomock.Any(), int(deletedProject.Id), gomock.Any()).Return(listDeployKeys, nil)
 		codeRepo.EXPECT().DeleteDeployKey(gomock.Any(), int(deletedProject.Id), gomock.Any()).Return(nil).AnyTimes()
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Any()).Return(deletedProject, nil).AnyTimes()
