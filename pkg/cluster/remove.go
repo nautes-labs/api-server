@@ -260,7 +260,7 @@ func (cr *ClusterRegistration) DeleteRuntime(nodes *nodestree.Node) error {
 	cr.ReplaceTemplatePathWithTenantRepositoryPath(nodes)
 
 	// The virtual cluster needs to additionally delete the specified Vcluster directory.
-	if cr.Usage == _VirtualDeploymentRuntime || cr.Usage == _VirtualProjectPipelineRuntime {
+	if IsVirtual(cr.Cluster) {
 		vclustersDir := fmt.Sprintf("%s/%s", concatSpecifiedVclustersDir(cr.TenantConfigRepoLocalPath, cr.Vcluster.HostCluster.Name), cr.Cluster.Name)
 		err := DeleteSpecifyDir(vclustersDir)
 		if err != nil {
@@ -309,7 +309,7 @@ func (cr *ClusterRegistration) CleanupAppSetIfEmpty() error {
 	switch {
 	case cr.Usage == _HostCluster && len(cr.HostClusterNames) == 0:
 		return cr.CleanHostClusterAppSet()
-	case cr.Usage != _HostCluster && len(cr.VclusterNames) == 0:
+	case IsVirtual(cr.Cluster) && len(cr.VclusterNames) == 0:
 		return cr.CleanVclusterAppSet()
 	}
 
@@ -366,7 +366,7 @@ func IsValidRuntimeAppSetFilename(filename string) bool {
 }
 
 func (cr *ClusterRegistration) CleanVclusterAppSet() error {
-	if cr.Usage != _VirtualDeploymentRuntime {
+	if !IsVirtual(cr.Cluster) {
 		return nil
 	}
 

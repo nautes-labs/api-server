@@ -50,7 +50,11 @@ func readFile(filePath string) (data []byte, err error) {
 func GetVclusterNames(filePath string) (vclusterNames []string, err error) {
 	data, err := readFile(filePath)
 	if err != nil {
-		return vclusterNames, nil
+		if os.IsNotExist(err) {
+			return vclusterNames, nil
+		} else {
+			return nil, err
+		}
 	}
 	data = []byte(ReplacePlaceholders(string(data), "{{vcluster}}", "vcluster"))
 	return GetApplicationSetElements(data)
