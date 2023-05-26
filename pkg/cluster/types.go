@@ -54,6 +54,7 @@ type TektonConfig struct {
 	Host          string
 	HttpsNodePort int
 	URL           string
+	OAuthURL      string
 }
 
 type Runtime struct {

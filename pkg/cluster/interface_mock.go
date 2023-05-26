@@ -48,19 +48,19 @@ func (mr *MockClusterRegistrationOperatorMockRecorder) GetArgocdURL() *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetArgocdURL", reflect.TypeOf((*MockClusterRegistrationOperator)(nil).GetArgocdURL))
 }
 
-// GetTraefikNodePortToHostCluster mocks base method.
-func (m *MockClusterRegistrationOperator) GetTraefikNodePortToHostCluster(tenantLocalPath, hostCluster string) (int, error) {
+// GetTektonOAuthURL mocks base method.
+func (m *MockClusterRegistrationOperator) GetTektonOAuthURL() (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTraefikNodePortToHostCluster", tenantLocalPath, hostCluster)
-	ret0, _ := ret[0].(int)
+	ret := m.ctrl.Call(m, "GetTektonOAuthURL")
+	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetTraefikNodePortToHostCluster indicates an expected call of GetTraefikNodePortToHostCluster.
-func (mr *MockClusterRegistrationOperatorMockRecorder) GetTraefikNodePortToHostCluster(tenantLocalPath, hostCluster interface{}) *gomock.Call {
+// GetTektonOAuthURL indicates an expected call of GetTektonOAuthURL.
+func (mr *MockClusterRegistrationOperatorMockRecorder) GetTektonOAuthURL() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTraefikNodePortToHostCluster", reflect.TypeOf((*MockClusterRegistrationOperator)(nil).GetTraefikNodePortToHostCluster), tenantLocalPath, hostCluster)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTektonOAuthURL", reflect.TypeOf((*MockClusterRegistrationOperator)(nil).GetTektonOAuthURL))
 }
 
 // InitializeClusterConfig mocks base method.

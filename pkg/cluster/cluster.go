@@ -16,14 +16,11 @@ package cluster
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"regexp"
 
 	utilstrings "github.com/nautes-labs/api-server/util/string"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
-	v1 "k8s.io/api/core/v1"
-	yaml "sigs.k8s.io/yaml"
 )
 
 const (
@@ -40,6 +37,8 @@ const (
 	_NIPDomainSuffix                                     = "nip.io"
 	_RuntimeSuffix                                       = "runtime"
 	_RuntimeProjectSuffix                                = "runtime-project"
+	_ArgocdOAuthSuffix                                   = "api/dex/callback"
+	_TektonOAuthSuffix                                   = "oauth2/callback"
 )
 
 func NewClusterRegistration() ClusterRegistrationOperator {
@@ -81,7 +80,7 @@ func (cr *ClusterRegistration) InitializeClusterConfig(param *ClusterRegistratio
 		return err
 	}
 
-	runtime, err = cr.getRuntime(resourceRuntimeCluster, param)
+	runtime, err = cr.getRuntime(param, resourceRuntimeCluster, hostCluster)
 	if err != nil {
 		return err
 	}
@@ -212,7 +211,7 @@ func GetArgocdConfig(cr *ClusterRegistration, cluster *resourcev1alpha1.Cluster,
 	return config, nil
 }
 
-func GetTektonConfig(cr *ClusterRegistration, cluster *resourcev1alpha1.Cluster, param *ClusterRegistrationParam) (*TektonConfig, error) {
+func GetTektonConfig(cr *ClusterRegistration, cluster *resourcev1alpha1.Cluster, hostCluster *HostCluster, param *ClusterRegistrationParam) (*TektonConfig, error) {
 	config := &TektonConfig{}
 
 	switch {
@@ -221,6 +220,10 @@ func GetTektonConfig(cr *ClusterRegistration, cluster *resourcev1alpha1.Cluster,
 		if err != nil {
 			return nil, fmt.Errorf("failed to get host cluster %s tarefik https NodePort, please check if the host cluster exists", cluster.Spec.HostCluster)
 		}
+
+		oauthURL := fmt.Sprintf("https://auth.%s.%s:%d", hostCluster.Name, hostCluster.PrimaryDomain, httpsNodePort)
+
+		config.OAuthURL = oauthURL
 		config.HttpsNodePort = httpsNodePort
 
 		tektonHost, err := GetTektonHost(param, cluster.Spec.ApiServer)
@@ -237,6 +240,8 @@ func GetTektonConfig(cr *ClusterRegistration, cluster *resourcev1alpha1.Cluster,
 		config.Host = tektonHost
 
 		if param.Traefik != nil && param.Traefik.HttpsNodePort != "" {
+			oauthURL := fmt.Sprintf("https://auth.%s.%s:%s/oauth2/callback", cluster.Name, cluster.Spec.PrimaryDomain, param.Traefik.HttpsNodePort)
+			config.OAuthURL = oauthURL
 			config.URL = fmt.Sprintf("https://%s:%s", tektonHost, param.Traefik.HttpsNodePort)
 		}
 	}
@@ -244,7 +249,7 @@ func GetTektonConfig(cr *ClusterRegistration, cluster *resourcev1alpha1.Cluster,
 	return config, nil
 }
 
-func (cr *ClusterRegistration) getRuntime(cluster *resourcev1alpha1.Cluster, param *ClusterRegistrationParam) (*Runtime, error) {
+func (cr *ClusterRegistration) getRuntime(param *ClusterRegistrationParam, cluster *resourcev1alpha1.Cluster, hostCluster *HostCluster) (*Runtime, error) {
 	if cluster == nil {
 		return nil, nil
 	}
@@ -254,29 +259,28 @@ func (cr *ClusterRegistration) getRuntime(cluster *resourcev1alpha1.Cluster, par
 		return nil, err
 	}
 
-	tektonConfig, err := GetTektonConfig(cr, cluster, param)
-	if err != nil {
-		return nil, err
-	}
-
-	primaryDomain := cluster.Spec.PrimaryDomain
-	if primaryDomain == "" {
+	if cluster.Spec.PrimaryDomain == "" {
 		if !utilstrings.IsIPPortURL(cluster.Spec.ApiServer) {
-			primaryDomain = cluster.Spec.ApiServer
+			cluster.Spec.PrimaryDomain = cluster.Spec.ApiServer
 		} else {
 			hostClusterIP, err := utilstrings.ParseUrl(cluster.Spec.ApiServer)
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve cluster server, err: %s", err)
 			}
-			primaryDomain = fmt.Sprintf("%s.%s", hostClusterIP, _NIPDomainSuffix)
+			cluster.Spec.PrimaryDomain = fmt.Sprintf("%s.%s", hostClusterIP, _NIPDomainSuffix)
 		}
+	}
+
+	tektonConfig, err := GetTektonConfig(cr, cluster, hostCluster, param)
+	if err != nil {
+		return nil, err
 	}
 
 	return &Runtime{
 		Name:          fmt.Sprintf("%s-%s", cluster.Name, _RuntimeSuffix),
 		ClusterName:   cluster.Name,
 		Type:          string(cluster.Spec.ClusterType),
-		PrimaryDomain: primaryDomain,
+		PrimaryDomain: cluster.Spec.PrimaryDomain,
 		MountPath:     cluster.Name,
 		ApiServer:     cluster.Spec.ApiServer,
 		ArgocdConfig:  argocdConfig,
@@ -385,21 +389,23 @@ func GetTektonHost(param *ClusterRegistrationParam, apiServer string) (string, e
 }
 
 func (cr *ClusterRegistration) GetArgocdURL() (string, error) {
-	filename := fmt.Sprintf("%s/%s-runtime/argocd/overlays/production/patch-argocd-cm.yaml", concatRuntimesDir(cr.TenantConfigRepoLocalPath), cr.Cluster.Name)
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		return "", err
+	if cr.Runtime.ArgocdConfig == nil {
+		return "", fmt.Errorf("argocd config is empty")
 	}
 
-	bytes, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return "", err
-	}
-	var cm v1.ConfigMap
-	if err := yaml.Unmarshal(bytes, &cm); err != nil {
-		return "", err
+	url := fmt.Sprintf("%s/%s", cr.Runtime.ArgocdConfig.URL, _ArgocdOAuthSuffix)
+
+	return url, nil
+}
+
+func (cr *ClusterRegistration) GetTektonOAuthURL() (string, error) {
+	if cr.Runtime.TektonConfig != nil && cr.Runtime.TektonConfig.OAuthURL != "" {
+		url := fmt.Sprintf("%s/%s", cr.Runtime.TektonConfig.OAuthURL, _TektonOAuthSuffix)
+
+		return url, nil
 	}
 
-	return cm.Data["url"], nil
+	return "", nil
 }
 
 const (

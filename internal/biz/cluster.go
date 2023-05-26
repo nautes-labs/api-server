@@ -286,17 +286,29 @@ func (c *ClusterUsecase) DeleteCluster(ctx context.Context, clusterName string) 
 }
 
 func (c *ClusterUsecase) SaveDexConfig(param *cluster.ClusterRegistrationParam, teantLocalPath string) error {
-	url, err := c.cluster.GetArgocdURL()
+	argocdOauthURL, err := c.cluster.GetArgocdURL()
 	if err != nil {
 		return err
 	}
-	if url == "" {
+	if argocdOauthURL == "" {
 		return fmt.Errorf("failed to get argocd url when saved dex config")
 	}
 
-	err = c.dex.UpdateRedirectURIs(url)
+	err = c.dex.UpdateRedirectURIs(argocdOauthURL)
 	if err != nil {
 		return err
+	}
+
+	tektonOauthURL, err := c.cluster.GetTektonOAuthURL()
+	if err != nil {
+		return err
+	}
+
+	if tektonOauthURL != "" {
+		err = c.dex.UpdateRedirectURIs(tektonOauthURL)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
