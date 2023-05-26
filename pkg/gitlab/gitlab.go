@@ -214,6 +214,15 @@ func (g *GitlabClient) DeleteDeployKey(pid interface{}, deployKey int, options .
 	return
 }
 
+func (g *GitlabClient) UpdateProjectDeployKey(pid interface{}, deployKey int, opt *gitlab.UpdateDeployKeyOptions, options ...gitlab.RequestOptionFunc) (key *gitlab.ProjectDeployKey, res *gitlab.Response, err error) {
+	key, res, err = g.client.DeployKeys.UpdateDeployKey(pid, deployKey, opt, options...)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
 func (g *GitlabClient) EnableProjectDeployKey(pid interface{}, deployKey int, options ...gitlab.RequestOptionFunc) (key *gitlab.ProjectDeployKey, res *gitlab.Response, err error) {
 	key, res, err = g.client.DeployKeys.EnableDeployKey(pid, deployKey, options...)
 	if err != nil {

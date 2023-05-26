@@ -332,6 +332,21 @@ func (mr *MockCodeRepoMockRecorder) UpdateCodeRepo(ctx, pid, options interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCodeRepo", reflect.TypeOf((*MockCodeRepo)(nil).UpdateCodeRepo), ctx, pid, options)
 }
 
+// UpdateDeployKey mocks base method.
+func (m *MockCodeRepo) UpdateDeployKey(ctx context.Context, pid interface{}, deployKey int, title string, canPush bool) (*ProjectDeployKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateDeployKey", ctx, pid, deployKey, title, canPush)
+	ret0, _ := ret[0].(*ProjectDeployKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateDeployKey indicates an expected call of UpdateDeployKey.
+func (mr *MockCodeRepoMockRecorder) UpdateDeployKey(ctx, pid, deployKey, title, canPush interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDeployKey", reflect.TypeOf((*MockCodeRepo)(nil).UpdateDeployKey), ctx, pid, deployKey, title, canPush)
+}
+
 // UpdateGroup mocks base method.
 func (m *MockCodeRepo) UpdateGroup(ctx context.Context, gid interface{}, git *GitGroupOptions) (*Group, error) {
 	m.ctrl.T.Helper()

@@ -217,7 +217,7 @@ func (c *CodeRepoBindingUsecase) getCodeRepoBindings(nodes nodestree.Node, codeR
 	return codeRepoBindings, nil
 }
 
-func (c *CodeRepoBindingUsecase) authorizeDeployKey(ctx context.Context, codeRepos []*resourcev1alpha1.CodeRepo, pid interface{}, permisions string) error {
+func (c *CodeRepoBindingUsecase) authorizeDeployKey(ctx context.Context, codeRepos []*resourcev1alpha1.CodeRepo, pid interface{}, permissions string) error {
 	var repositories []*Project
 	for _, repo := range codeRepos {
 		pid, err := utilstrings.ExtractNumber(RepoPrefix, repo.Name)
@@ -231,23 +231,26 @@ func (c *CodeRepoBindingUsecase) authorizeDeployKey(ctx context.Context, codeRep
 		repositories = append(repositories, project)
 	}
 
-	if err := c.applyDeploykey(ctx, pid, permisions, repositories, func(ctx context.Context, pid interface{}, deployKey int) error {
-		_, err := c.codeRepo.GetDeployKey(ctx, pid, deployKey)
+	if err := c.applyDeploykey(ctx, pid, permissions, repositories, func(ctx context.Context, pid interface{}, deployKey int) error {
+		projectDeployKey, err := c.codeRepo.EnableProjectDeployKey(ctx, pid, deployKey)
 		if err != nil {
-			if commonv1.IsDeploykeyNotFound(err) {
-				_, err := c.codeRepo.EnableProjectDeployKey(ctx, pid, deployKey)
-				if err != nil {
-					return err
-				}
-			} else {
-				return err
-			}
+			return err
+		}
+
+		if permissions != string(ReadWrite) {
+			return nil
+		}
+
+		_, err = c.codeRepo.UpdateDeployKey(ctx, pid, projectDeployKey.ID, projectDeployKey.Title, true)
+		if err != nil {
+			return err
 		}
 
 		return nil
 	}); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -356,11 +359,11 @@ func (c *CodeRepoBindingUsecase) AuthorizeForSameProjectRepository(ctx context.C
 				return fmt.Errorf("failed to convert code repository")
 			}
 			if repo1.Spec.Project == currentProject && repo1.Spec.Project == repo2.Spec.Project {
-				id1, err := utilstrings.ExtractNumber(RepoPrefix, repo1.Name)
+				pid1, err := utilstrings.ExtractNumber(RepoPrefix, repo1.Name)
 				if err != nil {
 					return err
 				}
-				id2, err := utilstrings.ExtractNumber(RepoPrefix, repo2.Name)
+				pid2, err := utilstrings.ExtractNumber(RepoPrefix, repo2.Name)
 				if err != nil {
 					return err
 				}
@@ -380,20 +383,34 @@ func (c *CodeRepoBindingUsecase) AuthorizeForSameProjectRepository(ctx context.C
 					return err
 				}
 
-				deployKey1Info, err := c.codeRepo.GetDeployKey(ctx, id1, deployKey1.ID)
+				deployKey1Info, err := c.codeRepo.GetDeployKey(ctx, pid1, deployKey1.ID)
 				if err != nil {
 					return err
 				}
-				deployKey2Info, err := c.codeRepo.GetDeployKey(ctx, id2, deployKey2.ID)
+				deployKey2Info, err := c.codeRepo.GetDeployKey(ctx, pid2, deployKey2.ID)
 				if err != nil {
 					return err
 				}
 
-				_, err = c.codeRepo.EnableProjectDeployKey(ctx, id1, deployKey2Info.ID)
+				_, err = c.codeRepo.EnableProjectDeployKey(ctx, pid1, deployKey2Info.ID)
 				if err != nil {
 					return err
 				}
-				_, err = c.codeRepo.EnableProjectDeployKey(ctx, id2, deployKey1Info.ID)
+				_, err = c.codeRepo.EnableProjectDeployKey(ctx, pid2, deployKey1Info.ID)
+				if err != nil {
+					return err
+				}
+
+				if permissions != string(ReadWrite) {
+					return nil
+				}
+
+				_, err = c.codeRepo.UpdateDeployKey(ctx, pid1, deployKey2Info.ID, deployKey2Info.Title, true)
+				if err != nil {
+					return err
+				}
+
+				_, err = c.codeRepo.UpdateDeployKey(ctx, pid2, deployKey1Info.ID, deployKey1Info.Title, true)
 				if err != nil {
 					return err
 				}
@@ -404,14 +421,14 @@ func (c *CodeRepoBindingUsecase) AuthorizeForSameProjectRepository(ctx context.C
 	return nil
 }
 
-func (c *CodeRepoBindingUsecase) getCodeRepoBindingsInAuthorizedRepo(ctx context.Context, nodes nodestree.Node, codeRepoName, permisions string) []*resourcev1alpha1.CodeRepoBinding {
+func (c *CodeRepoBindingUsecase) getCodeRepoBindingsInAuthorizedRepo(ctx context.Context, nodes nodestree.Node, codeRepoName, permissions string) []*resourcev1alpha1.CodeRepoBinding {
 	codeRepoBindingNodes := nodestree.ListsResourceNodes(nodes, nodestree.CodeRepoBinding, func(node *nodestree.Node) bool {
 		val, ok := node.Content.(*resourcev1alpha1.CodeRepoBinding)
 		if !ok {
 			return false
 		}
 
-		if val.Spec.CodeRepo == codeRepoName && val.Spec.Permissions == permisions {
+		if val.Spec.CodeRepo == codeRepoName && val.Spec.Permissions == permissions {
 			return true
 		}
 

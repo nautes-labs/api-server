@@ -30,6 +30,7 @@ type CodeRepo interface {
 	ListAllDeployKeys(ctx context.Context, opt *ListOptions) ([]*ProjectDeployKey, error)
 	GetDeployKey(ctx context.Context, pid interface{}, deployKeyID int) (*ProjectDeployKey, error)
 	EnableProjectDeployKey(ctx context.Context, pid interface{}, deployKey int) (*ProjectDeployKey, error)
+	UpdateDeployKey(ctx context.Context, pid interface{}, deployKey int, title string, canPush bool) (*ProjectDeployKey, error)
 	SaveDeployKey(ctx context.Context, pid interface{}, title string, canPush bool, publicKey []byte) (*ProjectDeployKey, error)
 	DeleteDeployKey(ctx context.Context, pid interface{}, deployKey int) error
 	CreateGroup(ctx context.Context, gitOptions *GitGroupOptions) (*Group, error)

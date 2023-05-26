@@ -479,6 +479,29 @@ func (g *gitlabRepo) SaveDeployKey(ctx context.Context, pid interface{}, title s
 	}, nil
 }
 
+func (g *gitlabRepo) UpdateDeployKey(ctx context.Context, pid interface{}, deployKey int, title string, canPush bool) (*biz.ProjectDeployKey, error) {
+	opts := &gitlab.UpdateDeployKeyOptions{
+		Title:   gitlab.String(title),
+		CanPush: gitlab.Bool(canPush),
+	}
+
+	client, err := NewGitlabClient(ctx, g)
+	if err != nil {
+		return nil, err
+	}
+
+	projectDeployKey, _, err := client.UpdateProjectDeployKey(pid, deployKey, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return &biz.ProjectDeployKey{
+		ID:    projectDeployKey.ID,
+		Title: projectDeployKey.Title,
+		Key:   projectDeployKey.Key,
+	}, nil
+}
+
 func (g *gitlabRepo) EnableProjectDeployKey(ctx context.Context, pid interface{}, deployKey int) (*biz.ProjectDeployKey, error) {
 	client, err := NewGitlabClient(ctx, g)
 	if err != nil {

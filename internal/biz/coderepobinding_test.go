@@ -266,6 +266,7 @@ var _ = Describe("Save CodeRepoBinding", func() {
 		codeRepo.EXPECT().ListDeployKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(listProjectDeployKeys, nil).AnyTimes()
 		codeRepo.EXPECT().DeleteDeployKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		codeRepo.EXPECT().EnableProjectDeployKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(projectDeployKey, nil).AnyTimes()
+		codeRepo.EXPECT().UpdateDeployKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), true).Return(projectDeployKey, nil).AnyTimes().AnyTimes()
 
 		gitRepo := NewMockGitRepo(ctl)
 		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil).AnyTimes()
@@ -315,6 +316,7 @@ var _ = Describe("Save CodeRepoBinding", func() {
 		codeRepo.EXPECT().ListDeployKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(listProjectDeployKeys, nil).AnyTimes()
 		codeRepo.EXPECT().DeleteDeployKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		codeRepo.EXPECT().EnableProjectDeployKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(projectDeployKey, nil).AnyTimes()
+		codeRepo.EXPECT().UpdateDeployKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), true).Return(projectDeployKey, nil).AnyTimes().AnyTimes()
 
 		gitRepo := NewMockGitRepo(ctl)
 		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil).AnyTimes()
@@ -364,6 +366,7 @@ var _ = Describe("Save CodeRepoBinding", func() {
 		codeRepo.EXPECT().ListDeployKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(listProjectDeployKeys, nil).AnyTimes()
 		codeRepo.EXPECT().DeleteDeployKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		codeRepo.EXPECT().EnableProjectDeployKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(projectDeployKey, nil).AnyTimes()
+		codeRepo.EXPECT().UpdateDeployKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), true).Return(projectDeployKey, nil).AnyTimes().AnyTimes()
 
 		gitRepo := NewMockGitRepo(ctl)
 		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil).AnyTimes()
@@ -447,6 +450,7 @@ var _ = Describe("Delete CodeRepoBinding", func() {
 		codeRepo.EXPECT().ListDeployKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(listProjectDeployKeys, nil).AnyTimes()
 		codeRepo.EXPECT().DeleteDeployKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		codeRepo.EXPECT().EnableProjectDeployKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(projectDeployKey, nil).AnyTimes()
+		codeRepo.EXPECT().UpdateDeployKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), true).Return(projectDeployKey, nil).AnyTimes().AnyTimes()
 
 		gitRepo := NewMockGitRepo(ctl)
 		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil).AnyTimes()
@@ -490,6 +494,7 @@ var _ = Describe("Delete CodeRepoBinding", func() {
 		codeRepo.EXPECT().ListDeployKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(listProjectDeployKeys, nil).AnyTimes()
 		codeRepo.EXPECT().DeleteDeployKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("failed to delete deploykey."))
 		codeRepo.EXPECT().EnableProjectDeployKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(projectDeployKey, nil).AnyTimes()
+		codeRepo.EXPECT().UpdateDeployKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), true).Return(projectDeployKey, nil).AnyTimes().AnyTimes()
 
 		gitRepo := NewMockGitRepo(ctl)
 		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil).AnyTimes()

@@ -314,6 +314,27 @@ func (mr *MockGitlabOperatorMockRecorder) GetProjectAccessToken(pid, id interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProjectAccessToken", reflect.TypeOf((*MockGitlabOperator)(nil).GetProjectAccessToken), varargs...)
 }
 
+// ListAllDeployKeys mocks base method.
+func (m *MockGitlabOperator) ListAllDeployKeys(opt *go_gitlab.ListInstanceDeployKeysOptions, options ...go_gitlab.RequestOptionFunc) ([]*go_gitlab.InstanceDeployKey, *go_gitlab.Response, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{opt}
+	for _, a := range options {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListAllDeployKeys", varargs...)
+	ret0, _ := ret[0].([]*go_gitlab.InstanceDeployKey)
+	ret1, _ := ret[1].(*go_gitlab.Response)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListAllDeployKeys indicates an expected call of ListAllDeployKeys.
+func (mr *MockGitlabOperatorMockRecorder) ListAllDeployKeys(opt interface{}, options ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{opt}, options...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAllDeployKeys", reflect.TypeOf((*MockGitlabOperator)(nil).ListAllDeployKeys), varargs...)
+}
+
 // ListDeployKeys mocks base method.
 func (m *MockGitlabOperator) ListDeployKeys(pid interface{}, opt *go_gitlab.ListProjectDeployKeysOptions, options ...go_gitlab.RequestOptionFunc) ([]*go_gitlab.ProjectDeployKey, *go_gitlab.Response, error) {
 	m.ctrl.T.Helper()
@@ -448,4 +469,25 @@ func (m *MockGitlabOperator) UpdateProject(pid interface{}, opt *go_gitlab.EditP
 func (mr *MockGitlabOperatorMockRecorder) UpdateProject(pid, opt interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateProject", reflect.TypeOf((*MockGitlabOperator)(nil).UpdateProject), pid, opt)
+}
+
+// UpdateProjectDeployKey mocks base method.
+func (m *MockGitlabOperator) UpdateProjectDeployKey(pid interface{}, deployKey int, opt *go_gitlab.UpdateDeployKeyOptions, options ...go_gitlab.RequestOptionFunc) (*go_gitlab.ProjectDeployKey, *go_gitlab.Response, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{pid, deployKey, opt}
+	for _, a := range options {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateProjectDeployKey", varargs...)
+	ret0, _ := ret[0].(*go_gitlab.ProjectDeployKey)
+	ret1, _ := ret[1].(*go_gitlab.Response)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// UpdateProjectDeployKey indicates an expected call of UpdateProjectDeployKey.
+func (mr *MockGitlabOperatorMockRecorder) UpdateProjectDeployKey(pid, deployKey, opt interface{}, options ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{pid, deployKey, opt}, options...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateProjectDeployKey", reflect.TypeOf((*MockGitlabOperator)(nil).UpdateProjectDeployKey), varargs...)
 }
