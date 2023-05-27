@@ -42,13 +42,27 @@ https://$api-server:$port/q/swagger-ui
 - [kratos](https://go-kratos.dev/docs/getting-started/usage/#%E5%AE%89%E8%A3%85)
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
 
-准备一个 kubernetes 实例，复制 kubeconfig 文件到 {$HOME}/.kube/config
+1、准备一个 kubernetes 实例，复制 kubeconfig 文件到 {$HOME}/.kube/config
 
 创建 nautes-configs 配置文件
 
 ```
 kubectl create cm nautes-configs -n nautes
 ```
+
+2、访问组件的证书
+
+当[环境安装]([安装 | Nautes](https://nautes.io/guide/user-guide/installation.html#%E5%87%86%E5%A4%87%E7%8E%AF%E5%A2%83))完成后，在` /opt/nautes/out/pki`会存在访问其他组件的证书和签发证书的CA
+
+3、设置资源布局的配置
+
+该文件位于当前项目下的 `pkg/nodestree/sample/resources.yaml`，通过设置环境变量的方式，项目启动会自动加载该文件
+
+```
+export RESOURCES_LAYOUT = ${workspaceFolder}/pkg/nodestree/sample/resources.yaml
+```
+
+
 
 ### 构建
 
