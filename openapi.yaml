@@ -1400,7 +1400,7 @@ components:
                     description: Gitlab project name.
                 revision:
                     type: string
-                    description: Wildcard is not supported, but regular expressions are supported.
+                    description: Wildcard is not supported, but regular expressions are supported. If it is empty, the trigger will determine the revision of the pipeline based on the revision of the event source
                 events:
                     type: array
                     items:
@@ -1439,7 +1439,7 @@ components:
                     description: Key of the pipeline.
                 revision:
                     type: string
-                    description: Wildcard is not supported, but regular expressions are supported.
+                    description: Wildcard is not supported, but regular expressions are supported. If it is empty, the trigger will determine the revision of the pipeline based on the revision of the event source
         api.projectpipelineruntime.v1.SaveReply:
             type: object
             properties:

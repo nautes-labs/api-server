@@ -106,6 +106,7 @@ type Gitlab struct {
 	// Gitlab project name.
 	RepoName string `protobuf:"bytes,1,opt,name=repo_name,proto3" json:"repo_name,omitempty"`
 	// Wildcard is not supported, but regular expressions are supported.
+	// If it is empty, the trigger will determine the revision of the pipeline based on the revision of the event source
 	Revision string `protobuf:"bytes,2,opt,name=revision,proto3" json:"revision,omitempty"`
 	// Gitlab webhook events: push_events, tag_push_events, etc.
 	Events []string `protobuf:"bytes,3,rep,name=events,proto3" json:"events,omitempty"`
@@ -308,6 +309,7 @@ type PipelineTriggers struct {
 	// Key of the pipeline.
 	Pipeline string `protobuf:"bytes,2,opt,name=pipeline,proto3" json:"pipeline,omitempty"`
 	// Wildcard is not supported, but regular expressions are supported.
+	// If it is empty, the trigger will determine the revision of the pipeline based on the revision of the event source
 	Revision string `protobuf:"bytes,3,opt,name=revision,proto3" json:"revision,omitempty"`
 }
 
