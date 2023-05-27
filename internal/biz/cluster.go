@@ -210,11 +210,9 @@ func (c *ClusterUsecase) SaveCluster(ctx context.Context, param *cluster.Cluster
 		return err
 	}
 
-	if !cluster.IsHostCluser(param.Cluster) {
-		err = c.SaveDexConfig(param, tenantRepositoryLocalPath)
-		if err != nil {
-			return err
-		}
+	err = c.SaveDexConfig(param, tenantRepositoryLocalPath)
+	if err != nil {
+		return err
 	}
 
 	c.log.Infof("successfully register cluster, cluster name: %s", param.Cluster.Name)
@@ -261,11 +259,9 @@ func (c *ClusterUsecase) DeleteCluster(ctx context.Context, clusterName string) 
 		return err
 	}
 
-	if !cluster.IsHostCluser(param.Cluster) {
-		err = c.DeleteDexConfig(param)
-		if err != nil {
-			return err
-		}
+	err = c.DeleteDexConfig(param)
+	if err != nil {
+		return err
 	}
 
 	err = c.cluster.Remove()
@@ -286,28 +282,30 @@ func (c *ClusterUsecase) DeleteCluster(ctx context.Context, clusterName string) 
 }
 
 func (c *ClusterUsecase) SaveDexConfig(param *cluster.ClusterRegistrationParam, teantLocalPath string) error {
-	argocdOauthURL, err := c.cluster.GetArgocdURL()
-	if err != nil {
-		return err
-	}
-	if argocdOauthURL == "" {
-		return fmt.Errorf("failed to get argocd url when saved dex config")
-	}
-
-	err = c.dex.UpdateRedirectURIs(argocdOauthURL)
-	if err != nil {
-		return err
-	}
-
-	tektonOauthURL, err := c.cluster.GetTektonOAuthURL()
-	if err != nil {
-		return err
-	}
-
-	if tektonOauthURL != "" {
-		err = c.dex.UpdateRedirectURIs(tektonOauthURL)
+	if !cluster.IsHostCluser(param.Cluster) {
+		argocdOauthURL, err := c.cluster.GetArgocdURL()
 		if err != nil {
 			return err
+		}
+		if argocdOauthURL != "" {
+			err = c.dex.UpdateRedirectURIs(argocdOauthURL)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if cluster.IsPhysical(param.Cluster) {
+		tektonOauthURL, err := c.cluster.GetTektonOAuthURL()
+		if err != nil {
+			return err
+		}
+
+		if tektonOauthURL != "" {
+			err = c.dex.UpdateRedirectURIs(tektonOauthURL)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -315,17 +313,32 @@ func (c *ClusterUsecase) SaveDexConfig(param *cluster.ClusterRegistrationParam, 
 }
 
 func (c *ClusterUsecase) DeleteDexConfig(param *cluster.ClusterRegistrationParam) error {
-	url, err := c.cluster.GetArgocdURL()
-	if err != nil {
-		return err
-	}
-	if url == "" {
-		return fmt.Errorf("failed to get argocd url when delete dex config")
+	if !cluster.IsHostCluser(param.Cluster) {
+		argocdOauthURL, err := c.cluster.GetArgocdURL()
+		if err != nil {
+			return err
+		}
+
+		if argocdOauthURL != "" {
+			err = c.dex.RemoveRedirectURIs(argocdOauthURL)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
-	err = c.dex.RemoveRedirectURIs(url)
-	if err != nil {
-		return err
+	if cluster.IsPhysical(param.Cluster) {
+		tektonOauthURL, err := c.cluster.GetTektonOAuthURL()
+		if err != nil {
+			return err
+		}
+
+		if tektonOauthURL != "" {
+			err = c.dex.RemoveRedirectURIs(tektonOauthURL)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil

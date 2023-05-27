@@ -41,6 +41,7 @@ type HostCluster struct {
 	ArgocdProject        string
 	PrimaryDomain        string
 	Host                 string
+	OAuthURL             string
 	ProjectPipelineItems []*ProjectPipelineItem
 }
 
@@ -54,7 +55,6 @@ type TektonConfig struct {
 	Host          string
 	HttpsNodePort int
 	URL           string
-	OAuthURL      string
 }
 
 type Runtime struct {
@@ -64,6 +64,7 @@ type Runtime struct {
 	PrimaryDomain       string
 	MountPath           string
 	ApiServer           string
+	OAuthURL            string
 	ArgocdConfig        *ArgocdConfig
 	TektonConfig        *TektonConfig
 	ProjectPipelineItem *ProjectPipelineItem

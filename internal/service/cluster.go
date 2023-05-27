@@ -39,8 +39,9 @@ func NewClusterService(cluster *biz.ClusterUsecase, configs *nautesconfigs.Confi
 }
 
 func (s *ClusterService) SaveCluster(ctx context.Context, req *clusterv1.SaveRequest) (*clusterv1.SaveReply, error) {
-	if req.Body.Usage == "worker" && req.Body.WorkerType == "" {
-		return nil, fmt.Errorf("when the cluster usage is 'worker', the WorkerType is required")
+	err := s.Validate(req)
+	if err != nil {
+		return nil, err
 	}
 
 	cluster := &resourcev1alpha1.Cluster{
@@ -63,10 +64,6 @@ func (s *ClusterService) SaveCluster(ctx context.Context, req *clusterv1.SaveReq
 		},
 	}
 
-	if err := checkHostClusterIsExist(cluster, req.Body); err != nil {
-		return nil, err
-	}
-
 	var vcluster *registercluster.Vcluster
 	if ok := registercluster.IsVirtualDeploymentRuntime(cluster); ok {
 		if req.Body.Vcluster != nil {
@@ -76,16 +73,9 @@ func (s *ClusterService) SaveCluster(ctx context.Context, req *clusterv1.SaveReq
 		}
 	}
 
-	var traefik *registercluster.Traefik
-	if !registercluster.IsVirtualDeploymentRuntime(cluster) && !registercluster.IsVirtualProjectPipelineRuntime(cluster) {
-		if req.Body.Traefik == nil {
-			return nil, fmt.Errorf("traefik parameter is required when cluster type is 'Host Cluster' or 'Physical Runtime'")
-		}
-
-		traefik = &ClusterRegistration.Traefik{
-			HttpNodePort:  req.Body.Traefik.HttpNodePort,
-			HttpsNodePort: req.Body.Traefik.HttpsNodePort,
-		}
+	traefik := &ClusterRegistration.Traefik{
+		HttpNodePort:  req.Body.Traefik.HttpNodePort,
+		HttpsNodePort: req.Body.Traefik.HttpsNodePort,
 	}
 
 	param := &ClusterRegistration.ClusterRegistrationParam{
@@ -115,12 +105,21 @@ func (s *ClusterService) DeleteCluster(ctx context.Context, req *clusterv1.Delet
 	}, nil
 }
 
-func checkHostClusterIsExist(cluster *resourcev1alpha1.Cluster, body *clusterv1.SaveRequest_Body) error {
-	if ok := registercluster.IsVirtualDeploymentRuntime(cluster); ok {
-		if body.HostCluster == "" {
-			return fmt.Errorf("host cluster for virtual cluster is required")
-		}
-		cluster.Spec.HostCluster = body.HostCluster
+func (s *ClusterService) Validate(req *clusterv1.SaveRequest) error {
+	if req.Body.Usage == string(resourcev1alpha1.CLUSTER_USAGE_WORKER) &&
+		req.Body.ClusterType == string(resourcev1alpha1.CLUSTER_TYPE_VIRTUAL) &&
+		req.Body.HostCluster == "" {
+		return fmt.Errorf("the 'Host Cluster' for virtual cluster is required")
+	}
+
+	if req.Body.Usage == string(resourcev1alpha1.CLUSTER_USAGE_WORKER) &&
+		req.Body.WorkerType == "" {
+		return fmt.Errorf("when the cluster usage is 'worker', the 'WorkerType' is required")
+	}
+
+	if req.Body.ClusterType == string(resourcev1alpha1.CLUSTER_TYPE_PHYSICAL) &&
+		req.Body.Traefik == nil {
+		return fmt.Errorf("traefik parameter is required when cluster type is 'Host Cluster' or 'Physical Runtime'")
 	}
 
 	return nil

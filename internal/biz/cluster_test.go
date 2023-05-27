@@ -145,9 +145,11 @@ var _ = Describe("Save cluster", func() {
 
 		clusteroperator := clusterregistration.NewMockClusterRegistrationOperator(ctl)
 		clusteroperator.EXPECT().InitializeClusterConfig(gomock.Any()).Return(nil)
+		clusteroperator.EXPECT().GetTektonOAuthURL().Return(tektonOAuthURL, nil)
 		clusteroperator.EXPECT().Save().Return(nil)
 
 		dex := NewMockDexRepo(ctl)
+		dex.EXPECT().UpdateRedirectURIs(tektonOAuthURL).Return(nil)
 
 		clusterusecase := NewClusterUsecase(logger, codeRepo, secretRepo, resourceusecase, nautesConfigs, client, clusteroperator, dex)
 		err := clusterusecase.SaveCluster(context.Background(), param, kubeconfig)
@@ -307,11 +309,9 @@ var _ = Describe("Save cluster", func() {
 		clusteroperator.EXPECT().InitializeClusterConfig(gomock.Any()).Return(nil)
 		clusteroperator.EXPECT().Save().Return(nil)
 		clusteroperator.EXPECT().GetArgocdURL().Return(argocdOAuthURL, nil)
-		clusteroperator.EXPECT().GetTektonOAuthURL().Return(tektonOAuthURL, nil)
 
 		dex := NewMockDexRepo(ctl)
 		dex.EXPECT().UpdateRedirectURIs(argocdOAuthURL).Return(nil)
-		dex.EXPECT().UpdateRedirectURIs(tektonOAuthURL).Return(nil)
 
 		clusterusecase := NewClusterUsecase(logger, codeRepo, secretRepo, resourceusecase, nautesConfigs, client, clusteroperator, dex)
 		err := clusterusecase.SaveCluster(context.Background(), param, kubeconfig)
