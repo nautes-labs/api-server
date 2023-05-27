@@ -1400,12 +1400,12 @@ components:
                     description: Gitlab project name.
                 revision:
                     type: string
-                    description: Supports wildcards.
+                    description: Wildcard is not supported, but regular expressions are supported.
                 events:
                     type: array
                     items:
                         type: string
-                    description: 'Gitlab webhook events: PushEvents, TagPushEvents, etc.'
+                    description: 'Gitlab webhook events: push_events, tag_push_events, etc.'
         api.projectpipelineruntime.v1.ListsReply:
             type: object
             properties:
@@ -1439,7 +1439,7 @@ components:
                     description: Key of the pipeline.
                 revision:
                     type: string
-                    description: does not support wildcards. If it is empty, the trigger will determine the revision of the pipeline based on the revision of the event source.
+                    description: Wildcard is not supported, but regular expressions are supported.
         api.projectpipelineruntime.v1.SaveReply:
             type: object
             properties:

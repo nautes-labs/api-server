@@ -178,7 +178,7 @@ func (r *ResourcesUsecase) Save(ctx context.Context, resourceOptions *resourceOp
 
 	nodes, err := r.nodestree.Load(localPath)
 	if err != nil {
-		r.log.Log(-1, "msg", "first load n failed", "err", err)
+		r.log.Log(-1, "msg", "first load nodes tree failed", "err", err)
 		return err
 	}
 
