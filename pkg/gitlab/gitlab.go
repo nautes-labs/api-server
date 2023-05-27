@@ -25,9 +25,9 @@ import (
 )
 
 const (
-	_CaCertPath        = "/opt/nautes/out/pki/ca-certificates/ca.crt"
-	_ApiServerCertPath = "/opt/nautes/out/pki/ca-certificates/apiserver.crt"
-	_ApiServerKeyPath  = "/opt/nautes/out/pki/ca-certificates/apiserver.key"
+	_CaCertPath        = "/opt/nautes/out/pki/ca.crt"
+	_ApiServerCertPath = "/opt/nautes/out/pki/apiserver.crt"
+	_ApiServerKeyPath  = "/opt/nautes/out/pki/apiserver.key"
 )
 
 type GitlabClient struct {
