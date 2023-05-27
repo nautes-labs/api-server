@@ -52,7 +52,7 @@ kubectl create cm nautes-configs -n nautes
 
 2、访问组件的证书
 
-当[环境安装]([安装 | Nautes](https://nautes.io/guide/user-guide/installation.html#%E5%87%86%E5%A4%87%E7%8E%AF%E5%A2%83))完成后，在` /opt/nautes/out/pki`会存在访问其他组件的证书和签发证书的CA
+当[环境安装]([安装 | Nautes](https://nautes.io/guide/user-guide/installation.html#%E5%87%86%E5%A4%87%E7%8E%AF%E5%A2%83))完成后，将`/opt/nautes/out/pki`路径下的证书赋值到` /usr/local/share/ca-certificates`，用于存在访问其他组件的证书和签发证书的CA
 
 3、设置资源布局的配置
 

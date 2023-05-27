@@ -46,7 +46,7 @@ spec:
         - containerPort: 8000
         volumeMounts:
         - name: api-server-secret
-          mountPath: /opt/nautes/out/pki
+          mountPath: /usr/local/share/ca-certificates
         - name: resources-layout
           mountPath: /usr/local/share/
           readOnly: true

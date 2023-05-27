@@ -45,7 +45,7 @@ const (
 	_PERMISSION            = "readonly"
 	_ACCESS_TYPE           = "deploykey"
 	_DefaultServiceAccount = "api-server-manager"
-	_CAPATH                = "/opt/nautes/out/pki"
+	_CAPATH                = "/usr/local/share/ca-certificates"
 	_VAULTTOKENKEY         = "token"
 )
 
