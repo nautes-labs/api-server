@@ -33,12 +33,11 @@ import (
 	auth "github.com/hashicorp/vault/api/auth/kubernetes"
 	commonv1 "github.com/nautes-labs/api-server/api/common/v1"
 	"github.com/nautes-labs/api-server/internal/biz"
+	kubernetes "github.com/nautes-labs/api-server/pkg/kubernetes"
 	vaultproxyv1 "github.com/nautes-labs/api-server/pkg/vaultproxy/v1"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	controllerruntime "sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 const (
@@ -114,7 +113,7 @@ func GetToken(namespace string) (string, error) {
 		Name:      _DefaultServiceAccount,
 	}
 
-	client, err := controllerruntime.New(config.GetConfigOrDie(), controllerruntime.Options{})
+	client, err := kubernetes.NewClient()
 	if err != nil {
 		return "", err
 	}
