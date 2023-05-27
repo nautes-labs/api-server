@@ -78,7 +78,7 @@ message PipelineTriggers {
   string event_source = 1[json_name = "event_source", (validate.rules).string.min_len = 1];
   // Key of the pipeline.
   string pipeline = 2 [json_name = "pipeline", (validate.rules).string.min_len = 1];
-  // Regular expressions are not supported.
+  // Regular expressions are not supported, If it is empty, the trigger will determine the revision of the pipeline based on the revision of the event source
   string revision = 3 [json_name = "revision"];
 }
 

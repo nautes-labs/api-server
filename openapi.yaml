@@ -1439,7 +1439,7 @@ components:
                     description: Key of the pipeline.
                 revision:
                     type: string
-                    description: Regular expressions are not supported.
+                    description: Regular expressions are not supported, If it is empty, the trigger will determine the revision of the pipeline based on the revision of the event source
         api.projectpipelineruntime.v1.SaveReply:
             type: object
             properties:

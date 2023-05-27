@@ -307,7 +307,7 @@ type PipelineTriggers struct {
 	EventSource string `protobuf:"bytes,1,opt,name=event_source,proto3" json:"event_source,omitempty"`
 	// Key of the pipeline.
 	Pipeline string `protobuf:"bytes,2,opt,name=pipeline,proto3" json:"pipeline,omitempty"`
-	// Regular expressions are not supported.
+	// Regular expressions are not supported, If it is empty, the trigger will determine the revision of the pipeline based on the revision of the event source
 	Revision string `protobuf:"bytes,3,opt,name=revision,proto3" json:"revision,omitempty"`
 }
 
