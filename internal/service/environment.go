@@ -88,8 +88,9 @@ func (s *EnvironmentService) SaveEnvironment(ctx context.Context, req *environme
 
 func (s *EnvironmentService) DeleteEnvironment(ctx context.Context, req *environmentv1.DeleteRequest) (*environmentv1.DeleteReply, error) {
 	options := &biz.BizOptions{
-		ResouceName: req.EnvironmentName,
-		ProductName: req.ProductName,
+		ResouceName:       req.EnvironmentName,
+		ProductName:       req.ProductName,
+		InsecureSkipCheck: req.InsecureSkipCheck,
 	}
 	err := s.environment.DeleteEnvironment(ctx, options)
 	if err != nil {

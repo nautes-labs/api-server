@@ -33,10 +33,10 @@ type ProjectHTTPServer interface {
 
 func RegisterProjectHTTPServer(s *http.Server, srv ProjectHTTPServer) {
 	r := s.Route("/")
-	r.GET("/api/v1/products/{productName}/projects/{projectName}", _Project_GetProject0_HTTP_Handler(srv))
-	r.GET("/api/v1/products/{productName}/projects", _Project_ListProjects0_HTTP_Handler(srv))
-	r.POST("/api/v1/products/{productName}/projects/{projectName}", _Project_SaveProject0_HTTP_Handler(srv))
-	r.DELETE("/api/v1/products/{productName}/projects/{projectName}", _Project_DeleteProject0_HTTP_Handler(srv))
+	r.GET("/api/v1/products/{product_name}/projects/{project_name}", _Project_GetProject0_HTTP_Handler(srv))
+	r.GET("/api/v1/products/{product_name}/projects", _Project_ListProjects0_HTTP_Handler(srv))
+	r.POST("/api/v1/products/{product_name}/projects/{project_name}", _Project_SaveProject0_HTTP_Handler(srv))
+	r.DELETE("/api/v1/products/{product_name}/projects/{project_name}", _Project_DeleteProject0_HTTP_Handler(srv))
 }
 
 func _Project_GetProject0_HTTP_Handler(srv ProjectHTTPServer) func(ctx http.Context) error {
@@ -147,7 +147,7 @@ func NewProjectHTTPClient(client *http.Client) ProjectHTTPClient {
 
 func (c *ProjectHTTPClientImpl) DeleteProject(ctx context.Context, in *DeleteRequest, opts ...http.CallOption) (*DeleteReply, error) {
 	var out DeleteReply
-	pattern := "/api/v1/products/{productName}/projects/{projectName}"
+	pattern := "/api/v1/products/{product_name}/projects/{project_name}"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationProjectDeleteProject))
 	opts = append(opts, http.PathTemplate(pattern))
@@ -160,7 +160,7 @@ func (c *ProjectHTTPClientImpl) DeleteProject(ctx context.Context, in *DeleteReq
 
 func (c *ProjectHTTPClientImpl) GetProject(ctx context.Context, in *GetRequest, opts ...http.CallOption) (*GetReply, error) {
 	var out GetReply
-	pattern := "/api/v1/products/{productName}/projects/{projectName}"
+	pattern := "/api/v1/products/{product_name}/projects/{project_name}"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationProjectGetProject))
 	opts = append(opts, http.PathTemplate(pattern))
@@ -173,7 +173,7 @@ func (c *ProjectHTTPClientImpl) GetProject(ctx context.Context, in *GetRequest, 
 
 func (c *ProjectHTTPClientImpl) ListProjects(ctx context.Context, in *ListsRequest, opts ...http.CallOption) (*ListsReply, error) {
 	var out ListsReply
-	pattern := "/api/v1/products/{productName}/projects"
+	pattern := "/api/v1/products/{product_name}/projects"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationProjectListProjects))
 	opts = append(opts, http.PathTemplate(pattern))
@@ -186,7 +186,7 @@ func (c *ProjectHTTPClientImpl) ListProjects(ctx context.Context, in *ListsReque
 
 func (c *ProjectHTTPClientImpl) SaveProject(ctx context.Context, in *SaveRequest, opts ...http.CallOption) (*SaveReply, error) {
 	var out SaveReply
-	pattern := "/api/v1/products/{productName}/projects/{projectName}"
+	pattern := "/api/v1/products/{product_name}/projects/{project_name}"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationProjectSaveProject))
 	opts = append(opts, http.PathTemplate(pattern))

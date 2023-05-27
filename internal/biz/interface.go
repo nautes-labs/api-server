@@ -16,6 +16,8 @@ package biz
 
 import (
 	"context"
+
+	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 )
 
 type CodeRepo interface {
@@ -25,24 +27,33 @@ type CodeRepo interface {
 	DeleteCodeRepo(ctx context.Context, pid interface{}) error
 	GetCodeRepo(ctx context.Context, pid interface{}) (*Project, error)
 	ListDeployKeys(ctx context.Context, pid interface{}, opt *ListOptions) ([]*ProjectDeployKey, error)
+	ListAllDeployKeys(ctx context.Context, opt *ListOptions) ([]*ProjectDeployKey, error)
 	GetDeployKey(ctx context.Context, pid interface{}, deployKeyID int) (*ProjectDeployKey, error)
-	SaveDeployKey(ctx context.Context, publicKey []byte, project *Project) (*ProjectDeployKey, error)
+	EnableProjectDeployKey(ctx context.Context, pid interface{}, deployKey int) (*ProjectDeployKey, error)
+	UpdateDeployKey(ctx context.Context, pid interface{}, deployKey int, title string, canPush bool) (*ProjectDeployKey, error)
+	SaveDeployKey(ctx context.Context, pid interface{}, title string, canPush bool, publicKey []byte) (*ProjectDeployKey, error)
 	DeleteDeployKey(ctx context.Context, pid interface{}, deployKey int) error
 	CreateGroup(ctx context.Context, gitOptions *GitGroupOptions) (*Group, error)
 	DeleteGroup(ctx context.Context, gid interface{}) error
 	UpdateGroup(ctx context.Context, gid interface{}, git *GitGroupOptions) (*Group, error)
 	GetGroup(ctx context.Context, gid interface{}) (*Group, error)
 	ListAllGroups(ctx context.Context) ([]*Group, error)
-	ListGroupCodeRepos(ctx context.Context, gid interface{}, opts ...interface{}) ([]*Project, error)
+	ListGroupCodeRepos(ctx context.Context, gid interface{}) ([]*Project, error)
+	ListAccessTokens(ctx context.Context, pid interface{}, opt *ListOptions) ([]*ProjectAccessToken, error)
+	GetProjectAccessToken(ctx context.Context, pid interface{}, id int) (*ProjectAccessToken, error)
+	CreateProjectAccessToken(ctx context.Context, pid interface{}, opt *CreateProjectAccessTokenOptions) (*ProjectAccessToken, error)
+	DeleteProjectAccessToken(ctx context.Context, pid interface{}, id int) error
 }
 
 type Secretrepo interface {
 	GetSecret(ctx context.Context, secretOptions *SecretOptions) (string, error)
 	GetDeployKey(ctx context.Context, secretOptions *SecretOptions) (*DeployKeySecretData, error)
-	SaveDeployKey(ctx context.Context, id int, key string, extendKVs map[string]string) error
+	SaveDeployKey(ctx context.Context, id, key, user, permission string, extendKVs map[string]string) error
+	SaveProjectAccessToken(ctx context.Context, id, token, user, permission string, extendKVs map[string]string) error
 	SaveClusterConfig(ctx context.Context, id, config string) error
-	DeleteSecret(ctx context.Context, id int) error
-	AuthorizationSecret(ctx context.Context, id int, destUser string) error
+	DeleteSecret(ctx context.Context, id int, user, permission string) error
+	AuthorizationSecret(ctx context.Context, id int, destUser, gitType, mountPath string) error
+	GetProjectAccessToken(ctx context.Context, secretOptions *SecretOptions) (*AccessTokenSecretData, error)
 }
 
 type GitRepo interface {
@@ -58,4 +69,9 @@ type GitRepo interface {
 type DexRepo interface {
 	UpdateRedirectURIs(redirectURI string) error
 	RemoveRedirectURIs(redirectURIs string) error
+}
+
+type Kubernetes interface {
+	ListCodeRepo(ctx context.Context) (*resourcev1alpha1.CodeRepoList, error)
+	ListCodeRepoBindings(ctx context.Context) (*resourcev1alpha1.CodeRepoBindingList, error)
 }

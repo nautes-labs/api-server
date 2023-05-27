@@ -65,12 +65,12 @@ type nodesTree struct {
 	client      client.Client
 	config      *Config
 	operators   []NodesOperator
+	nodes       *Node
 }
 
 type CompareOptions struct {
-	Nodes            Node
-	ProductName      string
-	LocalProjectPath string
+	Nodes       Node
+	ProductName string
 }
 
 func NewNodestree(fileOptions *FileOptions, config *Config, client client.Client) NodesTree {
@@ -85,6 +85,18 @@ func NewNodestree(fileOptions *FileOptions, config *Config, client client.Client
 		client: client,
 		config: config,
 	}
+}
+
+func (in *nodesTree) AppendIgnoreFilePath(paths []string) {
+	in.fileOptions.IgnorePath = append(in.fileOptions.IgnorePath, paths...)
+}
+
+func (in *nodesTree) GetFileOptions() *FileOptions {
+	return in.fileOptions
+}
+
+func (in *nodesTree) GetResourceLayoutConfigs() *Config {
+	return in.config
 }
 
 // Compare comparison between file tree and standard layout
@@ -193,6 +205,41 @@ func (i *nodesTree) AppendOperators(operator NodesOperator) {
 	i.operators = append(i.operators, operator)
 }
 
+func (r *nodesTree) FilterIgnoreByLayout(path string) error {
+	ignorePaths := make([]string, 0)
+	layoutConfigs := r.GetResourceLayoutConfigs()
+
+	layoutNames := make(map[string]struct{})
+	for _, config := range layoutConfigs.Sub {
+		layoutNames[config.Name] = struct{}{}
+	}
+
+	dir, err := os.Open(path)
+	if err != nil {
+		fmt.Printf("failed to open dir: %s", err)
+		return err
+	}
+	defer dir.Close()
+
+	subDirs, err := dir.Readdirnames(-1)
+	if err != nil {
+		fmt.Printf("failed to read sub dir: %s", err)
+		return err
+	}
+
+	ignorePaths = make([]string, 0, len(subDirs))
+
+	for _, subdir := range subDirs {
+		if _, exists := layoutNames[subdir]; !exists {
+			ignorePaths = append(ignorePaths, subdir)
+		}
+	}
+
+	r.AppendIgnoreFilePath(ignorePaths)
+
+	return nil
+}
+
 func (i *nodesTree) Load(path string) (root Node, err error) {
 	if strings.TrimSpace(path) == "" {
 		err = fmt.Errorf("file or directory cannot be empty")
@@ -217,7 +264,17 @@ func (i *nodesTree) Load(path string) (root Node, err error) {
 		}
 	}
 
+	i.nodes = &root
+
 	return
+}
+
+func (i *nodesTree) GetNodes() (*Node, error) {
+	if i.nodes == nil {
+		return nil, fmt.Errorf("the nodes is nill, please load the nodes")
+	}
+
+	return i.nodes, nil
 }
 
 // explorerRecursive traverse of the file tree
@@ -236,7 +293,7 @@ func explorerRecursive(node *Node, fileOptions *FileOptions, operators []NodesOp
 			Level: node.Level + 1,
 		}
 
-		if ok := fileFiltering(fileOptions, f.Name()); ok {
+		if ok := fileFiltering(fileOptions, f.Name(), tmp); ok {
 			continue
 		}
 
@@ -311,18 +368,22 @@ func convertResource(child *Node, operators []NodesOperator) (cr interface{}, er
 	}
 
 	if cr == nil {
-		return nil, fmt.Errorf("unable to create %s type instance resource, please check the CreateResource method of the resource", resource.Kind)
+		return nil, fmt.Errorf("when loading the nodes tree, unable to generate resource node tree of type '%s'", resource.Kind)
 	}
 
 	return cr, nil
 }
 
-func fileFiltering(option *FileOptions, name string) bool {
+func fileFiltering(option *FileOptions, name, pathstr string) bool {
 	if ok := IsInSlice(option.IgnoreFile, name); ok {
 		return true
 	}
 
 	if ok := IsInSlice(option.IgnorePath, name); ok {
+		return true
+	}
+
+	if ok := InContainsDir(pathstr, option.IgnorePath); ok {
 		return true
 	}
 

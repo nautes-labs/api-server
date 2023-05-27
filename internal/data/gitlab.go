@@ -164,6 +164,15 @@ func (g *gitlabRepo) GetCodeRepo(ctx context.Context, pid interface{}) (*biz.Pro
 		SshUrlToRepo:      project.SSHURLToRepo,
 		HttpUrlToRepo:     project.HTTPURLToRepo,
 		PathWithNamespace: project.PathWithNamespace,
+		Namespace: &biz.ProjectNamespace{
+			ID:        project.Namespace.ID,
+			Name:      project.Namespace.Name,
+			Path:      project.Namespace.Path,
+			Kind:      project.Namespace.Kind,
+			FullPath:  project.Namespace.FullPath,
+			AvatarURL: project.Namespace.AvatarURL,
+			WebURL:    project.Namespace.WebURL,
+		},
 	}, nil
 }
 
@@ -271,33 +280,16 @@ func (g *gitlabRepo) GetGroup(ctx context.Context, gid interface{}) (*biz.Group,
 	}, nil
 }
 
-func (g *gitlabRepo) ListGroupCodeRepos(ctx context.Context, gid interface{}, opts ...interface{}) ([]*biz.Project, error) {
-	var page, per_page int
+func (g *gitlabRepo) ListGroupCodeRepos(ctx context.Context, gid interface{}) ([]*biz.Project, error) {
 	var projects []*gitlab.Project
 	var result []*biz.Project
-
-	if len(opts) > 0 {
-		if value, ok := opts[0].(int); ok {
-			page = value
-		}
-
-		if value, ok := opts[1].(int); ok {
-			per_page = value
-		}
-	}
-
-	opt := &gitlab.ListGroupProjectsOptions{
-		ListOptions: gitlab.ListOptions{
-			Page:    page,
-			PerPage: per_page,
-		},
-	}
 
 	client, err := NewGitlabClient(ctx, g)
 	if err != nil {
 		return nil, err
 	}
 
+	opt := &gitlab.ListGroupProjectsOptions{}
 	projects, _, err = client.ListGroupProjects(gid, opt)
 	if err != nil {
 		return nil, err
@@ -347,6 +339,54 @@ func (g *gitlabRepo) ListAllGroups(ctx context.Context) ([]*biz.Group, error) {
 	return Groups, nil
 }
 
+func (g *gitlabRepo) ListAllDeployKeys(ctx context.Context, opt *biz.ListOptions) ([]*biz.ProjectDeployKey, error) {
+	client, err := NewGitlabClient(ctx, g)
+	if err != nil {
+		return nil, err
+	}
+
+	keys, res, err := client.ListAllDeployKeys(&gitlab.ListInstanceDeployKeysOptions{
+		ListOptions: gitlab.ListOptions{
+			Page:    opt.Page,
+			PerPage: opt.PerPage,
+		},
+	})
+	if err != nil && res != nil && res.StatusCode == 404 {
+		return nil, commonv1.ErrorDeploykeyNotFound("failed to list deploykeys, err: %s", err)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	projectDeployKeys := []*biz.ProjectDeployKey{}
+	projectsWithWriteAccess := []*biz.DeployKeyProject{}
+	for _, key := range keys {
+		for _, deployKeyProject := range key.ProjectsWithWriteAccess {
+			projectsWithWriteAccess = append(projectsWithWriteAccess, &biz.DeployKeyProject{
+				ID:                deployKeyProject.ID,
+				Description:       deployKeyProject.Description,
+				Name:              deployKeyProject.Name,
+				NameWithNamespace: deployKeyProject.NameWithNamespace,
+				Path:              deployKeyProject.Path,
+				PathWithNamespace: deployKeyProject.PathWithNamespace,
+				CreatedAt:         deployKeyProject.CreatedAt,
+			})
+		}
+		projectDeployKey := &biz.ProjectDeployKey{
+			Title:                   key.Title,
+			ID:                      key.ID,
+			Key:                     key.Key,
+			CreatedAt:               key.CreatedAt,
+			Fingerprint:             key.Fingerprint,
+			ProjectsWithWriteAccess: projectsWithWriteAccess,
+		}
+		projectDeployKeys = append(projectDeployKeys, projectDeployKey)
+	}
+
+	return projectDeployKeys, nil
+}
+
 func (g *gitlabRepo) ListDeployKeys(ctx context.Context, pid interface{}, opt *biz.ListOptions) ([]*biz.ProjectDeployKey, error) {
 	client, err := NewGitlabClient(ctx, g)
 	if err != nil {
@@ -365,8 +405,11 @@ func (g *gitlabRepo) ListDeployKeys(ctx context.Context, pid interface{}, opt *b
 	projectDeployKeys := []*biz.ProjectDeployKey{}
 	for _, key := range keys {
 		projectDeployKey := &biz.ProjectDeployKey{
-			ID:  key.ID,
-			Key: key.Key,
+			Title:     key.Title,
+			ID:        key.ID,
+			Key:       key.Key,
+			CreatedAt: key.CreatedAt,
+			CanPush:   key.CanPush,
 		}
 		projectDeployKeys = append(projectDeployKeys, projectDeployKey)
 	}
@@ -380,7 +423,10 @@ func (g *gitlabRepo) DeleteDeployKey(ctx context.Context, pid interface{}, deplo
 		return err
 	}
 
-	_, err = client.DeleteDeployKey(pid, deployKey)
+	res, err := client.DeleteDeployKey(pid, deployKey)
+	if err != nil && res != nil && res.StatusCode == 404 {
+		return commonv1.ErrorDeploykeyNotFound("failed to delete deploy key, err: %s", err)
+	}
 	if err != nil {
 		return err
 	}
@@ -409,11 +455,11 @@ func (g *gitlabRepo) GetDeployKey(ctx context.Context, pid interface{}, deployKe
 	}, nil
 }
 
-func (g *gitlabRepo) SaveDeployKey(ctx context.Context, publicKey []byte, project *biz.Project) (*biz.ProjectDeployKey, error) {
-	title := fmt.Sprintf("repo-%v", project.Id)
+func (g *gitlabRepo) SaveDeployKey(ctx context.Context, pid interface{}, title string, canPush bool, publicKey []byte) (*biz.ProjectDeployKey, error) {
 	opts := &gitlab.AddDeployKeyOptions{
-		Title: gitlab.String(title),
-		Key:   gitlab.String(string(publicKey)),
+		Title:   gitlab.String(title),
+		Key:     gitlab.String(string(publicKey)),
+		CanPush: gitlab.Bool(canPush),
 	}
 
 	client, err := NewGitlabClient(ctx, g)
@@ -421,7 +467,7 @@ func (g *gitlabRepo) SaveDeployKey(ctx context.Context, publicKey []byte, projec
 		return nil, err
 	}
 
-	projectDeployKey, _, err := client.AddDeployKey(int(project.Id), opts)
+	projectDeployKey, _, err := client.AddDeployKey(pid, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -431,6 +477,157 @@ func (g *gitlabRepo) SaveDeployKey(ctx context.Context, publicKey []byte, projec
 		Title: projectDeployKey.Title,
 		Key:   projectDeployKey.Key,
 	}, nil
+}
+
+func (g *gitlabRepo) UpdateDeployKey(ctx context.Context, pid interface{}, deployKey int, title string, canPush bool) (*biz.ProjectDeployKey, error) {
+	opts := &gitlab.UpdateDeployKeyOptions{
+		Title:   gitlab.String(title),
+		CanPush: gitlab.Bool(canPush),
+	}
+
+	client, err := NewGitlabClient(ctx, g)
+	if err != nil {
+		return nil, err
+	}
+
+	projectDeployKey, _, err := client.UpdateProjectDeployKey(pid, deployKey, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return &biz.ProjectDeployKey{
+		ID:    projectDeployKey.ID,
+		Title: projectDeployKey.Title,
+		Key:   projectDeployKey.Key,
+	}, nil
+}
+
+func (g *gitlabRepo) EnableProjectDeployKey(ctx context.Context, pid interface{}, deployKey int) (*biz.ProjectDeployKey, error) {
+	client, err := NewGitlabClient(ctx, g)
+	if err != nil {
+		return nil, err
+	}
+
+	projectDeployKey, _, err := client.EnableProjectDeployKey(pid, deployKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return &biz.ProjectDeployKey{
+		ID:    projectDeployKey.ID,
+		Title: projectDeployKey.Title,
+		Key:   projectDeployKey.Key,
+	}, nil
+}
+
+func (g *gitlabRepo) GetProjectAccessToken(ctx context.Context, pid interface{}, id int) (*biz.ProjectAccessToken, error) {
+	client, err := NewGitlabClient(ctx, g)
+	if err != nil {
+		return nil, err
+	}
+
+	token, res, err := client.GetProjectAccessToken(pid, id)
+	if err != nil && res != nil && res.StatusCode == 404 {
+		return nil, commonv1.ErrorAccesstokenNotFound("failed to get access token, err: %s", err)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &biz.ProjectAccessToken{
+		Name:        token.Name,
+		ID:          token.ID,
+		UserID:      token.UserID,
+		Scopes:      token.Scopes,
+		CreatedAt:   token.CreatedAt,
+		LastUsedAt:  token.LastUsedAt,
+		ExpiresAt:   (*biz.ISOTime)(token.ExpiresAt),
+		Active:      token.Active,
+		Revoked:     token.Revoked,
+		Token:       token.Token,
+		AccessLevel: biz.AccessLevelValue(token.AccessLevel),
+	}, nil
+}
+
+func (g *gitlabRepo) ListAccessTokens(ctx context.Context, pid interface{}, opt *biz.ListOptions) ([]*biz.ProjectAccessToken, error) {
+	client, err := NewGitlabClient(ctx, g)
+	if err != nil {
+		return nil, err
+	}
+
+	accessTokens, res, err := client.ListProjectAccessToken(pid, &gitlab.ListProjectAccessTokensOptions{Page: opt.Page, PerPage: opt.PerPage})
+	if err != nil && res != nil && res.StatusCode == 404 {
+		return nil, commonv1.ErrorAccesstokenNotFound("failed to list access tokens, err: %s", err)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	projectAccessTokens := []*biz.ProjectAccessToken{}
+	for _, token := range accessTokens {
+		projectAccessToken := &biz.ProjectAccessToken{
+			Name:        token.Name,
+			ID:          token.ID,
+			UserID:      token.UserID,
+			Scopes:      token.Scopes,
+			CreatedAt:   token.CreatedAt,
+			LastUsedAt:  token.LastUsedAt,
+			ExpiresAt:   (*biz.ISOTime)(token.ExpiresAt),
+			Active:      token.Active,
+			Revoked:     token.Revoked,
+			Token:       token.Token,
+			AccessLevel: biz.AccessLevelValue(token.AccessLevel),
+		}
+		projectAccessTokens = append(projectAccessTokens, projectAccessToken)
+	}
+
+	return projectAccessTokens, nil
+}
+
+func (g *gitlabRepo) CreateProjectAccessToken(ctx context.Context, pid interface{}, opt *biz.CreateProjectAccessTokenOptions) (*biz.ProjectAccessToken, error) {
+	tokenOptions := &gitlab.CreateProjectAccessTokenOptions{
+		Name:        opt.Name,
+		Scopes:      opt.Scopes,
+		AccessLevel: (*gitlab.AccessLevelValue)(opt.AccessLevel),
+		ExpiresAt:   (*gitlab.ISOTime)(opt.ExpiresAt),
+	}
+
+	client, err := NewGitlabClient(ctx, g)
+	if err != nil {
+		return nil, err
+	}
+	token, _, err := client.CreateProjectAccessToken(pid, tokenOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	return &biz.ProjectAccessToken{
+		Name:        token.Name,
+		ID:          token.ID,
+		UserID:      token.UserID,
+		Scopes:      token.Scopes,
+		CreatedAt:   token.CreatedAt,
+		LastUsedAt:  token.LastUsedAt,
+		ExpiresAt:   (*biz.ISOTime)(token.ExpiresAt),
+		Active:      token.Active,
+		Revoked:     token.Revoked,
+		Token:       token.Token,
+		AccessLevel: biz.AccessLevelValue(token.AccessLevel),
+	}, nil
+}
+
+func (g *gitlabRepo) DeleteProjectAccessToken(ctx context.Context, pid interface{}, id int) error {
+	client, err := NewGitlabClient(ctx, g)
+	if err != nil {
+		return err
+	}
+
+	if _, err := client.DeleteProjectAccessToken(pid, id); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func NewGitlabClient(ctx context.Context, g *gitlabRepo) (gitlabclient.GitlabOperator, error) {

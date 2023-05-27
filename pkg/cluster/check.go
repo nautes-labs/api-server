@@ -16,14 +16,30 @@ package cluster
 
 import resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 
+func IsVirtual(cluster *resourcev1alpha1.Cluster) bool {
+	return cluster.Spec.ClusterType == resourcev1alpha1.CLUSTER_TYPE_VIRTUAL
+}
+
+func IsPhysical(cluster *resourcev1alpha1.Cluster) bool {
+	return cluster.Spec.ClusterType == resourcev1alpha1.CLUSTER_TYPE_PHYSICAL
+
+}
 func IsHostCluser(cluster *resourcev1alpha1.Cluster) bool {
 	return cluster.Spec.ClusterType == resourcev1alpha1.CLUSTER_TYPE_PHYSICAL && cluster.Spec.Usage == resourcev1alpha1.CLUSTER_USAGE_HOST
 }
 
-func IsVirtualRuntime(cluster *resourcev1alpha1.Cluster) bool {
-	return cluster.Spec.ClusterType == resourcev1alpha1.CLUSTER_TYPE_VIRTUAL && cluster.Spec.Usage == resourcev1alpha1.CLUSTER_USAGE_WORKER
+func IsVirtualDeploymentRuntime(cluster *resourcev1alpha1.Cluster) bool {
+	return cluster.Spec.ClusterType == resourcev1alpha1.CLUSTER_TYPE_VIRTUAL && cluster.Spec.Usage == resourcev1alpha1.CLUSTER_USAGE_WORKER && cluster.Spec.WorkerType == resourcev1alpha1.DEPLOYMENT_TYPE
 }
 
-func IsPhysicalRuntime(cluster *resourcev1alpha1.Cluster) bool {
-	return cluster.Spec.ClusterType == resourcev1alpha1.CLUSTER_TYPE_PHYSICAL && cluster.Spec.Usage == resourcev1alpha1.CLUSTER_USAGE_WORKER
+func IsPhysicalDeploymentRuntime(cluster *resourcev1alpha1.Cluster) bool {
+	return cluster.Spec.ClusterType == resourcev1alpha1.CLUSTER_TYPE_PHYSICAL && cluster.Spec.Usage == resourcev1alpha1.CLUSTER_USAGE_WORKER && cluster.Spec.WorkerType == resourcev1alpha1.DEPLOYMENT_TYPE
+}
+
+func IsVirtualProjectPipelineRuntime(cluster *resourcev1alpha1.Cluster) bool {
+	return cluster.Spec.ClusterType == resourcev1alpha1.CLUSTER_TYPE_VIRTUAL && cluster.Spec.Usage == resourcev1alpha1.CLUSTER_USAGE_WORKER && cluster.Spec.WorkerType == resourcev1alpha1.PIPELINE_TYPE
+}
+
+func IsPhysicalProjectPipelineRuntime(cluster *resourcev1alpha1.Cluster) bool {
+	return cluster.Spec.ClusterType == resourcev1alpha1.CLUSTER_TYPE_PHYSICAL && cluster.Spec.Usage == resourcev1alpha1.CLUSTER_USAGE_WORKER && cluster.Spec.WorkerType == resourcev1alpha1.PIPELINE_TYPE
 }

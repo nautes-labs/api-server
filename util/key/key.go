@@ -18,23 +18,20 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-
-	utilstring "github.com/nautes-labs/api-server/util/string"
 )
 
-func GenerateKeyPair(keyType string) ([]byte, []byte, error) {
-	keyPath := fmt.Sprintf("%s/%s", os.TempDir(), "key")
-	tag := fmt.Sprintf("api-server-%s", utilstring.RandStr(5))
+func GenerateKeyPair(keyType, tag string) ([]byte, []byte, error) {
+	keyPath := fmt.Sprintf("%s/%s", os.TempDir(), tag)
 	cmd := exec.Command("ssh-keygen", "-t", keyType, "-P", "", "-f", keyPath, "-C", tag)
 	err := cmd.Run()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to generate secret key pair, err: %w", err)
 	}
-	defer func(path string) {
-		_ = os.RemoveAll(path)
-	}(keyPath)
 
-	publicKeyPath := fmt.Sprintf("%s/%s", os.TempDir(), "key.pub")
+	defer os.Remove(keyPath)
+	defer os.Remove(fmt.Sprintf("%s.pub", keyPath))
+
+	publicKeyPath := fmt.Sprintf("%s.pub", keyPath)
 	publicKeyBytes, err := os.ReadFile(publicKeyPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read public key file")

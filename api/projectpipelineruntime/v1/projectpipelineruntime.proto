@@ -1,3 +1,17 @@
+// Copyright 2023 Nautes Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 syntax = "proto3";
 
 package api.projectpipelineruntime.v1;
@@ -11,45 +25,83 @@ import "validate/validate.proto";
 service ProjectPipelineRuntime {
   rpc GetProjectPipelineRuntime (GetRequest) returns (GetReply) {
     option (google.api.http) = {
-      get: "/api/v1/products/{productName}/projectpipelineruntimes/{projectPipelineRuntimeName}"
+      get: "/api/v1/products/{product_name}/projectpipelineruntimes/{project_pipeline_runtime_name}"
     };
   }
   rpc ListProjectPipelineRuntimes (ListsRequest) returns (ListsReply) {
     option (google.api.http) = {
-      get: "/api/v1/products/{productName}/projectpipelineruntimes"
+      get: "/api/v1/products/{product_name}/projectpipelineruntimes"
     };
   }
   rpc SaveProjectPipelineRuntime (SaveRequest) returns (SaveReply) {
     option (google.api.http) = {
-      post: "/api/v1/products/{productName}/projectpipelineruntimes/{projectPipelineRuntimeName}"
-      body: "Body"
+      post: "/api/v1/products/{product_name}/projectpipelineruntimes/{project_pipeline_runtime_name}"
+      body: "body"
     };
   }
   rpc DeleteProjectPipelineRuntime (DeleteRequest) returns (DeleteReply) {
     option (google.api.http) = {
-      delete: "/api/v1/products/{productName}/projectpipelineruntimes/{projectPipelineRuntimeName}"
+      delete: "/api/v1/products/{product_name}/projectpipelineruntimes/{project_pipeline_runtime_name}"
     };
   }
+}
+
+// Defines the event source for triggering a pipeline.
+message Calendar {
+  // Schedule is a cron-like expression. For reference, see: https://en.wikipedia.org/wiki/Cron
+  string schedule = 1 [json_name = "schedule"];
+  // Interval is a string that describes an interval duration, e.g. 1s, 30m, 2h...
+  string interval = 2 [json_name = "interval"];
+  // ExclusionDates defines the list of DATE-TIME exceptions for recurring events.
+  repeated string exclusion_dates = 3 [json_name = "exclusion_dates"];
+  // Timezone in which to run the schedule
+  string timezone = 4 [json_name = "timezone"];
+}
+
+message Gitlab {
+  // Gitlab project name.
+  string repo_name = 1 [json_name = "repo_name", (validate.rules).string.min_len = 1];
+  // Supports regular expressions.
+  string revision = 2 [json_name = "revision", (validate.rules).string.min_len = 1];
+  // Gitlab webhook events: push_events, tag_push_events, etc.
+  repeated string events = 3 [json_name = "events"];
+}
+
+// Defines the types of event sources that can trigger a pipeline.
+message EventSource {
+  // Name of the event source.
+  string name = 1 [json_name = "name", (validate.rules).string.min_len = 1];
+  // Gitlab event source for triggering the pipeline.
+  Gitlab gitlab = 2 [json_name = "gitlab"];
+  // Calendar event source for triggering the pipeline.
+  Calendar calendar = 3 [json_name = "calendar"];
 }
 
 // Defines a pipeline and its associated event sources.
 message Pipeline {
   // Name of the pipeline.
   string name = 1 [json_name = "name", (validate.rules).string.min_len = 1];
-  // Name of the branch in the pipeline repository.
-  string branch = 2 [json_name = "branch", (validate.rules).string.min_len = 1];
-  // Path to the pipeline configuration file in the pipeline repository.
+  // Default is 'default'.
+  string label = 2 [json_name = "label"];
+  // Pipeline manifest path, wildcard support.
   string path = 3 [json_name = "path", (validate.rules).string.min_len = 1];
-  // Event sources associated with the pipeline.
-  repeated EventSource eventSources = 4 [json_name = "event_sources", (validate.rules).repeated.min_items = 1];
+}
+
+message PipelineTriggers {
+  // Key of the event source.
+  string event_source = 1[json_name = "event_source", (validate.rules).string.min_len = 1];
+  // Key of the pipeline.
+  string pipeline = 2 [json_name = "pipeline", (validate.rules).string.min_len = 1];
+  // Regular expressions are not supported, If it is empty, the trigger will determine the revision of the pipeline based on the revision of the event source
+  string revision = 3 [json_name = "revision"];
 }
 
 // Request message format for getting pipeline information.
 message GetRequest {
   // Name of the product associated with the pipeline.
-  string productName = 1 [json_name = "product_name"];
+  string product_name = 1 [json_name = "product_name"];
   // Name of the pipeline runtime environment.
-  string projectPipelineRuntimeName = 2 [json_name = "project_pipeline_runtime_name"];
+  string project_pipeline_runtime_name = 2 [json_name = "project_pipeline_runtime_name"];
 }
 
 // Response message format for getting pipeline information.
@@ -59,19 +111,23 @@ message GetReply {
   // Name of the project associated with the pipeline.
   string project = 2 [json_name = "project"];
   // Configuration repository of the pipeline.
-  string pipelineSource = 3 [json_name = "pipeline_source"];
+  string pipeline_source = 3 [json_name = "pipeline_source"];
   // Other repositories outside the pipeline (optional).
-  repeated string codeSources = 4 [json_name = "code_sources"];
+  repeated EventSource event_sources = 4 [json_name = "event_sources"];
   // Pipelines associated with the product.
   repeated Pipeline pipelines = 5 [json_name = "pipelines"];
+  // Pipeline event triggers.  
+  repeated PipelineTriggers pipeline_triggers = 6 [json_name = "pipeline_triggers"];
   // Target deployment environment.
-  string destination = 6 [json_name = "destination"];
+  string destination = 7 [json_name = "destination"];
+  // Isolation definition of pipeline runtime related resources: shared(default) or exclusive.
+  string isolation = 8 [json_name = "isolation"];
 }
 
 // Request message format for listing pipelines.
 message ListsRequest {
   // Name of the product associated with the pipelines to be listed.
-  string productName = 1 [json_name = "product_name"];
+  string product_name = 1 [json_name = "product_name"];
 }
 
 // Response message format for listing pipelines.
@@ -80,47 +136,31 @@ message ListsReply {
   repeated GetReply items = 1;
 }
 
-// Defines the event source for triggering a pipeline.
-message CalendarEventSource {
-  // Schedule for triggering the pipeline.
-  string schedule = 1 [json_name = "schedule"];
-  // Interval between pipeline runs.
-  string interval = 2 [json_name = "interval"];
-  // Dates to exclude from triggering the pipeline.
-  repeated string exclusionDates = 3 [json_name = "exclusion_dates"];
-  // Timezone for the pipeline.
-  string timezone = 4 [json_name = "timezone"];
-}
-
-// Defines the types of event sources that can trigger a pipeline.
-message EventSource {
-  // Whether to enable or disable webhook triggering for the pipeline.
-  string webhook = 1 [json_name = "webhook", (validate.rules).string = {in: ["enabled", "disabled"]}];
-  // Calendar event source for triggering the pipeline.
-  CalendarEventSource calendar = 2 [json_name = "calendar"];
-}
-
 // Proto message for saving a pipeline configuration request.
 message SaveRequest {
   // Message containing the body of the request.
   message Body {
     // Name of the project associated with the pipeline.
     string project = 1 [json_name = "project", (validate.rules).string.min_len = 1];
-    // Configuration repository of pipeline.
-    string pipelineSource = 2 [json_name = "pipeline_source", (validate.rules).string.min_len = 1];
-    // Other repository outside the pipeline(optional).
-    repeated string codeSources = 3 [json_name = "code_sources"];
-    // Pipelines defined in the configuration repository.
-    repeated Pipeline pipelines = 4 [json_name = "pipelines"];
-    // Target deployment environment.
-    string destination = 5 [json_name = "destination", (validate.rules).string.min_len = 1];
+    // The code repo for pipeline manifests.
+    string pipeline_source = 2 [json_name = "pipeline_source", (validate.rules).string.min_len = 1];
+    // The definition of pipeline.
+    repeated Pipeline pipelines = 3 [json_name = "pipelines", (validate.rules).repeated.min_items = 1];
+    // Events source that may trigger the pipeline.
+    repeated EventSource event_sources = 4 [json_name = "event_sources", (validate.rules).repeated.min_items = 1];
+    // Pipeline event triggers.
+    repeated PipelineTriggers pipeline_triggers = 5 [json_name = "pipeline_triggers", (validate.rules).repeated.min_items = 1];
+    // The definition of pipeline.
+    string destination = 6 [json_name = "destination", (validate.rules).string.min_len = 1];
+    // Isolation definition of pipeline runtime related resources: shared(default) or exclusive
+    string isolation = 7 [json_name = "isolation", (validate.rules).string = {in: ["shared", "exclusive"]}];
   }
   // Name of the product associated with the pipeline.
-  string productName = 1 [json_name = "product"];
+  string product_name = 1 [json_name = "product_name"];
   // Name of the pipeline runtime associated with the project.
-  string projectPipelineRuntimeName = 2 [json_name = "project_pipeline_runtime_name"];
-  // Whether to skip checking SSL certificates when making requests.
-  bool insecureSkipCheck = 3 [json_name = "insecure_skip_check"];
+  string project_pipeline_runtime_name = 2 [json_name = "project_pipeline_runtime_name"];
+  // Whether to skip checking global resource detection when making requests.
+  bool insecure_skip_check = 3 [json_name = "insecure_skip_check"];
   // The body of the request.
   Body body = 4;
 }
@@ -134,11 +174,11 @@ message SaveReply {
 // Proto message for deleting a pipeline configuration request.
 message DeleteRequest {
   // Name of the product associated with the pipeline.
-  string productName = 1 [json_name = "product_name"];
+  string product_name = 1 [json_name = "product_name"];
   // Name of the pipeline runtime associated with the project.
-  string projectPipelineRuntimeName = 2 [json_name = "project_pipeline_runtime_name"];
-  // Whether to skip checking SSL certificates when making requests.
-  bool insecureSkipCheck = 3 [json_name = "insecure_skip_check"];
+  string project_pipeline_runtime_name = 2 [json_name = "project_pipeline_runtime_name"];
+  // Whether to skip checking global resource detection when making requests.
+  bool insecure_skip_check = 3 [json_name = "insecure_skip_check"];
 }
 
 // Proto message for the response to a delete pipeline configuration request.

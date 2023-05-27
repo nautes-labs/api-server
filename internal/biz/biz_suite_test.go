@@ -18,6 +18,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/go-kratos/kratos/v2/log"
+	"github.com/go-kratos/kratos/v2/middleware/tracing"
 	"github.com/golang/mock/gomock"
 	"github.com/nautes-labs/pkg/pkg/log/zap"
 	. "github.com/onsi/ginkgo/v2"
@@ -25,7 +27,12 @@ import (
 )
 
 var (
-	logger      = zap.NewLogger()
+	logger = log.With(zap.NewLogger(),
+		"ts", log.DefaultTimestamp,
+		"caller", log.DefaultCaller,
+		"trace.id", tracing.TraceID(),
+		"span.id", tracing.SpanID(),
+	)
 	ctx         = context.Background()
 	ctl         *gomock.Controller
 	testUseCase = NewTestUseCase()

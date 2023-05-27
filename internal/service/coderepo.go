@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	coderepov1 "github.com/nautes-labs/api-server/api/coderepo/v1"
+	commonv1 "github.com/nautes-labs/api-server/api/common/v1"
 	"github.com/nautes-labs/api-server/internal/biz"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
@@ -88,13 +89,13 @@ func (s *CodeRepoService) GetCodeRepo(ctx context.Context, req *coderepov1.GetRe
 }
 
 func (s *CodeRepoService) ListCodeRepos(ctx context.Context, req *coderepov1.ListsRequest) (*coderepov1.ListsReply, error) {
-	cps, err := s.codeRepo.ListCodeRepos(ctx, req.ProductName)
+	codeRepoAndProjects, err := s.codeRepo.ListCodeRepos(ctx, req.ProductName)
 	if err != nil {
 		return nil, err
 	}
 
 	var items []*coderepov1.GetReply
-	for _, cp := range cps {
+	for _, cp := range codeRepoAndProjects {
 		items = append(items, s.CovertCodeRepoValueToReply(cp.CodeRepo, cp.Project))
 	}
 
@@ -128,6 +129,10 @@ func (s *CodeRepoService) SaveCodeRepo(ctx context.Context, req *coderepov1.Save
 		if gitOptions.Gitlab.Path == "" {
 			gitOptions.Gitlab.Path = gitOptions.Gitlab.Name
 		}
+
+		if gitOptions.Gitlab.Path != req.CoderepoName {
+			return nil, fmt.Errorf("the name of the codeRepo resource must be the same as the repository path")
+		}
 	} else {
 		if gitOptions.Github != "" {
 			return nil, errors.New("coming soon to support github")
@@ -152,6 +157,12 @@ func (s *CodeRepoService) SaveCodeRepo(ctx context.Context, req *coderepov1.Save
 	}
 	err := s.codeRepo.SaveCodeRepo(ctx, options, data, gitOptions)
 	if err != nil {
+		if commonv1.IsRefreshPermissionsAccessDenied(err) {
+			return &coderepov1.SaveReply{
+				Msg: fmt.Sprintf("[warning] the CodeRepo %s was deleted, but refresh permission failed, please check the current user permission, err: %s", req.CoderepoName, err.Error()),
+			}, nil
+		}
+
 		return nil, err
 	}
 

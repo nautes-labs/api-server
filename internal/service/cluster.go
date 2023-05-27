@@ -39,6 +39,11 @@ func NewClusterService(cluster *biz.ClusterUsecase, configs *nautesconfigs.Confi
 }
 
 func (s *ClusterService) SaveCluster(ctx context.Context, req *clusterv1.SaveRequest) (*clusterv1.SaveReply, error) {
+	err := s.Validate(req)
+	if err != nil {
+		return nil, err
+	}
+
 	cluster := &resourcev1alpha1.Cluster{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: resourcev1alpha1.GroupVersion.String(),
@@ -49,19 +54,18 @@ func (s *ClusterService) SaveCluster(ctx context.Context, req *clusterv1.SaveReq
 			Namespace: s.configs.Nautes.Namespace,
 		},
 		Spec: resourcev1alpha1.ClusterSpec{
-			ApiServer:   req.Body.ApiServer,
-			ClusterType: resourcev1alpha1.ClusterType(req.Body.ClusterType),
-			ClusterKind: resourcev1alpha1.ClusterKind(req.Body.ClusterKind),
-			Usage:       resourcev1alpha1.ClusterUsage(req.Body.Usage),
+			ApiServer:     req.Body.ApiServer,
+			ClusterType:   resourcev1alpha1.ClusterType(req.Body.ClusterType),
+			ClusterKind:   resourcev1alpha1.ClusterKind(req.Body.ClusterKind),
+			Usage:         resourcev1alpha1.ClusterUsage(req.Body.Usage),
+			HostCluster:   req.Body.HostCluster,
+			PrimaryDomain: req.Body.PrimaryDomain,
+			WorkerType:    resourcev1alpha1.ClusterWorkType(req.Body.WorkerType),
 		},
 	}
 
-	if err := checkHostClusterIsExist(cluster, req.Body); err != nil {
-		return nil, err
-	}
-
 	var vcluster *registercluster.Vcluster
-	if ok := registercluster.IsVirtualRuntime(cluster); ok {
+	if ok := registercluster.IsVirtualDeploymentRuntime(cluster); ok {
 		if req.Body.Vcluster != nil {
 			vcluster = &registercluster.Vcluster{
 				HttpsNodePort: req.Body.Vcluster.HttpsNodePort,
@@ -69,21 +73,15 @@ func (s *ClusterService) SaveCluster(ctx context.Context, req *clusterv1.SaveReq
 		}
 	}
 
-	var traefik *registercluster.Traefik
-	if ok := registercluster.IsVirtualRuntime(cluster); !ok {
-		if req.Body.Traefik != nil {
-			traefik = &ClusterRegistration.Traefik{
-				HttpNodePort:  req.Body.Traefik.HttpNodePort,
-				HttpsNodePort: req.Body.Traefik.HttpsNodePort,
-			}
-		} else {
-			return nil, fmt.Errorf("traefik parameter is not found")
-		}
+	traefik := &ClusterRegistration.Traefik{
+		HttpNodePort:  req.Body.Traefik.HttpNodePort,
+		HttpsNodePort: req.Body.Traefik.HttpsNodePort,
 	}
 
 	param := &ClusterRegistration.ClusterRegistrationParam{
 		Cluster:    cluster,
 		ArgocdHost: req.Body.ArgocdHost,
+		TektonHost: req.Body.TektonHost,
 		Traefik:    traefik,
 		Vcluster:   vcluster,
 	}
@@ -107,12 +105,21 @@ func (s *ClusterService) DeleteCluster(ctx context.Context, req *clusterv1.Delet
 	}, nil
 }
 
-func checkHostClusterIsExist(cluster *resourcev1alpha1.Cluster, body *clusterv1.SaveRequest_Body) error {
-	if ok := registercluster.IsVirtualRuntime(cluster); ok {
-		if body.HostCluster == "" {
-			return fmt.Errorf("host cluster for virtual cluster is required")
-		}
-		cluster.Spec.HostCluster = body.HostCluster
+func (s *ClusterService) Validate(req *clusterv1.SaveRequest) error {
+	if req.Body.Usage == string(resourcev1alpha1.CLUSTER_USAGE_WORKER) &&
+		req.Body.ClusterType == string(resourcev1alpha1.CLUSTER_TYPE_VIRTUAL) &&
+		req.Body.HostCluster == "" {
+		return fmt.Errorf("the 'Host Cluster' for virtual cluster is required")
+	}
+
+	if req.Body.Usage == string(resourcev1alpha1.CLUSTER_USAGE_WORKER) &&
+		req.Body.WorkerType == "" {
+		return fmt.Errorf("when the cluster usage is 'worker', the 'WorkerType' is required")
+	}
+
+	if req.Body.ClusterType == string(resourcev1alpha1.CLUSTER_TYPE_PHYSICAL) &&
+		req.Body.Traefik == nil {
+		return fmt.Errorf("traefik parameter is required when cluster type is 'Host Cluster' or 'Physical Runtime'")
 	}
 
 	return nil

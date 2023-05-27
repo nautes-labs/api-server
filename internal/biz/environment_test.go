@@ -56,7 +56,7 @@ func createEnvironmentNode(resource *resourcev1alpha1.Environment) *nodestree.No
 	return &nodestree.Node{
 		Name:    resource.Name,
 		Kind:    nodestree.Enviroment,
-		Path:    fmt.Sprintf("%s/%s/%s.yaml", localRepositaryPath, _EnvSubDir, resource.Name),
+		Path:    fmt.Sprintf("%s/%s/%s.yaml", localRepositoryPath, _EnvSubDir, resource.Name),
 		Level:   3,
 		Content: resource,
 	}
@@ -164,7 +164,7 @@ var _ = Describe("Save environment", func() {
 		Expect(err).Should(HaveOccurred())
 	}))
 
-	It("will created successfully", testUseCase.CreateResourceSuccess(fakeNodes, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
+	It("will created successfully", testUseCase.CreateResourceSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 		biz := NewEnviromentUsecase(logger, nautesConfigs, codeRepo, nodestree, resourceUseCase)
 		err := biz.SaveEnvironment(context.Background(), bizOptions, enviromentData)
 		Expect(err).ShouldNot(HaveOccurred())

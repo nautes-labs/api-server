@@ -52,7 +52,7 @@ func createProjectNode(resource *resourcev1alpha1.Project) *nodestree.Node {
 	return &nodestree.Node{
 		Name:    resource.Name,
 		Kind:    nodestree.Project,
-		Path:    fmt.Sprintf("%s/%s/%s/%s.yaml", localRepositaryPath, _ProjectsDir, resource.Name, resource.Name),
+		Path:    fmt.Sprintf("%s/%s/%s/%s.yaml", localRepositoryPath, _ProjectsDir, resource.Name, resource.Name),
 		Level:   4,
 		Content: resource,
 	}
@@ -167,7 +167,7 @@ var _ = Describe("Save project", func() {
 		Expect(err).Should(HaveOccurred())
 	}))
 
-	It("will created successfully", testUseCase.CreateResourceSuccess(fakeNodes, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
+	It("will created successfully", testUseCase.CreateResourceSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 		biz := NewProjectUsecase(logger, codeRepo, nil, nodestree, nautesConfigs, resourceUseCase)
 		err := biz.SaveProject(context.Background(), bizOptions, projectData)
 		Expect(err).ShouldNot(HaveOccurred())

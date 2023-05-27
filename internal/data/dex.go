@@ -62,13 +62,13 @@ type Dex struct {
 	k8sClient client.Client
 }
 
-func (d *Dex) UpdateRedirectURIs(redirectURIs string) error {
+func (d *Dex) UpdateRedirectURIs(url string) error {
 	cm, err := d.GetDexConfig()
 	if err != nil {
 		return err
 	}
 
-	cm.Data["config.yaml"], err = UpdateConfigURIs(cm.Data["config.yaml"], redirectURIs)
+	cm.Data["config.yaml"], err = UpdateConfigURIs(cm.Data["config.yaml"], url)
 	if err != nil {
 		return fmt.Errorf("failed to update configmap dex in namespace dex, err: %w", err)
 	}
@@ -81,13 +81,13 @@ func (d *Dex) UpdateRedirectURIs(redirectURIs string) error {
 	return nil
 }
 
-func (d *Dex) RemoveRedirectURIs(redirectURIs string) error {
+func (d *Dex) RemoveRedirectURIs(url string) error {
 	cm, err := d.GetDexConfig()
 	if err != nil {
 		return err
 	}
 
-	cm.Data["config.yaml"], err = RemoveConfigURIs(cm.Data["config.yaml"], redirectURIs)
+	cm.Data["config.yaml"], err = RemoveConfigURIs(cm.Data["config.yaml"], url)
 	if err != nil {
 		return fmt.Errorf("failed to update configmap dex in namespace dex, err: %w", err)
 	}

@@ -33,12 +33,11 @@ import (
 	auth "github.com/hashicorp/vault/api/auth/kubernetes"
 	commonv1 "github.com/nautes-labs/api-server/api/common/v1"
 	"github.com/nautes-labs/api-server/internal/biz"
+	kubernetes "github.com/nautes-labs/api-server/pkg/kubernetes"
+	vaultproxyv1 "github.com/nautes-labs/api-server/pkg/vaultproxy/v1"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
-	vaultproxyv1 "github.com/nautes-labs/vault-proxy/api/vaultproxy/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	controllerruntime "sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 const (
@@ -47,10 +46,7 @@ const (
 	_ACCESS_TYPE           = "deploykey"
 	_DefaultServiceAccount = "api-server-manager"
 	_CAPATH                = "/usr/local/share/ca-certificates"
-)
-
-var (
-	prefix = "repo-"
+	_VAULTTOKENKEY         = "token"
 )
 
 type vaultRepo struct {
@@ -108,6 +104,37 @@ func NewKubernetesAuth(mountPath, token string, roles map[string]string) (*auth.
 	}
 
 	return k8sAuth, nil
+}
+
+func GetToken(namespace string) (string, error) {
+	sa := &corev1.ServiceAccount{}
+	saNamespaceName := types.NamespacedName{
+		Namespace: namespace,
+		Name:      _DefaultServiceAccount,
+	}
+
+	client, err := kubernetes.NewClient()
+	if err != nil {
+		return "", err
+	}
+
+	err = client.Get(context.Background(), saNamespaceName, sa)
+	if err != nil {
+		return "", err
+	}
+
+	secretName := sa.Secrets[0].Name
+	secret := &corev1.Secret{}
+	secretNamespaceName := types.NamespacedName{
+		Namespace: namespace,
+		Name:      secretName,
+	}
+
+	err = client.Get(context.Background(), secretNamespaceName, secret)
+	if err != nil {
+		return "", err
+	}
+	return string(secret.Data[_VAULTTOKENKEY]), nil
 }
 
 func (v *vaultRepo) NewVaultClient(ctx context.Context) (*vault.Client, error) {
@@ -179,25 +206,25 @@ func (v *vaultRepo) GetDeployKey(ctx context.Context, secretOptions *biz.SecretO
 		return nil, fmt.Errorf("unable to read secret: %w", err)
 	}
 
-	val, ok := secret.Data["fingerprint"]
+	val, ok := secret.Data[biz.Fingerprint]
 	if !ok {
-		return nil, commonv1.ErrorSecretNotFound("fingerprint of key information %s is not found", secretOptions.SecretKey)
+		return nil, commonv1.ErrorSecretNotFound("the fingerprint of the deploy key was not found, secret path: %s", secretOptions.SecretPath)
 	}
 	if val.(string) == "" {
-		return nil, commonv1.ErrorSecretNotFound("fingerprint of key information %s is empty", secretOptions.SecretKey)
+		return nil, commonv1.ErrorSecretNotFound("the fingerprint of the deploy key was not found, secret path: %s", secretOptions.SecretPath)
 	}
 	fingerprint := val.(string)
 
-	val, ok = secret.Data["id"]
+	val, ok = secret.Data[biz.DeployKeyID]
 	if !ok {
-		return nil, commonv1.ErrorSecretNotFound("deploy key id of key information %s is not found", secretOptions.SecretKey)
+		return nil, commonv1.ErrorSecretNotFound("the id of the deploy key was not found, secret path: %s", secretOptions.SecretPath)
 	}
 	if val.(string) == "" {
-		return nil, commonv1.ErrorSecretNotFound("deploy key id of key information %s is empty", secretOptions.SecretKey)
+		return nil, commonv1.ErrorSecretNotFound("the id of the deploy key was not found, secret path: %s", secretOptions.SecretPath)
 	}
 	id, err := strconv.Atoi(val.(string))
 	if err != nil {
-		return nil, commonv1.ErrorSecretNotFound("secret id %s is not found", secretOptions.SecretKey)
+		return nil, err
 	}
 
 	return &biz.DeployKeySecretData{
@@ -241,51 +268,88 @@ func (v *vaultRepo) GetSecret(ctx context.Context, secretOptions *biz.SecretOpti
 	return val.(string), nil
 }
 
-func GetToken(namespace string) (string, error) {
-	sa := &corev1.ServiceAccount{}
-	saNamespaceName := types.NamespacedName{
-		Namespace: namespace,
-		Name:      _DefaultServiceAccount,
+func (v *vaultRepo) SaveDeployKey(ctx context.Context, id, key, user, permission string, extendKVs map[string]string) error {
+	opt := &vaultproxyv1.GitRequest{
+		Meta: &vaultproxyv1.GitMeta{
+			ProviderType: string(v.config.Git.GitType),
+			Id:           id,
+			Username:     user,
+			Permission:   permission,
+		},
+		Kvs: &vaultproxyv1.GitKVs{
+			DeployKey:   string(key),
+			Additionals: extendKVs,
+		},
 	}
-
-	client, err := controllerruntime.New(config.GetConfigOrDie(), controllerruntime.Options{})
+	_, err := v.secret.CreateGit(context.Background(), opt)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	err = client.Get(context.Background(), saNamespaceName, sa)
-	if err != nil {
-		return "", err
-	}
-
-	secretName := sa.Secrets[0].Name
-	secret := &corev1.Secret{}
-	secretNamespaceName := types.NamespacedName{
-		Namespace: namespace,
-		Name:      secretName,
-	}
-
-	err = client.Get(context.Background(), secretNamespaceName, secret)
-	if err != nil {
-		return "", err
-	}
-	return string(secret.Data["token"]), nil
+	return nil
 }
 
-func (v *vaultRepo) SaveDeployKey(ctx context.Context, id int, key string, extendKVs map[string]string) error {
-	repoID := fmt.Sprintf("%s%d", prefix, id)
+func (v *vaultRepo) GetProjectAccessToken(ctx context.Context, secretOptions *biz.SecretOptions) (*biz.AccessTokenSecretData, error) {
+	client, err := v.NewVaultClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() error {
+		err = client.Auth().Token().RevokeSelf("")
+		if err != nil {
+			return err
+		}
+		return nil
+	}()
+
+	secret, err := client.KVv2(secretOptions.SecretEngine).Get(context.Background(), secretOptions.SecretPath)
+	if err != nil {
+		err = errors.Unwrap(err)
+		if err == vault.ErrSecretNotFound {
+			return nil, commonv1.ErrorSecretNotFound("unable to read secret, err: %s", err)
+		}
+
+		return nil, fmt.Errorf("unable to read secret: %w", err)
+	}
+
+	val, ok := secret.Data[biz.AccessTokenID]
+	if !ok {
+		return nil, commonv1.ErrorSecretNotFound("the id of the project access token was not found, secret path: %s", secretOptions.SecretPath)
+	}
+	if val.(string) == "" {
+		return nil, commonv1.ErrorSecretNotFound("the id of the project access token was not found, secret path: %s", secretOptions.SecretPath)
+	}
+	id, err := strconv.Atoi(val.(string))
+	if err != nil {
+		return nil, err
+	}
+
+	token, ok := secret.Data[biz.SecretsAccessToken]
+	if !ok {
+		return nil, commonv1.ErrorSecretNotFound("the vault of project access token was not found, secret path: %s", secretOptions.SecretPath)
+	}
+	if token.(string) == "" {
+		return nil, commonv1.ErrorSecretNotFound("the vault of project access token was not found, secret path: %s", secretOptions.SecretPath)
+	}
+
+	return &biz.AccessTokenSecretData{
+		ID: id,
+	}, nil
+}
+
+func (v *vaultRepo) SaveProjectAccessToken(ctx context.Context, id, key, user, permission string, extendKVs map[string]string) error {
 	opt := &vaultproxyv1.GitRequest{
-		Providertype: string(v.config.Git.GitType),
-		Repoid:       repoID,
-		Username:     _USERNAME,
-		Permission:   _PERMISSION,
-		Account: &vaultproxyv1.GitAccount{
-			Access: &vaultproxyv1.GitAccount_Deploykey{
-				Deploykey: string(key),
-			},
-			Accesstype: _ACCESS_TYPE,
+		Meta: &vaultproxyv1.GitMeta{
+			ProviderType: string(v.config.Git.GitType),
+			Id:           id,
+			Username:     user,
+			Permission:   permission,
 		},
-		AdditionalKVs: extendKVs,
+		Kvs: &vaultproxyv1.GitKVs{
+			AccessToken: string(key),
+			Additionals: extendKVs,
+		},
 	}
 	_, err := v.secret.CreateGit(context.Background(), opt)
 	if err != nil {
@@ -299,10 +363,12 @@ func (v *vaultRepo) SaveClusterConfig(ctx context.Context, id, config string) er
 	var clustertype = "kubernetes"
 	var permission = "admin"
 	opt := &vaultproxyv1.ClusterRequest{
-		Clustertype: clustertype,
-		Clusterid:   id,
-		Username:    _USERNAME,
-		Permission:  permission,
+		Meta: &vaultproxyv1.ClusterMeta{
+			Id:         id,
+			Type:       clustertype,
+			Username:   _USERNAME,
+			Permission: permission,
+		},
 		Account: &vaultproxyv1.ClusterAccount{
 			Kubeconfig: config,
 		},
@@ -315,13 +381,20 @@ func (v *vaultRepo) SaveClusterConfig(ctx context.Context, id, config string) er
 	return nil
 }
 
-func (v *vaultRepo) DeleteSecret(ctx context.Context, id int) error {
-	repoID := fmt.Sprintf("%s%d", prefix, id)
+func (v *vaultRepo) DeleteSecret(ctx context.Context, id int, user, permission string) error {
+	repoID := fmt.Sprintf("%s%d", biz.RepoPrefix, id)
 	opt := &vaultproxyv1.GitRequest{
-		Providertype: string(v.config.Git.GitType),
-		Repoid:       repoID,
-		Username:     _USERNAME,
-		Permission:   _PERMISSION,
+		Meta: &vaultproxyv1.GitMeta{
+			ProviderType: string(v.config.Git.GitType),
+			Id:           repoID,
+			Username:     user,
+			Permission:   permission,
+		},
+		// TODO:
+		// This is a bug, Subsequent deletion required.
+		Kvs: &vaultproxyv1.GitKVs{
+			DeployKey: "deploy_key",
+		},
 	}
 	_, err := v.secret.DeleteGit(context.TODO(), opt)
 	if err != nil {
@@ -330,7 +403,7 @@ func (v *vaultRepo) DeleteSecret(ctx context.Context, id int) error {
 	return nil
 }
 
-func (v *vaultRepo) AuthorizationSecret(ctx context.Context, id int, destUser string) error {
+func (v *vaultRepo) AuthorizationSecret(ctx context.Context, id int, destUser, gitType, mountPath string) error {
 	if id == 0 || destUser == "" {
 		return fmt.Errorf("authorization failed. please check the parameters")
 	}
@@ -340,13 +413,13 @@ func (v *vaultRepo) AuthorizationSecret(ctx context.Context, id int, destUser st
 		return fmt.Errorf("dest user is not found")
 	}
 
-	repoID := fmt.Sprintf("%s%d", prefix, id)
+	repoID := fmt.Sprintf("%s%d", biz.RepoPrefix, id)
 	opt := &vaultproxyv1.AuthroleGitPolicyRequest{
-		ClusterName: v.config.Secret.Vault.MountPath,
+		ClusterName: mountPath,
 		DestUser:    destUser,
-		SecretOptions: &vaultproxyv1.GitRequest{
-			Providertype: string(v.config.Git.GitType),
-			Repoid:       repoID,
+		Secret: &vaultproxyv1.GitMeta{
+			ProviderType: gitType,
+			Id:           repoID,
 			Username:     _USERNAME,
 			Permission:   _PERMISSION,
 		},

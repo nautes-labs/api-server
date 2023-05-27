@@ -103,8 +103,8 @@ func main() {
 	}
 
 	fileOptions := &nodestree.FileOptions{
-		IgnorePath:       []string{".git", "production"},
 		ExclusionsSuffix: []string{".txt", ".md"},
+		ContentType:      nodestree.CRDContentType,
 	}
 
 	nodesTree := nodestree.NewNodestree(fileOptions, resources_layout, client)

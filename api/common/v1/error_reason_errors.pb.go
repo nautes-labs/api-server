@@ -106,3 +106,27 @@ func IsSecretNotFound(err error) bool {
 func ErrorSecretNotFound(format string, args ...interface{}) *errors.Error {
 	return errors.New(404, ErrorReason_SECRET_NOT_FOUND.String(), fmt.Sprintf(format, args...))
 }
+
+func IsAccesstokenNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	e := errors.FromError(err)
+	return e.Reason == ErrorReason_ACCESSTOKEN_NOT_FOUND.String() && e.Code == 404
+}
+
+func ErrorAccesstokenNotFound(format string, args ...interface{}) *errors.Error {
+	return errors.New(404, ErrorReason_ACCESSTOKEN_NOT_FOUND.String(), fmt.Sprintf(format, args...))
+}
+
+func IsRefreshPermissionsAccessDenied(err error) bool {
+	if err == nil {
+		return false
+	}
+	e := errors.FromError(err)
+	return e.Reason == ErrorReason_REFRESH_PERMISSIONS_ACCESS_DENIED.String() && e.Code == 403
+}
+
+func ErrorRefreshPermissionsAccessDenied(format string, args ...interface{}) *errors.Error {
+	return errors.New(403, ErrorReason_REFRESH_PERMISSIONS_ACCESS_DENIED.String(), fmt.Sprintf(format, args...))
+}

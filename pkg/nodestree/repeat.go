@@ -31,9 +31,8 @@ func CheckResourceRepeatName(options CompareOptions, in *nodesTree) error {
 			}
 		} else {
 			child := CompareOptions{
-				Nodes:            *node1,
-				ProductName:      options.ProductName,
-				LocalProjectPath: options.LocalProjectPath,
+				Nodes:       *node1,
+				ProductName: options.ProductName,
 			}
 			err := CheckResourceRepeatName(child, in)
 			if err != nil {

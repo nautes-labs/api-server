@@ -17,6 +17,7 @@ package nodestree
 const (
 	Project                = "Project"
 	CodeRepo               = "CodeRepo"
+	CodeRepoBinding        = "CodeRepoBinding"
 	Cluster                = "Cluster"
 	Enviroment             = "Environment"
 	DeploymentRuntime      = "DeploymentRuntime"

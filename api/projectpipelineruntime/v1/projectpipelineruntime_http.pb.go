@@ -33,10 +33,10 @@ type ProjectPipelineRuntimeHTTPServer interface {
 
 func RegisterProjectPipelineRuntimeHTTPServer(s *http.Server, srv ProjectPipelineRuntimeHTTPServer) {
 	r := s.Route("/")
-	r.GET("/api/v1/products/{productName}/projectpipelineruntimes/{projectPipelineRuntimeName}", _ProjectPipelineRuntime_GetProjectPipelineRuntime0_HTTP_Handler(srv))
-	r.GET("/api/v1/products/{productName}/projectpipelineruntimes", _ProjectPipelineRuntime_ListProjectPipelineRuntimes0_HTTP_Handler(srv))
-	r.POST("/api/v1/products/{productName}/projectpipelineruntimes/{projectPipelineRuntimeName}", _ProjectPipelineRuntime_SaveProjectPipelineRuntime0_HTTP_Handler(srv))
-	r.DELETE("/api/v1/products/{productName}/projectpipelineruntimes/{projectPipelineRuntimeName}", _ProjectPipelineRuntime_DeleteProjectPipelineRuntime0_HTTP_Handler(srv))
+	r.GET("/api/v1/products/{product_name}/projectpipelineruntimes/{project_pipeline_runtime_name}", _ProjectPipelineRuntime_GetProjectPipelineRuntime0_HTTP_Handler(srv))
+	r.GET("/api/v1/products/{product_name}/projectpipelineruntimes", _ProjectPipelineRuntime_ListProjectPipelineRuntimes0_HTTP_Handler(srv))
+	r.POST("/api/v1/products/{product_name}/projectpipelineruntimes/{project_pipeline_runtime_name}", _ProjectPipelineRuntime_SaveProjectPipelineRuntime0_HTTP_Handler(srv))
+	r.DELETE("/api/v1/products/{product_name}/projectpipelineruntimes/{project_pipeline_runtime_name}", _ProjectPipelineRuntime_DeleteProjectPipelineRuntime0_HTTP_Handler(srv))
 }
 
 func _ProjectPipelineRuntime_GetProjectPipelineRuntime0_HTTP_Handler(srv ProjectPipelineRuntimeHTTPServer) func(ctx http.Context) error {
@@ -147,7 +147,7 @@ func NewProjectPipelineRuntimeHTTPClient(client *http.Client) ProjectPipelineRun
 
 func (c *ProjectPipelineRuntimeHTTPClientImpl) DeleteProjectPipelineRuntime(ctx context.Context, in *DeleteRequest, opts ...http.CallOption) (*DeleteReply, error) {
 	var out DeleteReply
-	pattern := "/api/v1/products/{productName}/projectpipelineruntimes/{projectPipelineRuntimeName}"
+	pattern := "/api/v1/products/{product_name}/projectpipelineruntimes/{project_pipeline_runtime_name}"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationProjectPipelineRuntimeDeleteProjectPipelineRuntime))
 	opts = append(opts, http.PathTemplate(pattern))
@@ -160,7 +160,7 @@ func (c *ProjectPipelineRuntimeHTTPClientImpl) DeleteProjectPipelineRuntime(ctx 
 
 func (c *ProjectPipelineRuntimeHTTPClientImpl) GetProjectPipelineRuntime(ctx context.Context, in *GetRequest, opts ...http.CallOption) (*GetReply, error) {
 	var out GetReply
-	pattern := "/api/v1/products/{productName}/projectpipelineruntimes/{projectPipelineRuntimeName}"
+	pattern := "/api/v1/products/{product_name}/projectpipelineruntimes/{project_pipeline_runtime_name}"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationProjectPipelineRuntimeGetProjectPipelineRuntime))
 	opts = append(opts, http.PathTemplate(pattern))
@@ -173,7 +173,7 @@ func (c *ProjectPipelineRuntimeHTTPClientImpl) GetProjectPipelineRuntime(ctx con
 
 func (c *ProjectPipelineRuntimeHTTPClientImpl) ListProjectPipelineRuntimes(ctx context.Context, in *ListsRequest, opts ...http.CallOption) (*ListsReply, error) {
 	var out ListsReply
-	pattern := "/api/v1/products/{productName}/projectpipelineruntimes"
+	pattern := "/api/v1/products/{product_name}/projectpipelineruntimes"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationProjectPipelineRuntimeListProjectPipelineRuntimes))
 	opts = append(opts, http.PathTemplate(pattern))
@@ -186,7 +186,7 @@ func (c *ProjectPipelineRuntimeHTTPClientImpl) ListProjectPipelineRuntimes(ctx c
 
 func (c *ProjectPipelineRuntimeHTTPClientImpl) SaveProjectPipelineRuntime(ctx context.Context, in *SaveRequest, opts ...http.CallOption) (*SaveReply, error) {
 	var out SaveReply
-	pattern := "/api/v1/products/{productName}/projectpipelineruntimes/{projectPipelineRuntimeName}"
+	pattern := "/api/v1/products/{product_name}/projectpipelineruntimes/{project_pipeline_runtime_name}"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationProjectPipelineRuntimeSaveProjectPipelineRuntime))
 	opts = append(opts, http.PathTemplate(pattern))

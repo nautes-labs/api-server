@@ -31,33 +31,49 @@ type Vcluster struct {
 	Namespace     string
 	ApiServer     string
 	HttpsNodePort string
-	TlsSan        string
+	TLSSan        string
 	HostCluster   *HostCluster
 }
 
 type HostCluster struct {
-	Name          string
-	ApiServer     string
-	ArgocdProject string
+	Name                 string
+	ApiServer            string
+	ArgocdProject        string
+	PrimaryDomain        string
+	Host                 string
+	OAuthURL             string
+	ProjectPipelineItems []*ProjectPipelineItem
 }
 
-type Argocd struct {
-	Host string
-	URL  string
+type ArgocdConfig struct {
+	Host    string
+	URL     string
+	Project string
+}
+
+type TektonConfig struct {
+	Host          string
+	HttpsNodePort int
+	URL           string
 }
 
 type Runtime struct {
-	Name          string
-	Type          string
-	MountPath     string
-	ApiServer     string
-	ArgocdProject string
-	Argocd        *Argocd
+	Name                string
+	ClusterName         string
+	Type                string
+	PrimaryDomain       string
+	MountPath           string
+	ApiServer           string
+	OAuthURL            string
+	ArgocdConfig        *ArgocdConfig
+	TektonConfig        *TektonConfig
+	ProjectPipelineItem *ProjectPipelineItem
 }
 
-type RuntimeNameAndApiServer struct {
-	Name       string
-	ClusterURL string
+type ProjectPipelineItem struct {
+	Name            string
+	HostClusterName string
+	TektonConfig    *TektonConfig
 }
 
 type ClusterRegistrationParam struct {
@@ -68,6 +84,7 @@ type ClusterRegistrationParam struct {
 	Vcluster                     *Vcluster
 	Cluster                      *resourcev1alpha1.Cluster
 	ArgocdHost                   string
+	TektonHost                   string
 	Traefik                      *Traefik
 	Configs                      *nautesconfigs.Config
 	CaBundle                     string
@@ -85,7 +102,6 @@ type ClusterRegistration struct {
 	HostClusterNames             []string
 	VclusterNames                []string
 	Vcluster                     *Vcluster
-	RuntimeNameAndApiServers     []*RuntimeNameAndApiServer
 	Runtime                      *Runtime
 	Traefik                      *Traefik
 	NautesConfigs                nautesconfigs.Nautes

@@ -34,14 +34,8 @@ rules:
   resources:
   - clusters
   - coderepoes
-  verbs:
-  - create
-  - get
-  - list
-- apiGroups:
-  - nautes.resource.nautes.io
-  resources:
   - coderepoproviders
+  - coderepobindings
   verbs:
   - create
   - get

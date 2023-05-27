@@ -27,7 +27,7 @@ import (
 )
 
 // ProviderSet is data providers.
-var ProviderSet = wire.NewSet(NewData, NewCodeRepo, NewSecretRepo, NewGitRepo, NewDexRepo)
+var ProviderSet = wire.NewSet(NewData, NewCodeRepo, NewSecretRepo, NewGitRepo, NewDexRepo, NewKubernetes)
 
 func NewData(logger log.Logger, configs *nautesconfigs.Config) (func(), error) {
 	cleanup := func() {

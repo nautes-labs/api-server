@@ -12,4 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vault
+package cluster
+
+const (
+	_HostClustersDir    = "host-clusters"
+	_RuntimesDir        = "runtimes"
+	_VclustersDir       = "vclusters"
+	_VclusterAppSetFile = "production/vcluster-appset.yaml"
+)

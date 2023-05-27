@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	v1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 )
 
 // MockCodeRepo is a mock of CodeRepo interface.
@@ -64,6 +65,21 @@ func (mr *MockCodeRepoMockRecorder) CreateGroup(ctx, gitOptions interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateGroup", reflect.TypeOf((*MockCodeRepo)(nil).CreateGroup), ctx, gitOptions)
 }
 
+// CreateProjectAccessToken mocks base method.
+func (m *MockCodeRepo) CreateProjectAccessToken(ctx context.Context, pid interface{}, opt *CreateProjectAccessTokenOptions) (*ProjectAccessToken, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateProjectAccessToken", ctx, pid, opt)
+	ret0, _ := ret[0].(*ProjectAccessToken)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateProjectAccessToken indicates an expected call of CreateProjectAccessToken.
+func (mr *MockCodeRepoMockRecorder) CreateProjectAccessToken(ctx, pid, opt interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateProjectAccessToken", reflect.TypeOf((*MockCodeRepo)(nil).CreateProjectAccessToken), ctx, pid, opt)
+}
+
 // DeleteCodeRepo mocks base method.
 func (m *MockCodeRepo) DeleteCodeRepo(ctx context.Context, pid interface{}) error {
 	m.ctrl.T.Helper()
@@ -104,6 +120,35 @@ func (m *MockCodeRepo) DeleteGroup(ctx context.Context, gid interface{}) error {
 func (mr *MockCodeRepoMockRecorder) DeleteGroup(ctx, gid interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteGroup", reflect.TypeOf((*MockCodeRepo)(nil).DeleteGroup), ctx, gid)
+}
+
+// DeleteProjectAccessToken mocks base method.
+func (m *MockCodeRepo) DeleteProjectAccessToken(ctx context.Context, pid interface{}, id int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteProjectAccessToken", ctx, pid, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteProjectAccessToken indicates an expected call of DeleteProjectAccessToken.
+func (mr *MockCodeRepoMockRecorder) DeleteProjectAccessToken(ctx, pid, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProjectAccessToken", reflect.TypeOf((*MockCodeRepo)(nil).DeleteProjectAccessToken), ctx, pid, id)
+}
+
+// EnableProjectDeployKey mocks base method.
+func (m *MockCodeRepo) EnableProjectDeployKey(ctx context.Context, pid interface{}, deployKey int) (*ProjectDeployKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnableProjectDeployKey", ctx, pid, deployKey)
+	ret0, _ := ret[0].(*ProjectDeployKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnableProjectDeployKey indicates an expected call of EnableProjectDeployKey.
+func (mr *MockCodeRepoMockRecorder) EnableProjectDeployKey(ctx, pid, deployKey interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableProjectDeployKey", reflect.TypeOf((*MockCodeRepo)(nil).EnableProjectDeployKey), ctx, pid, deployKey)
 }
 
 // GetCodeRepo mocks base method.
@@ -167,6 +212,51 @@ func (mr *MockCodeRepoMockRecorder) GetGroup(ctx, gid interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGroup", reflect.TypeOf((*MockCodeRepo)(nil).GetGroup), ctx, gid)
 }
 
+// GetProjectAccessToken mocks base method.
+func (m *MockCodeRepo) GetProjectAccessToken(ctx context.Context, pid interface{}, id int) (*ProjectAccessToken, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProjectAccessToken", ctx, pid, id)
+	ret0, _ := ret[0].(*ProjectAccessToken)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetProjectAccessToken indicates an expected call of GetProjectAccessToken.
+func (mr *MockCodeRepoMockRecorder) GetProjectAccessToken(ctx, pid, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProjectAccessToken", reflect.TypeOf((*MockCodeRepo)(nil).GetProjectAccessToken), ctx, pid, id)
+}
+
+// ListAccessTokens mocks base method.
+func (m *MockCodeRepo) ListAccessTokens(ctx context.Context, pid interface{}, opt *ListOptions) ([]*ProjectAccessToken, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAccessTokens", ctx, pid, opt)
+	ret0, _ := ret[0].([]*ProjectAccessToken)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAccessTokens indicates an expected call of ListAccessTokens.
+func (mr *MockCodeRepoMockRecorder) ListAccessTokens(ctx, pid, opt interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAccessTokens", reflect.TypeOf((*MockCodeRepo)(nil).ListAccessTokens), ctx, pid, opt)
+}
+
+// ListAllDeployKeys mocks base method.
+func (m *MockCodeRepo) ListAllDeployKeys(ctx context.Context, opt *ListOptions) ([]*ProjectDeployKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAllDeployKeys", ctx, opt)
+	ret0, _ := ret[0].([]*ProjectDeployKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAllDeployKeys indicates an expected call of ListAllDeployKeys.
+func (mr *MockCodeRepoMockRecorder) ListAllDeployKeys(ctx, opt interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAllDeployKeys", reflect.TypeOf((*MockCodeRepo)(nil).ListAllDeployKeys), ctx, opt)
+}
+
 // ListAllGroups mocks base method.
 func (m *MockCodeRepo) ListAllGroups(ctx context.Context) ([]*Group, error) {
 	m.ctrl.T.Helper()
@@ -198,38 +288,33 @@ func (mr *MockCodeRepoMockRecorder) ListDeployKeys(ctx, pid, opt interface{}) *g
 }
 
 // ListGroupCodeRepos mocks base method.
-func (m *MockCodeRepo) ListGroupCodeRepos(ctx context.Context, gid interface{}, opts ...interface{}) ([]*Project, error) {
+func (m *MockCodeRepo) ListGroupCodeRepos(ctx context.Context, gid interface{}) ([]*Project, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, gid}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ListGroupCodeRepos", varargs...)
+	ret := m.ctrl.Call(m, "ListGroupCodeRepos", ctx, gid)
 	ret0, _ := ret[0].([]*Project)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListGroupCodeRepos indicates an expected call of ListGroupCodeRepos.
-func (mr *MockCodeRepoMockRecorder) ListGroupCodeRepos(ctx, gid interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockCodeRepoMockRecorder) ListGroupCodeRepos(ctx, gid interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, gid}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListGroupCodeRepos", reflect.TypeOf((*MockCodeRepo)(nil).ListGroupCodeRepos), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListGroupCodeRepos", reflect.TypeOf((*MockCodeRepo)(nil).ListGroupCodeRepos), ctx, gid)
 }
 
 // SaveDeployKey mocks base method.
-func (m *MockCodeRepo) SaveDeployKey(ctx context.Context, publicKey []byte, project *Project) (*ProjectDeployKey, error) {
+func (m *MockCodeRepo) SaveDeployKey(ctx context.Context, pid interface{}, title string, canPush bool, publicKey []byte) (*ProjectDeployKey, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SaveDeployKey", ctx, publicKey, project)
+	ret := m.ctrl.Call(m, "SaveDeployKey", ctx, pid, title, canPush, publicKey)
 	ret0, _ := ret[0].(*ProjectDeployKey)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SaveDeployKey indicates an expected call of SaveDeployKey.
-func (mr *MockCodeRepoMockRecorder) SaveDeployKey(ctx, publicKey, project interface{}) *gomock.Call {
+func (mr *MockCodeRepoMockRecorder) SaveDeployKey(ctx, pid, title, canPush, publicKey interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveDeployKey", reflect.TypeOf((*MockCodeRepo)(nil).SaveDeployKey), ctx, publicKey, project)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveDeployKey", reflect.TypeOf((*MockCodeRepo)(nil).SaveDeployKey), ctx, pid, title, canPush, publicKey)
 }
 
 // UpdateCodeRepo mocks base method.
@@ -245,6 +330,21 @@ func (m *MockCodeRepo) UpdateCodeRepo(ctx context.Context, pid interface{}, opti
 func (mr *MockCodeRepoMockRecorder) UpdateCodeRepo(ctx, pid, options interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCodeRepo", reflect.TypeOf((*MockCodeRepo)(nil).UpdateCodeRepo), ctx, pid, options)
+}
+
+// UpdateDeployKey mocks base method.
+func (m *MockCodeRepo) UpdateDeployKey(ctx context.Context, pid interface{}, deployKey int, title string, canPush bool) (*ProjectDeployKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateDeployKey", ctx, pid, deployKey, title, canPush)
+	ret0, _ := ret[0].(*ProjectDeployKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateDeployKey indicates an expected call of UpdateDeployKey.
+func (mr *MockCodeRepoMockRecorder) UpdateDeployKey(ctx, pid, deployKey, title, canPush interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDeployKey", reflect.TypeOf((*MockCodeRepo)(nil).UpdateDeployKey), ctx, pid, deployKey, title, canPush)
 }
 
 // UpdateGroup mocks base method.
@@ -286,31 +386,31 @@ func (m *MockSecretrepo) EXPECT() *MockSecretrepoMockRecorder {
 }
 
 // AuthorizationSecret mocks base method.
-func (m *MockSecretrepo) AuthorizationSecret(ctx context.Context, id int, destUser string) error {
+func (m *MockSecretrepo) AuthorizationSecret(ctx context.Context, id int, destUser, gitType, mountPath string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AuthorizationSecret", ctx, id, destUser)
+	ret := m.ctrl.Call(m, "AuthorizationSecret", ctx, id, destUser, gitType, mountPath)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AuthorizationSecret indicates an expected call of AuthorizationSecret.
-func (mr *MockSecretrepoMockRecorder) AuthorizationSecret(ctx, id, destUser interface{}) *gomock.Call {
+func (mr *MockSecretrepoMockRecorder) AuthorizationSecret(ctx, id, destUser, gitType, mountPath interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthorizationSecret", reflect.TypeOf((*MockSecretrepo)(nil).AuthorizationSecret), ctx, id, destUser)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthorizationSecret", reflect.TypeOf((*MockSecretrepo)(nil).AuthorizationSecret), ctx, id, destUser, gitType, mountPath)
 }
 
 // DeleteSecret mocks base method.
-func (m *MockSecretrepo) DeleteSecret(ctx context.Context, id int) error {
+func (m *MockSecretrepo) DeleteSecret(ctx context.Context, id int, user, permission string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteSecret", ctx, id)
+	ret := m.ctrl.Call(m, "DeleteSecret", ctx, id, user, permission)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteSecret indicates an expected call of DeleteSecret.
-func (mr *MockSecretrepoMockRecorder) DeleteSecret(ctx, id interface{}) *gomock.Call {
+func (mr *MockSecretrepoMockRecorder) DeleteSecret(ctx, id, user, permission interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSecret", reflect.TypeOf((*MockSecretrepo)(nil).DeleteSecret), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSecret", reflect.TypeOf((*MockSecretrepo)(nil).DeleteSecret), ctx, id, user, permission)
 }
 
 // GetDeployKey mocks base method.
@@ -326,6 +426,21 @@ func (m *MockSecretrepo) GetDeployKey(ctx context.Context, secretOptions *Secret
 func (mr *MockSecretrepoMockRecorder) GetDeployKey(ctx, secretOptions interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDeployKey", reflect.TypeOf((*MockSecretrepo)(nil).GetDeployKey), ctx, secretOptions)
+}
+
+// GetProjectAccessToken mocks base method.
+func (m *MockSecretrepo) GetProjectAccessToken(ctx context.Context, secretOptions *SecretOptions) (*AccessTokenSecretData, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProjectAccessToken", ctx, secretOptions)
+	ret0, _ := ret[0].(*AccessTokenSecretData)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetProjectAccessToken indicates an expected call of GetProjectAccessToken.
+func (mr *MockSecretrepoMockRecorder) GetProjectAccessToken(ctx, secretOptions interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProjectAccessToken", reflect.TypeOf((*MockSecretrepo)(nil).GetProjectAccessToken), ctx, secretOptions)
 }
 
 // GetSecret mocks base method.
@@ -358,17 +473,31 @@ func (mr *MockSecretrepoMockRecorder) SaveClusterConfig(ctx, id, config interfac
 }
 
 // SaveDeployKey mocks base method.
-func (m *MockSecretrepo) SaveDeployKey(ctx context.Context, id int, key string, extendKVs map[string]string) error {
+func (m *MockSecretrepo) SaveDeployKey(ctx context.Context, id, key, user, permission string, extendKVs map[string]string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SaveDeployKey", ctx, id, key, extendKVs)
+	ret := m.ctrl.Call(m, "SaveDeployKey", ctx, id, key, user, permission, extendKVs)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SaveDeployKey indicates an expected call of SaveDeployKey.
-func (mr *MockSecretrepoMockRecorder) SaveDeployKey(ctx, id, key, extendKVs interface{}) *gomock.Call {
+func (mr *MockSecretrepoMockRecorder) SaveDeployKey(ctx, id, key, user, permission, extendKVs interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveDeployKey", reflect.TypeOf((*MockSecretrepo)(nil).SaveDeployKey), ctx, id, key, extendKVs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveDeployKey", reflect.TypeOf((*MockSecretrepo)(nil).SaveDeployKey), ctx, id, key, user, permission, extendKVs)
+}
+
+// SaveProjectAccessToken mocks base method.
+func (m *MockSecretrepo) SaveProjectAccessToken(ctx context.Context, id, token, user, permission string, extendKVs map[string]string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveProjectAccessToken", ctx, id, token, user, permission, extendKVs)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SaveProjectAccessToken indicates an expected call of SaveProjectAccessToken.
+func (mr *MockSecretrepoMockRecorder) SaveProjectAccessToken(ctx, id, token, user, permission, extendKVs interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveProjectAccessToken", reflect.TypeOf((*MockSecretrepo)(nil).SaveProjectAccessToken), ctx, id, token, user, permission, extendKVs)
 }
 
 // MockGitRepo is a mock of GitRepo interface.
@@ -560,4 +689,57 @@ func (m *MockDexRepo) UpdateRedirectURIs(redirectURI string) error {
 func (mr *MockDexRepoMockRecorder) UpdateRedirectURIs(redirectURI interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRedirectURIs", reflect.TypeOf((*MockDexRepo)(nil).UpdateRedirectURIs), redirectURI)
+}
+
+// MockKubernetes is a mock of Kubernetes interface.
+type MockKubernetes struct {
+	ctrl     *gomock.Controller
+	recorder *MockKubernetesMockRecorder
+}
+
+// MockKubernetesMockRecorder is the mock recorder for MockKubernetes.
+type MockKubernetesMockRecorder struct {
+	mock *MockKubernetes
+}
+
+// NewMockKubernetes creates a new mock instance.
+func NewMockKubernetes(ctrl *gomock.Controller) *MockKubernetes {
+	mock := &MockKubernetes{ctrl: ctrl}
+	mock.recorder = &MockKubernetesMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockKubernetes) EXPECT() *MockKubernetesMockRecorder {
+	return m.recorder
+}
+
+// ListCodeRepo mocks base method.
+func (m *MockKubernetes) ListCodeRepo(ctx context.Context) (*v1alpha1.CodeRepoList, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListCodeRepo", ctx)
+	ret0, _ := ret[0].(*v1alpha1.CodeRepoList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListCodeRepo indicates an expected call of ListCodeRepo.
+func (mr *MockKubernetesMockRecorder) ListCodeRepo(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCodeRepo", reflect.TypeOf((*MockKubernetes)(nil).ListCodeRepo), ctx)
+}
+
+// ListCodeRepoBindings mocks base method.
+func (m *MockKubernetes) ListCodeRepoBindings(ctx context.Context) (*v1alpha1.CodeRepoBindingList, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListCodeRepoBindings", ctx)
+	ret0, _ := ret[0].(*v1alpha1.CodeRepoBindingList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListCodeRepoBindings indicates an expected call of ListCodeRepoBindings.
+func (mr *MockKubernetesMockRecorder) ListCodeRepoBindings(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCodeRepoBindings", reflect.TypeOf((*MockKubernetes)(nil).ListCodeRepoBindings), ctx)
 }

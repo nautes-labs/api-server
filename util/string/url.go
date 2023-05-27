@@ -36,11 +36,6 @@ func ExtractPortFromURL(rawurl string) (string, error) {
 }
 
 func ParseUrl(urlString string) (string, error) {
-	// Check if the URL is empty
-	if urlString == "" {
-		return "", fmt.Errorf("the URL is empty")
-	}
-
 	parsedUrl, err := url.Parse(urlString)
 	if err != nil {
 		return "", err
@@ -65,4 +60,23 @@ func ParseUrl(urlString string) (string, error) {
 	}
 
 	return ip.String(), nil
+}
+
+func IsIPPortURL(urlString string) bool {
+	u, err := url.Parse(urlString)
+	if err != nil {
+		return false
+	}
+
+	host, _, err := net.SplitHostPort(u.Host)
+	if err != nil {
+		return false
+	}
+
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return false
+	}
+
+	return true
 }

@@ -1,3 +1,17 @@
+// Copyright 2023 Nautes Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 syntax = "proto3";
 
 package api.product.v1;
@@ -11,7 +25,7 @@ option go_package = "github.com/nautes-labs/api-server/api/product/v1;v1";
 service Product {
   rpc GetProduct (GetProductRequest) returns (GetProductReply) {
     option (google.api.http) = {
-      get: "/api/v1/products/{productName}"
+      get: "/api/v1/products/{product_name}"
     };
   }
   rpc ListProducts (ListProductsRequest) returns (ListProductsReply) {
@@ -21,13 +35,13 @@ service Product {
   }
   rpc SaveProduct (SaveProductRequest) returns (SaveProductReply) {
     option (google.api.http) = {
-      post: "/api/v1/products/{productName}"
+      post: "/api/v1/products/{product_name}"
       body: "*"
     };
   }
   rpc DeleteProduct (DeleteProductRequest) returns (DeleteProductReply) {
     option (google.api.http) = {
-      delete: "/api/v1/products/{productName}"
+      delete: "/api/v1/products/{product_name}"
     };
   }
 }
@@ -100,7 +114,7 @@ message GitGroup {
 
 message GetProductRequest {
   // The name of the product to get
-  string productName = 1 [json_name = "product_name"];
+  string product_name = 1 [json_name = "product_name"];
 }
 
 message GetProductReply {
@@ -120,7 +134,7 @@ message ListProductsReply {
   
 message SaveProductRequest {
   // The name of the product to save
-  string productName = 1 [json_name = "product_name"];
+  string product_name = 1 [json_name = "product_name"];
 
   // The Git group of the product
   Git git = 2 [json_name = "git", (validate.rules).message.required = true];
@@ -133,7 +147,7 @@ message SaveProductReply {
 
 message DeleteProductRequest {
   // The name of the product to delete
-  string productName = 1 [json_name = "product_name"];
+  string product_name = 1 [json_name = "product_name"];
 }
 
 message DeleteProductReply {

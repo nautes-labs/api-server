@@ -224,7 +224,7 @@ func (e *EnvironmentUsecase) CheckReference(options nodestree.CompareOptions, no
 
 	env, ok := node.Content.(*resourcev1alpha1.Environment)
 	if !ok {
-		return true, fmt.Errorf("node %s resource type error", node.Name)
+		return true, fmt.Errorf("wrong type found for %s node when checking Environment type", node.Name)
 	}
 
 	productName := env.Spec.Product

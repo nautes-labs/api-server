@@ -37,7 +37,8 @@ func wireApp(confServer *conf.Server, confData *conf.Data, logger log.Logger, no
 		return nil, nil, err
 	}
 	resourcesUsecase := biz.NewResourcesUsecase(logger, codeRepo, secretrepo, gitRepo, nodesTree, config)
-	codeRepoUsecase := biz.NewCodeRepoUsecase(logger, codeRepo, secretrepo, nodesTree, config, resourcesUsecase, client2)
+	codeRepoBindingUsecase := biz.NewCodeRepoCodeRepoBindingUsecase(logger, codeRepo, secretrepo, nodesTree, resourcesUsecase, config, client2)
+	codeRepoUsecase := biz.NewCodeRepoUsecase(logger, codeRepo, secretrepo, nodesTree, config, resourcesUsecase, codeRepoBindingUsecase, client2)
 	productUsecase := biz.NewProductUsecase(logger, codeRepo, secretrepo, gitRepo, config, resourcesUsecase, codeRepoUsecase)
 	productService := service.NewProductService(productUsecase, config)
 	grpcServer := server.NewGRPCServer(confServer, productService, logger)
@@ -46,6 +47,7 @@ func wireApp(confServer *conf.Server, confData *conf.Data, logger log.Logger, no
 	deploymentRuntimeUsecase := biz.NewDeploymentRuntimeUsecase(logger, codeRepo, nodesTree, resourcesUsecase)
 	deploymentruntimeService := service.NewDeploymentruntimeService(deploymentRuntimeUsecase)
 	codeRepoService := service.NewCodeRepoService(codeRepoUsecase, config)
+	codeRepoBindingService := service.NewCodeRepoBindingService(codeRepoBindingUsecase)
 	projectUsecase := biz.NewProjectUsecase(logger, codeRepo, secretrepo, nodesTree, config, resourcesUsecase)
 	projectService := service.NewProjectService(projectUsecase)
 	environmentUsecase := biz.NewEnviromentUsecase(logger, config, codeRepo, nodesTree, resourcesUsecase)
@@ -53,7 +55,7 @@ func wireApp(confServer *conf.Server, confData *conf.Data, logger log.Logger, no
 	dexRepo := data.NewDexRepo(client2)
 	clusterUsecase := biz.NewClusterUsecase(logger, codeRepo, secretrepo, resourcesUsecase, config, client2, clusteroperator, dexRepo)
 	clusterService := service.NewClusterService(clusterUsecase, config)
-	serviceProductGroup := server.NewServiceGroup(projectPipelineRuntimeService, deploymentruntimeService, codeRepoService, productService, projectService, environmentService, clusterService)
+	serviceProductGroup := server.NewServiceGroup(projectPipelineRuntimeService, deploymentruntimeService, codeRepoService, codeRepoBindingService, productService, projectService, environmentService, clusterService)
 	httpServer := server.NewHTTPServer(confServer, serviceProductGroup)
 	app := newApp(logger, grpcServer, httpServer)
 	return app, func() {

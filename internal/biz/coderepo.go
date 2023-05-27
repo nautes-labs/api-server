@@ -18,13 +18,14 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	errors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/log"
 	commonv1 "github.com/nautes-labs/api-server/api/common/v1"
-	gitlabclient "github.com/nautes-labs/api-server/pkg/gitlab"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
 	utilkey "github.com/nautes-labs/api-server/util/key"
+	utilstrings "github.com/nautes-labs/api-server/util/string"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,19 +35,17 @@ import (
 const (
 	_CodeRepoKind    = "CodeRepo"
 	_CodeReposSubDir = "code-repos"
-	_RepoPrefix      = "repo-"
-	SecretsEngine    = "git"
-	SecretsKey       = "deploykey"
 )
 
 type CodeRepoUsecase struct {
-	log              *log.Helper
-	codeRepo         CodeRepo
-	secretRepo       Secretrepo
-	nodestree        nodestree.NodesTree
-	config           *nautesconfigs.Config
-	resourcesUsecase *ResourcesUsecase
-	client           client.Client
+	log                    *log.Helper
+	codeRepo               CodeRepo
+	secretRepo             Secretrepo
+	nodestree              nodestree.NodesTree
+	config                 *nautesconfigs.Config
+	resourcesUsecase       *ResourcesUsecase
+	codeRepoBindingUsecase *CodeRepoBindingUsecase
+	client                 client.Client
 }
 
 type CodeRepoData struct {
@@ -54,10 +53,19 @@ type CodeRepoData struct {
 	Spec resourcev1alpha1.CodeRepoSpec
 }
 
-func NewCodeRepoUsecase(logger log.Logger, codeRepo CodeRepo, secretRepo Secretrepo, nodestree nodestree.NodesTree, config *nautesconfigs.Config, resourcesUsecase *ResourcesUsecase, client client.Client) *CodeRepoUsecase {
-	coderepo := &CodeRepoUsecase{log: log.NewHelper(log.With(logger)), codeRepo: codeRepo, secretRepo: secretRepo, nodestree: nodestree, config: config, resourcesUsecase: resourcesUsecase, client: client}
-	nodestree.AppendOperators(coderepo)
-	return coderepo
+func NewCodeRepoUsecase(logger log.Logger, codeRepo CodeRepo, secretRepo Secretrepo, nodestree nodestree.NodesTree, config *nautesconfigs.Config, resourcesUsecase *ResourcesUsecase, codeRepoBindingUsecase *CodeRepoBindingUsecase, client client.Client) *CodeRepoUsecase {
+	codeRepoUsecase := &CodeRepoUsecase{
+		log:                    log.NewHelper(log.With(logger)),
+		codeRepo:               codeRepo,
+		secretRepo:             secretRepo,
+		nodestree:              nodestree,
+		config:                 config,
+		resourcesUsecase:       resourcesUsecase,
+		codeRepoBindingUsecase: codeRepoBindingUsecase,
+		client:                 client,
+	}
+	nodestree.AppendOperators(codeRepoUsecase)
+	return codeRepoUsecase
 }
 
 func (c *CodeRepoUsecase) GetCodeRepo(ctx context.Context, codeRepoName, productName string) (*resourcev1alpha1.CodeRepo, *Project, error) {
@@ -68,13 +76,13 @@ func (c *CodeRepoUsecase) GetCodeRepo(ctx context.Context, codeRepoName, product
 	}
 
 	if project != nil {
-		resourceName := fmt.Sprintf("%s%d", _RepoPrefix, int(project.Id))
+		resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
 		codeRepoName = resourceName
 	}
 
 	node, err := c.resourcesUsecase.Get(ctx, nodestree.CodeRepo, productName, c, func(nodes nodestree.Node) (string, error) {
 		if project != nil {
-			resourceName := fmt.Sprintf("%s%d", _RepoPrefix, int(project.Id))
+			resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
 			return resourceName, nil
 		}
 
@@ -89,7 +97,7 @@ func (c *CodeRepoUsecase) GetCodeRepo(ctx context.Context, codeRepoName, product
 		return nil, nil, err
 	}
 
-	codeRepo, err := c.nodeToResource(node)
+	codeRepo, err := nodeToCodeRepo(node)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -100,6 +108,265 @@ func (c *CodeRepoUsecase) GetCodeRepo(ctx context.Context, codeRepoName, product
 	}
 
 	return codeRepo, project, nil
+}
+
+type CodeRepoWithProject struct {
+	CodeRepo *resourcev1alpha1.CodeRepo
+	Project  *Project
+}
+
+func (c *CodeRepoUsecase) ListCodeRepos(ctx context.Context, productName string) ([]*CodeRepoWithProject, error) {
+	nodes, err := c.resourcesUsecase.List(ctx, productName, c)
+	if err != nil {
+		return nil, err
+	}
+
+	codeRepos, err := nodesToCodeRepoists(*nodes)
+	if err != nil {
+		return nil, err
+	}
+
+	var cps []*CodeRepoWithProject
+	for _, codeRepo := range codeRepos {
+		err = c.convertProductToGroupName(ctx, codeRepo)
+		if err != nil {
+			return nil, err
+		}
+		pid := fmt.Sprintf("%s/%s", productName, codeRepo.Spec.RepoName)
+		project, err := c.codeRepo.GetCodeRepo(ctx, pid)
+		if err != nil {
+			return nil, err
+		}
+		cps = append(cps, &CodeRepoWithProject{
+			CodeRepo: codeRepo,
+			Project:  project,
+		})
+	}
+
+	return cps, nil
+}
+
+func (c *CodeRepoUsecase) SaveCodeRepo(ctx context.Context, options *BizOptions, data *CodeRepoData, gitOptions *GitCodeRepoOptions) error {
+	group, err := c.codeRepo.GetGroup(ctx, options.ProductName)
+	if err != nil {
+		return err
+	}
+	data.Spec.Product = fmt.Sprintf("%s%d", _ProductPrefix, int(group.Id))
+
+	project, err := c.saveRepository(ctx, group, options.ResouceName, gitOptions)
+	if err != nil {
+		return err
+	}
+	pid := int(project.Id)
+	codeRepoName := fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
+	data.Name = codeRepoName
+
+	resourceOptions := &resourceOptions{
+		resourceKind:      nodestree.CodeRepo,
+		productName:       options.ProductName,
+		insecureSkipCheck: options.InsecureSkipCheck,
+		operator:          c,
+	}
+	err = c.resourcesUsecase.Save(ctx, resourceOptions, data)
+	if err != nil {
+		return err
+	}
+
+	projectReadWriteDeployKey, err := c.saveDeployKey(ctx, pid, true)
+	if err != nil {
+		return err
+	}
+
+	projectReadOnlyDeployKey, err := c.saveDeployKey(ctx, pid, false)
+	if err != nil {
+		return err
+	}
+
+	if err := c.removeInvalidDeploykey(ctx, pid, projectReadWriteDeployKey, projectReadOnlyDeployKey); err != nil {
+		return err
+	}
+
+	projectAccessToken, err := c.saveAccessToken(ctx, pid)
+	if err != nil {
+		return err
+	}
+
+	if err := c.removeInvalidProjectAccessTokens(ctx, pid, projectAccessToken); err != nil {
+		return err
+	}
+
+	codeRepo, err := c.getCodeRepo(ctx, options.ProductName, codeRepoName)
+	if err != nil {
+		return err
+	}
+
+	err = c.refreshAuthorization(ctx, options.ProductName, codeRepo.Spec.Project)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *CodeRepoUsecase) DeleteCodeRepo(ctx context.Context, options *BizOptions) error {
+	group, err := c.codeRepo.GetGroup(ctx, options.ProductName)
+	if err != nil {
+		return err
+	}
+
+	projectPath := fmt.Sprintf("%s/%s", group.Path, options.ResouceName)
+	project, err := c.codeRepo.GetCodeRepo(ctx, projectPath)
+	if err != nil {
+		if commonv1.IsProjectNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	pid := int(project.Id)
+	codeRepoName := fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
+
+	resourceOptions := &resourceOptions{
+		resourceKind:      nodestree.CodeRepo,
+		productName:       options.ProductName,
+		insecureSkipCheck: options.InsecureSkipCheck,
+		operator:          c,
+	}
+
+	codeRepo, err := c.getCodeRepo(ctx, options.ProductName, codeRepoName)
+	if err != nil {
+		return err
+	}
+
+	err = c.refreshAuthorization(ctx, options.ProductName, codeRepo.Spec.Project, codeRepo.Name)
+	if err != nil {
+		return err
+	}
+
+	if err := c.resourcesUsecase.Delete(ctx, resourceOptions, func(nodes nodestree.Node) (string, error) {
+		if project != nil {
+			return codeRepoName, nil
+		}
+
+		resourceName, err := c.getCodeRepoName(nodes, options.ResouceName)
+		if err != nil {
+			return "", err
+		}
+
+		return resourceName, nil
+	}); err != nil {
+		return err
+	}
+
+	if err = c.deleteReadOnlySecret(ctx, pid); err != nil {
+		return err
+	}
+
+	if err = c.deleteReadWriteSecret(ctx, pid); err != nil {
+		return err
+	}
+
+	if err = c.deleteAccessTokenSecret(ctx, pid); err != nil {
+		return err
+	}
+
+	if err := c.deleteDeployKeys(ctx, pid); err != nil {
+		return err
+	}
+
+	if err = c.codeRepo.DeleteCodeRepo(ctx, pid); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *CodeRepoUsecase) getCodeRepo(ctx context.Context, productName, codeRepoName string) (*resourcev1alpha1.CodeRepo, error) {
+	nodes, err := c.resourcesUsecase.loadDefaultProjectNodes(ctx, productName)
+	if err != nil {
+		return nil, err
+	}
+
+	node := c.nodestree.GetNode(nodes, nodestree.CodeRepo, codeRepoName)
+	codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
+	if !ok {
+		return nil, fmt.Errorf(" type found for %s node", node.Name)
+	}
+
+	return codeRepo, nil
+}
+
+// refreshAuthorization Check the authorization code repository's scope of permissions.
+// If there is an authorization, refresh the permission; otherwise, do not refresh it.
+func (c *CodeRepoUsecase) refreshAuthorization(ctx context.Context, productName, currentProjectName string, skipRepositories ...string) error {
+	nodes, err := c.nodestree.GetNodes()
+	if err != nil {
+		return err
+	}
+
+	codeReposNodes := nodestree.ListsResourceNodes(*nodes, nodestree.CodeRepo)
+
+	var errorMessages []string
+	for _, node := range codeReposNodes {
+		codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
+		if !ok {
+			return fmt.Errorf("wrong type found for %s node when refresh Authorization", node.Name)
+		}
+		ok = utilstrings.ContainsString(skipRepositories, codeRepo.Name)
+		if ok {
+			continue
+		}
+
+		if codeRepo.Spec.Project == currentProjectName {
+			err = c.codeRepoBindingUsecase.refreshAuthorization(ctx, *nodes, codeRepo.Name)
+			if err != nil {
+				if commonv1.IsNoAuthorization(err) {
+					errorMessages = append(errorMessages, err.Error())
+				} else {
+					return err
+				}
+			}
+
+			return nil
+		}
+
+		codeRepoBindings, err := c.codeRepoBindingUsecase.getCodeRepoBindings(*nodes, codeRepo.Name)
+		if err != nil {
+			return err
+		}
+		// No authorization under repository, allow skipping.
+		if len(codeRepoBindings) == 0 {
+			continue
+		}
+
+		refreshRequired := false
+		for _, codeRepoBinding := range codeRepoBindings {
+			// When the length of projects is 0, it represents product-level authorization.
+			// If product-level authorization or code repository project permissions are found, refresh them.
+			if len(codeRepoBinding.Spec.Projects) == 0 ||
+				utilstrings.ContainsString(codeRepoBinding.Spec.Projects, currentProjectName) ||
+				(codeRepo.Spec.Project != "" && codeRepo.Spec.Project == currentProjectName) {
+				refreshRequired = true
+				break
+			}
+		}
+
+		if refreshRequired {
+			err = c.codeRepoBindingUsecase.refreshAuthorization(ctx, *nodes, codeRepo.Name)
+			if err != nil {
+				if commonv1.IsNoAuthorization(err) {
+					errorMessages = append(errorMessages, err.Error())
+				} else {
+					return err
+				}
+			}
+		}
+	}
+
+	if len(errorMessages) > 0 {
+		return commonv1.ErrorRefreshPermissionsAccessDenied("failed to refersh permission, err: %s", strings.Join(errorMessages, "\n"))
+	}
+
+	return nil
 }
 
 func (c *CodeRepoUsecase) convertProductToGroupName(ctx context.Context, codeRepo *resourcev1alpha1.CodeRepo) error {
@@ -117,82 +384,13 @@ func (c *CodeRepoUsecase) convertProductToGroupName(ctx context.Context, codeRep
 	return nil
 }
 
-func (c *CodeRepoUsecase) nodeToResource(node *nodestree.Node) (*resourcev1alpha1.CodeRepo, error) {
+func nodeToCodeRepo(node *nodestree.Node) (*resourcev1alpha1.CodeRepo, error) {
 	r, ok := node.Content.(*resourcev1alpha1.CodeRepo)
 	if !ok {
 		return nil, fmt.Errorf("failed to get instance when get %s coderepo", node.Name)
 	}
 
 	return r, nil
-}
-
-type CodeRepoAndProject struct {
-	CodeRepo *resourcev1alpha1.CodeRepo
-	Project  *Project
-}
-
-func (c *CodeRepoUsecase) ListCodeRepos(ctx context.Context, productName string) ([]*CodeRepoAndProject, error) {
-	nodes, err := c.resourcesUsecase.List(ctx, productName, c)
-	if err != nil {
-		return nil, err
-	}
-
-	codeRepos, err := c.nodesToLists(*nodes)
-	if err != nil {
-		return nil, err
-	}
-
-	var cps []*CodeRepoAndProject
-	for _, codeRepo := range codeRepos {
-		err = c.convertProductToGroupName(ctx, codeRepo)
-		if err != nil {
-			return nil, err
-		}
-		pid := fmt.Sprintf("%s/%s", productName, codeRepo.Spec.RepoName)
-		project, err := c.codeRepo.GetCodeRepo(ctx, pid)
-		if err != nil {
-			return nil, err
-		}
-		cps = append(cps, &CodeRepoAndProject{
-			CodeRepo: codeRepo,
-			Project:  project,
-		})
-	}
-
-	return cps, nil
-}
-
-func (c *CodeRepoUsecase) SaveCodeRepo(ctx context.Context, options *BizOptions, data *CodeRepoData, gitOptions *GitCodeRepoOptions) error {
-	group, err := c.codeRepo.GetGroup(ctx, options.ProductName)
-	if err != nil {
-		return err
-	}
-
-	project, err := c.saveRepository(ctx, group, options.ResouceName, gitOptions)
-	if err != nil {
-		return err
-	}
-
-	data.Spec.Product = fmt.Sprintf("%s%d", _ProductPrefix, int(group.Id))
-	data.Name = fmt.Sprintf("%s%d", _RepoPrefix, int(project.Id))
-	resourceOptions := &resourceOptions{
-		resourceKind:      nodestree.CodeRepo,
-		productName:       options.ProductName,
-		insecureSkipCheck: options.InsecureSkipCheck,
-		operator:          c,
-	}
-	err = c.resourcesUsecase.Save(ctx, resourceOptions, data)
-	if err != nil {
-		return err
-	}
-
-	pid := fmt.Sprintf("%s/%s", group.Path, options.ResouceName)
-	err = c.SaveDeployKey(ctx, pid, project)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (c *CodeRepoUsecase) saveRepository(ctx context.Context, group *Group, resourceName string, gitOptions *GitCodeRepoOptions) (*Project, error) {
@@ -218,15 +416,14 @@ func (c *CodeRepoUsecase) saveRepository(ctx context.Context, group *Group, reso
 	return project, nil
 }
 
-func (c *CodeRepoUsecase) GetDeployKeyFromSecretRepo(ctx context.Context, repoName string) (*DeployKeySecretData, error) {
+func (c *CodeRepoUsecase) getDeployKeyFromSecretRepo(ctx context.Context, pid int, permission string) (*DeployKeySecretData, error) {
+	repoName := fmt.Sprintf("%s%d", RepoPrefix, pid)
 	gitType := c.config.Git.GitType
-	secretsEngine := SecretsEngine
-	secretsKey := SecretsKey
-	secretPath := fmt.Sprintf("%s/%s/%s/%s", gitType, repoName, "default", "readonly")
+	secretPath := fmt.Sprintf("%s/%s/%s/%s", gitType, repoName, DefaultUser, permission)
 	secretOptions := &SecretOptions{
 		SecretPath:   secretPath,
-		SecretEngine: secretsEngine,
-		SecretKey:    secretsKey,
+		SecretEngine: SecretsGitEngine,
+		SecretKey:    SecretsDeployKey,
 	}
 
 	deployKeySecretData, err := c.secretRepo.GetDeployKey(ctx, secretOptions)
@@ -237,59 +434,93 @@ func (c *CodeRepoUsecase) GetDeployKeyFromSecretRepo(ctx context.Context, repoNa
 	return deployKeySecretData, nil
 }
 
-func (c *CodeRepoUsecase) SaveDeployKey(ctx context.Context, pid interface{}, project *Project) error {
-	repoName := fmt.Sprintf("%s%d", _RepoPrefix, int(project.Id))
-	secretData, err := c.GetDeployKeyFromSecretRepo(ctx, repoName)
+func (c *CodeRepoUsecase) getAccessTokenFromSecretRepo(ctx context.Context, pid int) (*AccessTokenSecretData, error) {
+	repoName := fmt.Sprintf("%s%d", RepoPrefix, pid)
+	gitType := c.config.Git.GitType
+	secretPath := fmt.Sprintf("%s/%s/%s/%s", gitType, repoName, DefaultUser, AccessTokenName)
+	secretOptions := &SecretOptions{
+		SecretPath:   secretPath,
+		SecretEngine: SecretsGitEngine,
+		SecretKey:    SecretsAccessToken,
+	}
+
+	accessTokenSecretData, err := c.secretRepo.GetProjectAccessToken(ctx, secretOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	return accessTokenSecretData, nil
+}
+
+// saveDeployKey is to store the deploykey to git and the key repository separately
+// It takes in an argument pid of type int and an argument canPush of type bool,
+// and returns a project deploykey and error.
+func (c *CodeRepoUsecase) saveDeployKey(ctx context.Context, pid int, canPush bool) (*ProjectDeployKey, error) {
+	permission := string(ReadOnly)
+	if canPush {
+		permission = string(ReadWrite)
+	}
+
+	secretData, err := c.getDeployKeyFromSecretRepo(ctx, pid, permission)
 	if err != nil {
 		ok := commonv1.IsSecretNotFound(err)
 		if !ok {
-			return err
+			return nil, err
 		}
 
-		err := c.AddDeployKeyAndRemoveInvalidDeployKey(ctx, project)
+		projectDeployKey, err := c.saveDeployKeyToGitAndSecretRepo(ctx, pid, canPush, permission)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		return nil
+		return projectDeployKey, nil
 	}
 
 	projectDeployKey, err := c.codeRepo.GetDeployKey(ctx, pid, secretData.ID)
 	if err != nil {
 		ok := commonv1.IsDeploykeyNotFound(err)
 		if !ok {
-			return err
+			return nil, err
 		}
 
-		err = c.AddDeployKeyAndRemoveInvalidDeployKey(ctx, project)
+		projectDeployKey, err = c.saveDeployKeyToGitAndSecretRepo(ctx, pid, canPush, permission)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		return nil
+		return projectDeployKey, nil
 	}
 
-	if projectDeployKey.Key != secretData.Fingerprint {
-		err = c.AddDeployKeyAndRemoveInvalidDeployKey(ctx, project)
-		if err != nil {
-			return err
-		}
+	if projectDeployKey.Key == secretData.Fingerprint {
+		return projectDeployKey, nil
 	}
 
-	return nil
+	projectDeployKey, err = c.saveDeployKeyToGitAndSecretRepo(ctx, pid, canPush, permission)
+	if err != nil {
+		return nil, err
+	}
+
+	return projectDeployKey, nil
 }
 
-func (c *CodeRepoUsecase) removeInvalidDeploykey(ctx context.Context, project *Project, validDeployKeyID int) error {
-	keys, err := c.getAllDeployKeys(ctx, project)
+func (c *CodeRepoUsecase) removeInvalidDeploykey(ctx context.Context, pid int, projectDeployKeys ...*ProjectDeployKey) error {
+	validProjectDeployKeys := make(map[int]bool, len(projectDeployKeys))
+	for _, deployKey := range projectDeployKeys {
+		validProjectDeployKeys[deployKey.ID] = true
+	}
+
+	deployKeysToDelete, err := c.FilterProjectDeployKeysByIDList(ctx, pid, validProjectDeployKeys)
 	if err != nil {
 		return err
 	}
 
-	for _, key := range keys {
-		if key.ID != validDeployKeyID {
-			err := c.codeRepo.DeleteDeployKey(ctx, int(project.Id), key.ID)
-			if err != nil {
-				return err
+	for _, key := range deployKeysToDelete {
+		for _, projectDeployKey := range projectDeployKeys {
+			if key.Title == projectDeployKey.Title {
+				err := c.codeRepo.DeleteDeployKey(ctx, pid, key.ID)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -297,50 +528,234 @@ func (c *CodeRepoUsecase) removeInvalidDeploykey(ctx context.Context, project *P
 	return nil
 }
 
-func (c *CodeRepoUsecase) getAllDeployKeys(ctx context.Context, project *Project) ([]*ProjectDeployKey, error) {
-	opts := &ListOptions{
-		Page:    1,
-		PerPage: 10,
+func (c *CodeRepoUsecase) FilterProjectDeployKeysByIDList(ctx context.Context, pid int, idList map[int]bool) ([]*ProjectDeployKey, error) {
+	keys, err := GetAllDeployKeys(ctx, c.codeRepo, pid)
+	if err != nil {
+		return nil, err
 	}
-	allDeployKeys := []*ProjectDeployKey{}
+
+	var filteredDeployKeys []*ProjectDeployKey
+	for _, key := range keys {
+		if !idList[key.ID] {
+			filteredDeployKeys = append(filteredDeployKeys, key)
+		}
+	}
+
+	return filteredDeployKeys, nil
+}
+
+func (c *CodeRepoUsecase) saveAccessToken(ctx context.Context, pid int) (*ProjectAccessToken, error) {
+	accessTokenSecretData, err := c.getAccessTokenFromSecretRepo(ctx, pid)
+	if err != nil {
+		ok := commonv1.IsSecretNotFound(err)
+		if !ok {
+			return nil, err
+		}
+
+		projectAccessToken, err := c.createAccessTokenToGitAndSecretRepo(ctx, pid)
+		if err != nil {
+			return nil, err
+		}
+
+		return projectAccessToken, nil
+	}
+
+	projectAccessToken, err := c.codeRepo.GetProjectAccessToken(ctx, pid, accessTokenSecretData.ID)
+	if err != nil {
+		ok := commonv1.IsAccesstokenNotFound(err)
+		if !ok {
+			return nil, err
+		}
+
+		projectAccessToken, err := c.createAccessTokenToGitAndSecretRepo(ctx, pid)
+		if err != nil {
+			return nil, err
+		}
+
+		return projectAccessToken, nil
+	}
+
+	return projectAccessToken, nil
+}
+
+func (c *CodeRepoUsecase) removeInvalidProjectAccessTokens(ctx context.Context, pid int, projectAccessTokens ...*ProjectAccessToken) error {
+	validAccessTokens := make(map[int]bool, len(projectAccessTokens))
+	for _, projectAccessToken := range projectAccessTokens {
+		validAccessTokens[projectAccessToken.ID] = true
+	}
+
+	accessTokensToDelete, err := c.FilterAccessTokensByIDList(ctx, pid, validAccessTokens)
+	if err != nil {
+		return err
+	}
+
+	for _, token := range accessTokensToDelete {
+		for _, validToken := range projectAccessTokens {
+			if token.Name == validToken.Name {
+				err := c.codeRepo.DeleteProjectAccessToken(ctx, pid, token.ID)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (c *CodeRepoUsecase) FilterAccessTokensByIDList(ctx context.Context, pid int, idList map[int]bool) ([]*ProjectAccessToken, error) {
+	allAccessTokens, err := c.GetAllAccessTokens(ctx, pid)
+	if err != nil {
+		return nil, err
+	}
+
+	var filteredAccessTokens []*ProjectAccessToken
+	for _, token := range allAccessTokens {
+		if !idList[token.ID] {
+			filteredAccessTokens = append(filteredAccessTokens, token)
+		}
+	}
+
+	return filteredAccessTokens, nil
+}
+
+type listFunc func(ctx context.Context, pid int, opts *ListOptions) ([]interface{}, error)
+
+func getAllItems(ctx context.Context, pid int, opts *ListOptions, getAllFunc listFunc) ([]interface{}, error) {
+	allItems := []interface{}{}
+	var err error
 	for {
-		keys, err := c.codeRepo.ListDeployKeys(ctx, int(project.Id), opts)
+		var items []interface{}
+		items, err = getAllFunc(ctx, pid, opts)
 		if err != nil {
 			return nil, err
 		}
 		opts.Page += 1
-		allDeployKeys = append(allDeployKeys, keys...)
-		if len(keys) != opts.PerPage {
-			return allDeployKeys, nil
+		allItems = append(allItems, items...)
+		if len(items) != opts.PerPage {
+			break
 		}
+	}
+	return allItems, err
+}
+
+func (c *CodeRepoUsecase) GetAllAccessTokens(ctx context.Context, pid int) ([]*ProjectAccessToken, error) {
+	opts := &ListOptions{
+		Page:    1,
+		PerPage: 10,
+	}
+	items, err := getAllItems(ctx, pid, opts, c.ListAccessTokens)
+	if err != nil {
+		return nil, err
+	}
+	accessTokens := make([]*ProjectAccessToken, len(items))
+	for i, item := range items {
+		accessToken, ok := item.(*ProjectAccessToken)
+		if !ok {
+			return nil, fmt.Errorf("unexpected item type: %T", item)
+		}
+		accessTokens[i] = accessToken
+	}
+
+	return accessTokens, nil
+}
+
+func (c *CodeRepoUsecase) ListAccessTokens(ctx context.Context, pid int, opts *ListOptions) ([]interface{}, error) {
+	tokens, err := c.codeRepo.ListAccessTokens(ctx, pid, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	var interfaceSlice []interface{}
+	for _, v := range tokens {
+		interfaceSlice = append(interfaceSlice, interface{}(v))
+	}
+
+	return interfaceSlice, nil
+}
+
+func GetAllDeployKeys(ctx context.Context, codeRepo CodeRepo, pid int) ([]*ProjectDeployKey, error) {
+	opts := &ListOptions{
+		Page:    1,
+		PerPage: 10,
+	}
+	items, err := getAllItems(ctx, pid, opts, ListDeployKeys(ctx, codeRepo, pid, opts))
+	if err != nil {
+		return nil, err
+	}
+	allDeployKeys := make([]*ProjectDeployKey, len(items))
+	for i, item := range items {
+		accessToken, ok := item.(*ProjectDeployKey)
+		if !ok {
+			return nil, fmt.Errorf("unexpected item type: %T", item)
+		}
+		allDeployKeys[i] = accessToken
+	}
+
+	return allDeployKeys, nil
+}
+
+func ListDeployKeys(ctx context.Context, codeRepo CodeRepo, pid int, opts *ListOptions) listFunc {
+	return func(ctx context.Context, pid int, opts *ListOptions) ([]interface{}, error) {
+		keys, err := codeRepo.ListDeployKeys(ctx, pid, opts)
+		if err != nil {
+			return nil, err
+		}
+
+		var interfaceSlice []interface{}
+		for _, v := range keys {
+			interfaceSlice = append(interfaceSlice, interface{}(v))
+		}
+
+		return interfaceSlice, nil
 	}
 }
 
-func (c *CodeRepoUsecase) AddDeployKeyAndRemoveInvalidDeployKey(ctx context.Context, project *Project) error {
-	publicKey, privateKey, err := utilkey.GenerateKeyPair(c.config.Git.DefaultDeployKeyType)
+func (c *CodeRepoUsecase) saveDeployKeyToGitAndSecretRepo(ctx context.Context, pid int, canPush bool, permission string) (*ProjectDeployKey, error) {
+	title := fmt.Sprintf("%s%d-%s", RepoPrefix, pid, permission)
+
+	publicKey, privateKey, err := utilkey.GenerateKeyPair(c.config.Git.DefaultDeployKeyType, title)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	projectDeployKey, err := c.codeRepo.SaveDeployKey(ctx, publicKey, project)
+	projectDeployKey, err := c.codeRepo.SaveDeployKey(ctx, pid, title, canPush, publicKey)
 	if err != nil {
-		return err
-	}
-
-	err = c.removeInvalidDeploykey(ctx, project, projectDeployKey.ID)
-	if err != nil {
-		return err
+		return nil, err
 	}
 
 	extendKVs := make(map[string]string)
-	extendKVs[gitlabclient.FINGERPRINT] = projectDeployKey.Key
-	extendKVs[gitlabclient.DEPLOYID] = strconv.Itoa(projectDeployKey.ID)
-	err = c.secretRepo.SaveDeployKey(ctx, int(project.Id), string(privateKey), extendKVs)
+	extendKVs[Fingerprint] = projectDeployKey.Key
+	extendKVs[DeployKeyID] = strconv.Itoa(projectDeployKey.ID)
+	err = c.secretRepo.SaveDeployKey(ctx, convertRepoName(pid), string(privateKey), DefaultUser, permission, extendKVs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return projectDeployKey, nil
+}
+
+func (c *CodeRepoUsecase) createAccessTokenToGitAndSecretRepo(ctx context.Context, pid int) (*ProjectAccessToken, error) {
+	name := AccessTokenName
+	scopes := []string{string(APIPermission)}
+	accessLevel := AccessLevelValue(Maintainer)
+	projectToken, err := c.codeRepo.CreateProjectAccessToken(ctx, pid, &CreateProjectAccessTokenOptions{
+		Name:        &name,
+		Scopes:      &scopes,
+		AccessLevel: &accessLevel,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	extendKVs := make(map[string]string)
+	extendKVs[AccessTokenID] = strconv.Itoa(projectToken.ID)
+	err = c.secretRepo.SaveProjectAccessToken(ctx, convertRepoName(pid), string(projectToken.Token), DefaultUser, name, extendKVs)
+	if err != nil {
+		return nil, err
+	}
+
+	return projectToken, nil
 }
 
 func (c *CodeRepoUsecase) CreateNode(path string, data interface{}) (*nodestree.Node, error) {
@@ -385,19 +800,19 @@ func (c *CodeRepoUsecase) CreateNode(path string, data interface{}) (*nodestree.
 	}, nil
 }
 
-func (c *CodeRepoUsecase) UpdateNode(resourceNode *nodestree.Node, data interface{}) (*nodestree.Node, error) {
+func (c *CodeRepoUsecase) UpdateNode(node *nodestree.Node, data interface{}) (*nodestree.Node, error) {
 	val, ok := data.(*CodeRepoData)
 	if !ok {
-		return nil, fmt.Errorf("failed to get conderepo %s data when updating node", resourceNode.Name)
+		return nil, fmt.Errorf("failed to get conderepo %s data when updating node", node.Name)
 	}
 
 	if len(val.Spec.Webhook.Events) == 0 {
 		val.Spec.Webhook.Events = make([]string, 0)
 	}
 
-	codeRepo, ok := resourceNode.Content.(*resourcev1alpha1.CodeRepo)
+	codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
 	if !ok {
-		return nil, fmt.Errorf("failed to get coderepo %s when updating node", resourceNode.Name)
+		return nil, fmt.Errorf("wrong type found for %s node when checking CodeRepo type", node.Name)
 	}
 
 	codeRepo.Spec = val.Spec
@@ -410,8 +825,8 @@ func (c *CodeRepoUsecase) UpdateNode(resourceNode *nodestree.Node, data interfac
 		codeRepo.Spec.CodeRepoProvider = codeRepoProvider.Name
 	}
 
-	resourceNode.Content = codeRepo
-	return resourceNode, nil
+	node.Content = codeRepo
+	return node, nil
 }
 
 func (c *CodeRepoUsecase) CheckReference(options nodestree.CompareOptions, node *nodestree.Node, k8sClient client.Client) (bool, error) {
@@ -421,7 +836,7 @@ func (c *CodeRepoUsecase) CheckReference(options nodestree.CompareOptions, node 
 
 	codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
 	if !ok {
-		return true, fmt.Errorf("node %s resource type error", node.Name)
+		return true, fmt.Errorf("wrong type found for %s node when checking CodeRepo type", node.Name)
 	}
 
 	err := nodestree.CheckResourceSubdirectory(&options.Nodes, node)
@@ -478,50 +893,13 @@ func (c *CodeRepoUsecase) CreateResource(kind string) interface{} {
 	return &resourcev1alpha1.CodeRepo{}
 }
 
-func (c *CodeRepoUsecase) DeleteCodeRepo(ctx context.Context, options *BizOptions) error {
-	group, err := c.codeRepo.GetGroup(ctx, options.ProductName)
+func (c *CodeRepoUsecase) deleteDeployKeys(ctx context.Context, pid int) error {
+	projectDeployKeys, err := GetAllDeployKeys(ctx, c.codeRepo, pid)
 	if err != nil {
 		return err
 	}
-
-	projectPath := fmt.Sprintf("%s/%s", group.Path, options.ResouceName)
-	project, err := c.codeRepo.GetCodeRepo(ctx, projectPath)
-	e := errors.FromError(err)
-	if err != nil && e.Code != 404 {
-		return err
-	}
-
-	resourceOptions := &resourceOptions{
-		resourceKind:      nodestree.CodeRepo,
-		productName:       options.ProductName,
-		insecureSkipCheck: options.InsecureSkipCheck,
-		operator:          c,
-	}
-	err = c.resourcesUsecase.Delete(ctx, resourceOptions, func(nodes nodestree.Node) (string, error) {
-		if project != nil {
-			resourceName := fmt.Sprintf("%s%d", _RepoPrefix, int(project.Id))
-			return resourceName, nil
-		}
-
-		resourceName, err := c.getCodeRepoName(nodes, options.ResouceName)
-		if err != nil {
-			return "", err
-		}
-
-		return resourceName, nil
-	})
-	if err != nil {
-		return err
-	}
-
-	if err == nil {
-		err = c.codeRepo.DeleteCodeRepo(ctx, int(project.Id))
-		if err != nil {
-			return err
-		}
-
-		err = c.secretRepo.DeleteSecret(ctx, int(project.Id))
-		if err != nil {
+	for _, key := range projectDeployKeys {
+		if err := c.codeRepo.DeleteDeployKey(ctx, pid, key.ID); err != nil {
 			return err
 		}
 	}
@@ -529,13 +907,40 @@ func (c *CodeRepoUsecase) DeleteCodeRepo(ctx context.Context, options *BizOption
 	return nil
 }
 
-func (e *CodeRepoUsecase) nodesToLists(nodes nodestree.Node) ([]*resourcev1alpha1.CodeRepo, error) {
+func (c *CodeRepoUsecase) deleteReadOnlySecret(ctx context.Context, pid int) error {
+	err := c.secretRepo.DeleteSecret(ctx, pid, DefaultUser, string(ReadOnly))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *CodeRepoUsecase) deleteReadWriteSecret(ctx context.Context, pid int) error {
+	err := c.secretRepo.DeleteSecret(ctx, pid, DefaultUser, string(ReadWrite))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *CodeRepoUsecase) deleteAccessTokenSecret(ctx context.Context, pid int) error {
+	err := c.secretRepo.DeleteSecret(ctx, pid, DefaultUser, string(AccessTokenName))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type ListMatchOptions func(*resourcev1alpha1.CodeRepo) bool
+
+func nodesToCodeRepoists(nodes nodestree.Node, options ...ListMatchOptions) ([]*resourcev1alpha1.CodeRepo, error) {
 	var codeReposDir *nodestree.Node
 	var resources []*resourcev1alpha1.CodeRepo
+	var filteredRepos []*resourcev1alpha1.CodeRepo
 
-	for _, child := range nodes.Children {
-		if child.Name == _CodeReposSubDir {
-			codeReposDir = child
+	for _, childNode := range nodes.Children {
+		if childNode.Name == _CodeReposSubDir {
+			codeReposDir = childNode
 			break
 		}
 	}
@@ -546,13 +951,32 @@ func (e *CodeRepoUsecase) nodesToLists(nodes nodestree.Node) ([]*resourcev1alpha
 
 	for _, subNode := range codeReposDir.Children {
 		for _, node := range subNode.Children {
-			r, err := e.nodeToResource(node)
+			if node.Kind != nodestree.CodeRepo {
+				continue
+			}
+
+			resource, err := nodeToCodeRepo(node)
 			if err != nil {
 				return nil, err
 			}
 
-			resources = append(resources, r)
+			matching := false
+			for _, fn := range options {
+				if fn(resource) {
+					filteredRepos = append(filteredRepos, resource)
+					matching = true
+					break
+				}
+			}
+
+			if !matching {
+				resources = append(resources, resource)
+			}
 		}
+	}
+
+	if len(filteredRepos) > 0 {
+		return filteredRepos, nil
 	}
 
 	return resources, nil
@@ -610,4 +1034,8 @@ func getCodeRepoProvider(k8sClient client.Client, namespace string) (*resourcev1
 	}
 
 	return nil, nil
+}
+
+func convertRepoName(id int) string {
+	return fmt.Sprintf("repo-%d", id)
 }

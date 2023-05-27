@@ -15,9 +15,9 @@
 package cluster
 
 type ClusterRegistrationOperator interface {
-	InitializeDependencies(param *ClusterRegistrationParam) error
-	GetArgocdURL() (string, error)
-	GetTraefikNodePortToHostCluster(tenantLocalPath, hostCluster string) (int, error)
+	InitializeClusterConfig(param *ClusterRegistrationParam) error
 	Save() error
 	Remove() error
+	GetArgocdURL() (string, error)
+	GetTektonOAuthURL() (string, error)
 }

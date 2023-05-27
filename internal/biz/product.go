@@ -17,7 +17,6 @@ package biz
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	errors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/log"
@@ -40,6 +39,16 @@ type Group struct {
 	ParentId    int32
 }
 
+type ProjectNamespace struct {
+	ID        int
+	Name      string
+	Path      string
+	Kind      string
+	FullPath  string
+	AvatarURL string
+	WebURL    string
+}
+
 type Project struct {
 	Id                int32
 	Name              string
@@ -50,6 +59,7 @@ type Project struct {
 	SshUrlToRepo      string
 	HttpUrlToRepo     string
 	PathWithNamespace string
+	Namespace         *ProjectNamespace
 }
 
 // ProductUsecase is a Product usecase.
@@ -212,29 +222,16 @@ func (p *ProductUsecase) saveDefaultProject(ctx context.Context, group *Group) (
 }
 
 func (p *ProductUsecase) grantAuthorizationDefaultProject(ctx context.Context, project *Project) error {
-	err := p.codeRepoUsecase.SaveDeployKey(ctx, int(project.Id), project)
+	projectDeployKey, err := p.codeRepoUsecase.saveDeployKey(ctx, int(project.Id), false)
 	if err != nil {
 		return err
 	}
 
-	err = p.secretRepo.AuthorizationSecret(ctx, int(project.Id), _ProductDestUser)
-	if err != nil {
+	if err := p.codeRepoUsecase.removeInvalidDeploykey(ctx, int(project.Id), projectDeployKey); err != nil {
 		return err
 	}
 
-	return nil
-}
-
-func (p *ProductUsecase) AddDeployKey(ctx context.Context, project *Project, publicKey, privateKey []byte) error {
-	projectDeployKey, err := p.codeRepo.SaveDeployKey(ctx, publicKey, project)
-	if err != nil {
-		return err
-	}
-
-	extendKVs := make(map[string]string)
-	extendKVs["fingerprint"] = projectDeployKey.Key
-	extendKVs["id"] = strconv.Itoa(projectDeployKey.ID)
-	err = p.secretRepo.SaveDeployKey(ctx, int(project.Id), string(privateKey), extendKVs)
+	err = p.secretRepo.AuthorizationSecret(ctx, int(project.Id), _ProductDestUser, string(p.configs.Git.GitType), p.configs.Secret.Vault.MountPath)
 	if err != nil {
 		return err
 	}
@@ -264,7 +261,7 @@ func (p *ProductUsecase) DeleteProduct(ctx context.Context, productID string) er
 			return err
 		}
 
-		err = p.secretRepo.DeleteSecret(ctx, int(project.Id))
+		err = p.secretRepo.DeleteSecret(ctx, int(project.Id), DefaultUser, string(ReadOnly))
 		if err != nil {
 			return err
 		}

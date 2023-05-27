@@ -1,3 +1,17 @@
+// Copyright 2023 Nautes Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 syntax = "proto3";
 
 package api.cluster.v1;
@@ -56,6 +70,12 @@ message SaveRequest {
     Traefik traefik = 9 [json_name = "traefik"];
     // kubeconfig specifies the Kubeconfig file of the cluster.
     string kubeconfig = 10 [json_name = "kubeconfig"];
+    // pipeline or deployment, when the cluster usage is 'worker', the WorkType is required.
+    string workerType = 11 [json_name = "worker_type"];
+    // PrimaryDomain is used to build the domain of components within the cluster.
+    string primaryDomain = 12 [json_name = "primary_domain"];
+    // TektonHost is the domain for the tekton dashboard, and it must be a subdomain of the PrimaryDomain
+    string tektonHost = 13 [json_name = "tekton_host"];
   }
   // clusterName specifies the name of the cluster.
   string clusterName = 2 [json_name = "cluster_name"];

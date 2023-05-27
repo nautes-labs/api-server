@@ -34,6 +34,13 @@ type GitlabOperator interface {
 
 	GetDeployKey(pid interface{}, deployKeyID int, options ...gitlab.RequestOptionFunc) (key *gitlab.ProjectDeployKey, res *gitlab.Response, err error)
 	ListDeployKeys(pid interface{}, opt *gitlab.ListProjectDeployKeysOptions, options ...gitlab.RequestOptionFunc) (keys []*gitlab.ProjectDeployKey, res *gitlab.Response, err error)
+	ListAllDeployKeys(opt *gitlab.ListInstanceDeployKeysOptions, options ...gitlab.RequestOptionFunc) (keys []*gitlab.InstanceDeployKey, res *gitlab.Response, err error)
 	AddDeployKey(pid interface{}, opt *gitlab.AddDeployKeyOptions, options ...gitlab.RequestOptionFunc) (key *gitlab.ProjectDeployKey, res *gitlab.Response, err error)
 	DeleteDeployKey(pid interface{}, deployKey int, options ...gitlab.RequestOptionFunc) (res *gitlab.Response, err error)
+	EnableProjectDeployKey(pid interface{}, deployKey int, options ...gitlab.RequestOptionFunc) (key *gitlab.ProjectDeployKey, res *gitlab.Response, err error)
+	UpdateProjectDeployKey(pid interface{}, deployKey int, opt *gitlab.UpdateDeployKeyOptions, options ...gitlab.RequestOptionFunc) (key *gitlab.ProjectDeployKey, res *gitlab.Response, err error)
+	GetProjectAccessToken(pid interface{}, id int, options ...gitlab.RequestOptionFunc) (token *gitlab.ProjectAccessToken, res *gitlab.Response, err error)
+	ListProjectAccessToken(pid interface{}, opt *gitlab.ListProjectAccessTokensOptions, options ...gitlab.RequestOptionFunc) (tokens []*gitlab.ProjectAccessToken, res *gitlab.Response, err error)
+	CreateProjectAccessToken(pid interface{}, opt *gitlab.CreateProjectAccessTokenOptions, options ...gitlab.RequestOptionFunc) (token *gitlab.ProjectAccessToken, res *gitlab.Response, err error)
+	DeleteProjectAccessToken(pid interface{}, id int, options ...gitlab.RequestOptionFunc) (res *gitlab.Response, err error)
 }

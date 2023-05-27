@@ -32,34 +32,60 @@ func NewProjectPipelineRuntimeService(projectPipelineRuntime *biz.ProjectPipelin
 	return &ProjectPipelineRuntimeService{projectPipelineRuntime: projectPipelineRuntime}
 }
 
-func (s *ProjectPipelineRuntimeService) CovertCodeRepoValueToReply(projectPipelineRuntime *resourcev1alpha1.ProjectPipelineRuntime, productName string) *projectpipelineruntimev1.GetReply {
+func (s *ProjectPipelineRuntimeService) covertCodeRepoValueToReply(projectPipelineRuntime *resourcev1alpha1.ProjectPipelineRuntime, productName string) *projectpipelineruntimev1.GetReply {
 	var pipelines []*projectpipelineruntimev1.Pipeline
-	var eventSources []*projectpipelineruntimev1.EventSource
 	for _, pipeline := range projectPipelineRuntime.Spec.Pipelines {
-		for _, eventSource := range pipeline.EventSources {
-			eventSources = append(eventSources, &projectpipelineruntimev1.EventSource{
-				Webhook: eventSource.Webhook,
-				Calendar: &projectpipelineruntimev1.CalendarEventSource{
-					Schedule:       eventSource.Calendar.Schedule,
-					Interval:       eventSource.Calendar.Interval,
-					ExclusionDates: eventSource.Calendar.ExclusionDates,
-					Timezone:       eventSource.Calendar.Timezone,
-				},
-			})
-		}
 		pipelines = append(pipelines, &projectpipelineruntimev1.Pipeline{
-			Name:   pipeline.Name,
-			Branch: pipeline.Branch,
-			Path:   pipeline.Path,
+			Name:  pipeline.Name,
+			Label: pipeline.Label,
+			Path:  pipeline.Path,
 		})
 	}
+
+	var eventSources []*projectpipelineruntimev1.EventSource
+	for _, source := range projectPipelineRuntime.Spec.EventSources {
+		event := &projectpipelineruntimev1.EventSource{}
+		if source.Name != "" {
+			event.Name = source.Name
+		}
+
+		if source.Gitlab != nil {
+			event.Gitlab = &projectpipelineruntimev1.Gitlab{
+				RepoName: source.Gitlab.RepoName,
+				Revision: source.Gitlab.Revision,
+				Events:   source.Gitlab.Events,
+			}
+		}
+
+		if event.Calendar != nil {
+			event.Calendar = &projectpipelineruntimev1.Calendar{
+				Schedule:       source.Calendar.Schedule,
+				Interval:       source.Calendar.Interval,
+				ExclusionDates: source.Calendar.ExclusionDates,
+				Timezone:       source.Calendar.Timezone,
+			}
+		}
+
+		eventSources = append(eventSources, event)
+	}
+
+	var pipelineTriggers []*projectpipelineruntimev1.PipelineTriggers
+	for _, trigger := range projectPipelineRuntime.Spec.PipelineTriggers {
+		pipelineTriggers = append(pipelineTriggers, &projectpipelineruntimev1.PipelineTriggers{
+			EventSource: trigger.EventSource,
+			Pipeline:    trigger.Pipeline,
+			Revision:    trigger.Revision,
+		})
+	}
+
 	return &projectpipelineruntimev1.GetReply{
-		Name:           projectPipelineRuntime.Name,
-		Project:        projectPipelineRuntime.Spec.Project,
-		PipelineSource: projectPipelineRuntime.Spec.PipelineSource,
-		CodeSources:    projectPipelineRuntime.Spec.CodeSources,
-		Destination:    projectPipelineRuntime.Spec.Destination,
-		Pipelines:      pipelines,
+		Name:             projectPipelineRuntime.Name,
+		Project:          projectPipelineRuntime.Spec.Project,
+		PipelineSource:   projectPipelineRuntime.Spec.PipelineSource,
+		EventSources:     eventSources,
+		Pipelines:        pipelines,
+		PipelineTriggers: pipelineTriggers,
+		Destination:      projectPipelineRuntime.Spec.Destination,
 	}
 }
 
@@ -69,7 +95,7 @@ func (s *ProjectPipelineRuntimeService) GetProjectPipelineRuntime(ctx context.Co
 		return nil, err
 	}
 
-	return s.CovertCodeRepoValueToReply(runtime, req.ProductName), nil
+	return s.covertCodeRepoValueToReply(runtime, req.ProductName), nil
 }
 
 func (s *ProjectPipelineRuntimeService) ListProjectPipelineRuntimes(ctx context.Context, req *projectpipelineruntimev1.ListsRequest) (*projectpipelineruntimev1.ListsReply, error) {
@@ -80,7 +106,7 @@ func (s *ProjectPipelineRuntimeService) ListProjectPipelineRuntimes(ctx context.
 
 	var items []*projectpipelineruntimev1.GetReply
 	for _, runtime := range runtimes {
-		items = append(items, s.CovertCodeRepoValueToReply(runtime, req.ProductName))
+		items = append(items, s.covertCodeRepoValueToReply(runtime, req.ProductName))
 	}
 
 	return &projectpipelineruntimev1.ListsReply{
@@ -92,11 +118,13 @@ func (s *ProjectPipelineRuntimeService) SaveProjectPipelineRuntime(ctx context.C
 	data := &biz.ProjectPipelineRuntimeData{
 		Name: req.ProjectPipelineRuntimeName,
 		Spec: resourcev1alpha1.ProjectPipelineRuntimeSpec{
-			Project:        req.Body.Project,
-			PipelineSource: req.Body.PipelineSource,
-			CodeSources:    req.Body.CodeSources,
-			Destination:    req.Body.Destination,
-			Pipelines:      s.getResourcePipelines(req.Body.Pipelines),
+			Project:          req.Body.Project,
+			PipelineSource:   req.Body.PipelineSource,
+			EventSources:     s.convertEventSources(req.Body.EventSources),
+			Pipelines:        s.convertPipelines(req.Body.Pipelines),
+			PipelineTriggers: s.convertPipelineTriggers(req.Body.PipelineTriggers),
+			Destination:      req.Body.Destination,
+			Isolation:        req.Body.Isolation,
 		},
 	}
 
@@ -115,19 +143,27 @@ func (s *ProjectPipelineRuntimeService) SaveProjectPipelineRuntime(ctx context.C
 	}, nil
 }
 
-func (s *ProjectPipelineRuntimeService) getResourcePipelines(pipelines []*projectpipelineruntimev1.Pipeline) []resourcev1alpha1.Pipeline {
-	resourcePipelines := []resourcev1alpha1.Pipeline{}
-	for _, pipeline := range pipelines {
-		resourcePipeline := resourcev1alpha1.Pipeline{
-			Name:   pipeline.Name,
-			Branch: pipeline.Branch,
-			Path:   pipeline.Path,
+func (s *ProjectPipelineRuntimeService) convertPipelineTriggers(triggers []*projectpipelineruntimev1.PipelineTriggers) (pipelineTriggers []resourcev1alpha1.PipelineTrigger) {
+	for _, trigger := range triggers {
+		resourcePipelineTrigger := resourcev1alpha1.PipelineTrigger{
+			EventSource: trigger.EventSource,
+			Pipeline:    trigger.Pipeline,
+			Revision:    trigger.Revision,
 		}
 
-		for _, e := range pipeline.EventSources {
-			resourcePipeline.EventSources = append(resourcePipeline.EventSources, resourcev1alpha1.EventSource{
-				Webhook: e.Webhook,
-			})
+		pipelineTriggers = append(pipelineTriggers, resourcePipelineTrigger)
+	}
+
+	return pipelineTriggers
+}
+
+func (s *ProjectPipelineRuntimeService) convertPipelines(pipelines []*projectpipelineruntimev1.Pipeline) (resourcePipelines []resourcev1alpha1.Pipeline) {
+
+	for _, pipeline := range pipelines {
+		resourcePipeline := resourcev1alpha1.Pipeline{
+			Name:  pipeline.Name,
+			Label: pipeline.Label,
+			Path:  pipeline.Path,
 		}
 
 		resourcePipelines = append(resourcePipelines, resourcePipeline)
@@ -135,6 +171,40 @@ func (s *ProjectPipelineRuntimeService) getResourcePipelines(pipelines []*projec
 	}
 
 	return resourcePipelines
+}
+
+func (s *ProjectPipelineRuntimeService) convertEventSources(events []*projectpipelineruntimev1.EventSource) (eventSources []resourcev1alpha1.EventSource) {
+	for _, eventSource := range events {
+		var gitlab *resourcev1alpha1.Gitlab
+		var calendar *resourcev1alpha1.Calendar
+
+		if eventSource.Gitlab != nil {
+			gitlab = &resourcev1alpha1.Gitlab{
+				RepoName: eventSource.Gitlab.RepoName,
+				Revision: eventSource.Gitlab.Revision,
+				Events:   eventSource.Gitlab.Events,
+			}
+		}
+
+		if eventSource.Calendar != nil {
+			calendar = &resourcev1alpha1.Calendar{
+				Schedule:       eventSource.Calendar.Schedule,
+				Interval:       eventSource.Calendar.Interval,
+				ExclusionDates: eventSource.Calendar.ExclusionDates,
+				Timezone:       eventSource.Calendar.Timezone,
+			}
+		}
+
+		resourceEventSource := resourcev1alpha1.EventSource{
+			Name:     eventSource.Name,
+			Gitlab:   gitlab,
+			Calendar: calendar,
+		}
+
+		eventSources = append(eventSources, resourceEventSource)
+	}
+
+	return eventSources
 }
 
 func (s *ProjectPipelineRuntimeService) DeleteProjectPipelineRuntime(ctx context.Context, req *projectpipelineruntimev1.DeleteRequest) (*projectpipelineruntimev1.DeleteReply, error) {

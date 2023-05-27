@@ -51,7 +51,7 @@ func createDeploymentRuntimeResource(name, repoID string) *resourcev1alpha1.Depl
 func createFakeDeploymentRuntimeNode(resource *resourcev1alpha1.DeploymentRuntime) *nodestree.Node {
 	return &nodestree.Node{
 		Name:    resource.Name,
-		Path:    fmt.Sprintf("%s/%s/%s.yaml", localRepositaryPath, _RuntimesDir, resource.Name),
+		Path:    fmt.Sprintf("%s/%s/%s.yaml", localRepositoryPath, _RuntimesDir, resource.Name),
 		Level:   3,
 		Content: resource,
 		Kind:    nodestree.DeploymentRuntime,
@@ -61,7 +61,7 @@ func createFakeDeploymentRuntimeNode(resource *resourcev1alpha1.DeploymentRuntim
 func createFakeDeployRuntimeNodes(node *nodestree.Node) nodestree.Node {
 	fakeSubNode := &nodestree.Node{
 		Name:     nodestree.DeploymentRuntime,
-		Path:     fmt.Sprintf("%s/%s", localRepositaryPath, _RuntimesDir),
+		Path:     fmt.Sprintf("%s/%s", localRepositoryPath, _RuntimesDir),
 		IsDir:    true,
 		Level:    2,
 		Content:  node,
@@ -82,7 +82,7 @@ var _ = Describe("Get deployment runtime", func() {
 	var (
 		resourceName = "runtime1"
 		toGetProject = &Project{Id: 1222, HttpUrlToRepo: fmt.Sprintf("ssh://git@gitlab.io/nautes-labs/%s.git", resourceName)}
-		repoID       = fmt.Sprintf("%s%d", _RepoPrefix, int(toGetProject.Id))
+		repoID       = fmt.Sprintf("%s%d", RepoPrefix, int(toGetProject.Id))
 		fakeResource = createDeploymentRuntimeResource(resourceName, repoID)
 		fakeNode     = createFakeDeploymentRuntimeNode(fakeResource)
 		fakeNodes    = createFakeDeployRuntimeNodes(fakeNode)
@@ -111,7 +111,7 @@ var _ = Describe("List deployment runtimes", func() {
 	var (
 		resourceName = "runtime1"
 		toGetProject = &Project{Id: 1222, HttpUrlToRepo: fmt.Sprintf("ssh://git@gitlab.io/nautes-labs/%s.git", resourceName)}
-		repoID       = fmt.Sprintf("%s%d", _RepoPrefix, int(toGetProject.Id))
+		repoID       = fmt.Sprintf("%s%d", RepoPrefix, int(toGetProject.Id))
 		fakeResource = createDeploymentRuntimeResource(resourceName, repoID)
 		fakeNode     = createFakeDeploymentRuntimeNode(fakeResource)
 		fakeNodes    = createFakeDeployRuntimeNodes(fakeNode)
@@ -158,7 +158,7 @@ var _ = Describe("Save deployment runtime", func() {
 	var (
 		resourceName          = "runtime1"
 		toGetProject          = &Project{Id: 1222, HttpUrlToRepo: fmt.Sprintf("ssh://git@gitlab.io/nautes-labs/%s.git", resourceName)}
-		repoID                = fmt.Sprintf("%s%d", _RepoPrefix, int(toGetProject.Id))
+		repoID                = fmt.Sprintf("%s%d", RepoPrefix, int(toGetProject.Id))
 		fakeResource          = createDeploymentRuntimeResource(resourceName, repoID)
 		fakeNode              = createFakeDeploymentRuntimeNode(fakeResource)
 		fakeNodes             = createFakeDeployRuntimeNodes(fakeNode)
@@ -187,7 +187,7 @@ var _ = Describe("Save deployment runtime", func() {
 		Expect(err).Should(HaveOccurred())
 	}))
 
-	It("will created successfully", testUseCase.CreateResourceSuccess(fakeNodes, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
+	It("will created successfully", testUseCase.CreateResourceSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), pid).Return(project, nil)
 		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
 		err := biz.SaveDeploymentRuntime(context.Background(), bizOptions, deploymentRuntimeData)
@@ -233,7 +233,7 @@ var _ = Describe("Save deployment runtime", func() {
 		codeRepo.EXPECT().GetCurrentUser(gomock.Any()).Return(_GitUser, _GitEmail, nil)
 
 		gitRepo := NewMockGitRepo(ctl)
-		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositaryPath, nil)
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil)
 		firstFetch := gitRepo.EXPECT().Fetch(gomock.Any(), gomock.Any(), "origin").Return("any", nil)
 		secondFetch := gitRepo.EXPECT().Fetch(gomock.Any(), gomock.Any()).Return("any", nil).After(firstFetch)
 		thirdFetch := gitRepo.EXPECT().Fetch(gomock.Any(), gomock.Any(), "origin").Return("any", nil).After(secondFetch)
@@ -241,18 +241,19 @@ var _ = Describe("Save deployment runtime", func() {
 		fifthFetch := gitRepo.EXPECT().Fetch(gomock.Any(), gomock.Any(), "origin").Return("any", nil).After(fouthFetch)
 		gitRepo.EXPECT().Fetch(gomock.Any(), gomock.Any()).Return("any", nil).After(fifthFetch)
 		gitRepo.EXPECT().Diff(gomock.Any(), gomock.Any(), "main", "remotes/origin/main").Return("any", nil).AnyTimes()
-		gitRepo.EXPECT().Merge(gomock.Any(), localRepositaryPath).Return("successfully auto merge", nil).AnyTimes()
+		gitRepo.EXPECT().Merge(gomock.Any(), localRepositoryPath).Return("successfully auto merge", nil).AnyTimes()
 		gitRepo.EXPECT().Push(gomock.Any(), gomock.Any()).Return(fmt.Errorf("unable to push code")).AnyTimes()
-		gitRepo.EXPECT().Commit(localRepositaryPath, gomock.Any()).AnyTimes()
+		gitRepo.EXPECT().Commit(localRepositoryPath, gomock.Any()).AnyTimes()
 
 		in := nodestree.NewMockNodesTree(ctl)
 		in.EXPECT().AppendOperators(gomock.Any())
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, nil, gitRepo, in, nautesConfigs)
 		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, in, resourcesUsecase)
-		in.EXPECT().Load(gomock.Eq(localRepositaryPath)).Return(emptyNodes, nil)
+		in.EXPECT().Load(gomock.Eq(localRepositoryPath)).Return(emptyNodes, nil)
 		in.EXPECT().Compare(gomock.Any()).Return(nil).AnyTimes()
 		in.EXPECT().GetNode(gomock.Any(), gomock.Any(), gomock.Any()).Return(fakeNode)
 		in.EXPECT().InsertNodes(gomock.Any(), gomock.Any()).Return(&fakeNodes, nil)
+		in.EXPECT().FilterIgnoreByLayout(localRepositoryPath).Return(nil)
 
 		err := biz.SaveDeploymentRuntime(context.Background(), bizOptions, deploymentRuntimeData)
 		Expect(err).Should(HaveOccurred())
@@ -359,7 +360,7 @@ var _ = Describe("Delete deployment runtime", func() {
 	var (
 		resourceName = "runtime1"
 		toGetProject = &Project{Id: 1222, HttpUrlToRepo: fmt.Sprintf("ssh://git@gitlab.io/nautes-labs/%s.git", resourceName)}
-		repoID       = fmt.Sprintf("%s%d", _RepoPrefix, int(toGetProject.Id))
+		repoID       = fmt.Sprintf("%s%d", RepoPrefix, int(toGetProject.Id))
 		fakeResource = createDeploymentRuntimeResource(resourceName, repoID)
 		fakeNode     = createFakeDeploymentRuntimeNode(fakeResource)
 		fakeNodes    = createFakeDeployRuntimeNodes(fakeNode)
