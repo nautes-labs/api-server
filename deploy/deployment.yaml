@@ -41,16 +41,12 @@ spec:
           postStart:
             exec:
               command:
-                - /bin/sh
-                - -c
-                - |
-                  cp /opt/nautes/out/pki/ca.crt /usr/local/share/ca-certificates/
-                  update-ca-certificates
+                ['/bin/sh', "-c", 'update-ca-certificates']
         ports:
         - containerPort: 8000
         volumeMounts:
         - name: api-server-secret
-          mountPath: /opt/nautes/out/pki
+          mountPath: /usr/local/share/ca-certificates
         - name: resources-layout
           mountPath: /usr/local/share/
           readOnly: true
