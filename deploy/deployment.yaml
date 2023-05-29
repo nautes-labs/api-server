@@ -52,6 +52,8 @@ spec:
           readOnly: true
         - name: api-server-log
           mountPath: /log
+        - name: ca-certs
+          mountPath: /usr/local/share/ca-certificates/
       volumes:
       - name: resources-layout
         configMap:
@@ -69,3 +71,5 @@ spec:
       - name: api-server-log
         persistentVolumeClaim:
           claimName: api-server-log
+      - name: ca-certs
+        emptyDir: {}
