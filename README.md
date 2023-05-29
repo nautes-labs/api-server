@@ -50,13 +50,13 @@ https://$api-server:$port/q/swagger-ui
 kubectl create cm nautes-configs -n nautes
 ```
 
-2、访问组件的证书
+2、访问其他组件的证书
 
-当[环境安装]([安装 | Nautes](https://nautes.io/guide/user-guide/installation.html#%E5%87%86%E5%A4%87%E7%8E%AF%E5%A2%83))完成后，将`/opt/nautes/out/pki`路径下的证书赋值到` /usr/local/share/ca-certificates`，用于存在访问其他组件的证书和签发证书的CA
+默认情况下，[安装环境](https://nautes.io/guide/user-guide/installation.html#%E5%87%86%E5%A4%87%E7%8E%AF%E5%A2%83)完成后，在`/opt/nautes/out/pki`目录下会生成用于存在访问其他组件的证书和签发证书的CA，请检查该目录下是否包含`api-server.key`，`ca.crt`等证书文件
 
-3、设置资源布局的配置
+3、设置环境变量
 
-该文件位于当前项目下的 `pkg/nodestree/sample/resources.yaml`，通过设置环境变量的方式，项目启动会自动加载该文件
+api-server会根据一份资源布局配置文件来校验和生成资源。本地开发时，可以通过设置环境变量的方式启动项目，该文件位于当前项目下的 `pkg/nodestree/sample/resources.yaml`
 
 ```
 export RESOURCES_LAYOUT = ${workspaceFolder}/pkg/nodestree/sample/resources.yaml
