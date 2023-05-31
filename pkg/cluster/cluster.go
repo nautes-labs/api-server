@@ -112,7 +112,7 @@ func (cr *ClusterRegistration) InitializeClusterConfig(param *ClusterRegistratio
 	return nil
 }
 
-func (cr *ClusterRegistration) getPojectPipelineItems(param *ClusterRegistrationParam, hostCluster *resourcev1alpha1.Cluster) ([]*ProjectPipelineItem, error) {
+func (cr *ClusterRegistration) getProjectPipelineItems(param *ClusterRegistrationParam, hostCluster *resourcev1alpha1.Cluster) ([]*ProjectPipelineItem, error) {
 	var hostClusterName string
 	var httpsNodePort int
 
@@ -126,7 +126,7 @@ func (cr *ClusterRegistration) getPojectPipelineItems(param *ClusterRegistration
 		return nil, err
 	}
 
-	ingressFilePath := concatTektonDashborardFilePath(param.TenantConfigRepoLocalPath, hostClusterName)
+	ingressFilePath := concatTektonDashboardFilePath(param.TenantConfigRepoLocalPath, hostClusterName)
 	_, err = os.Stat(ingressFilePath)
 	if err != nil && os.IsNotExist(err) {
 		return nil, nil
@@ -162,7 +162,7 @@ func readIngressFileContent(path string) (string, error) {
 func ConvertProjectPipeline(ingresses []Ingress, hostClusterName string, httpsNodePort int) []*ProjectPipelineItem {
 	projectPipelineItems := make([]*ProjectPipelineItem, 0)
 	for _, ingress := range ingresses {
-		re := regexp.MustCompile(`^(.*?)-tekton-dashborard$`)
+		re := regexp.MustCompile(`^(.*?)-tekton-Dashboard$`)
 		match := re.FindStringSubmatch(ingress.Metadata.Name)
 		name := match[1]
 		projectPipelineItems = append(projectPipelineItems, &ProjectPipelineItem{
@@ -334,7 +334,7 @@ func (cr *ClusterRegistration) getHostCluster(param *ClusterRegistrationParam, c
 		oauthURL = fmt.Sprintf("https://auth.%s.%s:%d/oauth2/callback", cluster.Name, primaryDomain, httpsNodePort)
 	}
 
-	projectPipelineItems, err := cr.getPojectPipelineItems(param, cluster)
+	projectPipelineItems, err := cr.getProjectPipelineItems(param, cluster)
 	if err != nil {
 		return nil, err
 	}

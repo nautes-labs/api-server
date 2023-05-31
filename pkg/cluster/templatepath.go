@@ -21,7 +21,7 @@ const (
 	_TenantProductionDir        = "tenant/production"
 	_HostClusterAppSetFile      = "tenant/production/host-cluster-appset.yaml"
 	_HostClusterAppSetFileName  = "host-cluster-appset.yaml"
-	_IngressTektonDashboardFile = "oauth2-proxy/overlays/production/ingress-tekton-dashborard.yaml"
+	_IngressTektonDashboardFile = "oauth2-proxy/overlays/production/ingress-tekton-Dashboard.yaml"
 )
 
 func concatHostClustesrDir(root string) string {
@@ -44,7 +44,7 @@ func concatSpecifiedVclustersDir(root, hostClusterName string) string {
 	return fmt.Sprintf("%s/%s/%s/%s", root, _HostClustersDir, hostClusterName, _VclustersDir)
 }
 
-func concatTektonDashborardFilePath(root, hostCluster string) string {
+func concatTektonDashboardFilePath(root, hostCluster string) string {
 	return fmt.Sprintf("%s/%s/%s/%s", root, _HostClustersDir, hostCluster, _IngressTektonDashboardFile)
 }
 

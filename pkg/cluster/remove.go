@@ -200,7 +200,7 @@ func (cr *ClusterRegistration) FilterDeletedClusters() error {
 }
 
 func (cr *ClusterRegistration) FilterDeletedProjectPipelineItem() error {
-	path := fmt.Sprintf("%s/%s/production/ingress-tekton-dashborard.yaml", concatHostClustesrDir(cr.TenantConfigRepoLocalPath), cr.Vcluster.HostCluster.Name)
+	path := fmt.Sprintf("%s/%s/production/ingress-tekton-Dashboard.yaml", concatHostClustesrDir(cr.TenantConfigRepoLocalPath), cr.Vcluster.HostCluster.Name)
 
 	projectPipelineItems := make([]*ProjectPipelineItem, 0)
 	_, err := os.Stat(path)
@@ -220,7 +220,7 @@ func (cr *ClusterRegistration) FilterDeletedProjectPipelineItem() error {
 	}
 	for _, ingress := range ingresses {
 		item := &ProjectPipelineItem{}
-		re := regexp.MustCompile(`(.+?)-tekton-dashborard`)
+		re := regexp.MustCompile(`(.+?)-tekton-Dashboard`)
 		matches := re.FindStringSubmatch(ingress.Metadata.Name)
 		if len(matches) == 0 {
 			return fmt.Errorf("the ingress name %s may be modified and do not conform to specification", ingress.Metadata.Name)
