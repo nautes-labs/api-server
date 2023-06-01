@@ -73,9 +73,10 @@ func (s *ClusterService) SaveCluster(ctx context.Context, req *clusterv1.SaveReq
 		}
 	}
 
-	traefik := &ClusterRegistration.Traefik{
-		HttpNodePort:  req.Body.Traefik.HttpNodePort,
-		HttpsNodePort: req.Body.Traefik.HttpsNodePort,
+	traefik := &ClusterRegistration.Traefik{}
+	if req.Body.ClusterType == string(resourcev1alpha1.CLUSTER_TYPE_PHYSICAL) {
+		traefik.HttpNodePort = req.Body.Traefik.HttpNodePort
+		traefik.HttpsNodePort = req.Body.Traefik.HttpsNodePort
 	}
 
 	param := &ClusterRegistration.ClusterRegistrationParam{
