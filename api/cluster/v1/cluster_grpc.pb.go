@@ -22,6 +22,8 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ClusterClient interface {
+	GetCluster(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*GetReply, error)
+	ListClusters(ctx context.Context, in *ListsRequest, opts ...grpc.CallOption) (*ListsReply, error)
 	SaveCluster(ctx context.Context, in *SaveRequest, opts ...grpc.CallOption) (*SaveReply, error)
 	DeleteCluster(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteReply, error)
 }
@@ -32,6 +34,24 @@ type clusterClient struct {
 
 func NewClusterClient(cc grpc.ClientConnInterface) ClusterClient {
 	return &clusterClient{cc}
+}
+
+func (c *clusterClient) GetCluster(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*GetReply, error) {
+	out := new(GetReply)
+	err := c.cc.Invoke(ctx, "/api.cluster.v1.Cluster/GetCluster", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *clusterClient) ListClusters(ctx context.Context, in *ListsRequest, opts ...grpc.CallOption) (*ListsReply, error) {
+	out := new(ListsReply)
+	err := c.cc.Invoke(ctx, "/api.cluster.v1.Cluster/ListClusters", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *clusterClient) SaveCluster(ctx context.Context, in *SaveRequest, opts ...grpc.CallOption) (*SaveReply, error) {
@@ -56,6 +76,8 @@ func (c *clusterClient) DeleteCluster(ctx context.Context, in *DeleteRequest, op
 // All implementations must embed UnimplementedClusterServer
 // for forward compatibility
 type ClusterServer interface {
+	GetCluster(context.Context, *GetRequest) (*GetReply, error)
+	ListClusters(context.Context, *ListsRequest) (*ListsReply, error)
 	SaveCluster(context.Context, *SaveRequest) (*SaveReply, error)
 	DeleteCluster(context.Context, *DeleteRequest) (*DeleteReply, error)
 	mustEmbedUnimplementedClusterServer()
@@ -65,6 +87,12 @@ type ClusterServer interface {
 type UnimplementedClusterServer struct {
 }
 
+func (UnimplementedClusterServer) GetCluster(context.Context, *GetRequest) (*GetReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCluster not implemented")
+}
+func (UnimplementedClusterServer) ListClusters(context.Context, *ListsRequest) (*ListsReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListClusters not implemented")
+}
 func (UnimplementedClusterServer) SaveCluster(context.Context, *SaveRequest) (*SaveReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SaveCluster not implemented")
 }
@@ -82,6 +110,42 @@ type UnsafeClusterServer interface {
 
 func RegisterClusterServer(s grpc.ServiceRegistrar, srv ClusterServer) {
 	s.RegisterService(&Cluster_ServiceDesc, srv)
+}
+
+func _Cluster_GetCluster_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ClusterServer).GetCluster(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.cluster.v1.Cluster/GetCluster",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ClusterServer).GetCluster(ctx, req.(*GetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Cluster_ListClusters_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ClusterServer).ListClusters(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.cluster.v1.Cluster/ListClusters",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ClusterServer).ListClusters(ctx, req.(*ListsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Cluster_SaveCluster_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -127,6 +191,14 @@ var Cluster_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "api.cluster.v1.Cluster",
 	HandlerType: (*ClusterServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetCluster",
+			Handler:    _Cluster_GetCluster_Handler,
+		},
+		{
+			MethodName: "ListClusters",
+			Handler:    _Cluster_ListClusters_Handler,
+		},
 		{
 			MethodName: "SaveCluster",
 			Handler:    _Cluster_SaveCluster_Handler,

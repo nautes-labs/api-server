@@ -15,13 +15,17 @@
 package cluster
 
 import (
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"regexp"
 	"strconv"
 
+	"github.com/nautes-labs/api-server/pkg/nodestree"
 	utilstrings "github.com/nautes-labs/api-server/util/string"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -476,6 +480,69 @@ func (cr *ClusterRegistration) GetTraefikNodePortToRuntime(tenantLocalPath, clus
 	}
 
 	return httpsNodePort, nil
+}
+
+func (cr *ClusterRegistration) GetClsuter(tenantLocalPath, clusterName string) (*resourcev1alpha1.Cluster, error) {
+	clusterFilePath := fmt.Sprintf("%s/%s.yaml", concatClustersDir(tenantLocalPath), clusterName)
+	_, err := os.Stat(clusterFilePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("the cluster resource %s is not found", clusterName)
+		}
+		return nil, err
+	}
+
+	content, err := ioutil.ReadFile(clusterFilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	cluster := &resourcev1alpha1.Cluster{}
+	err = yaml.Unmarshal(content, cluster)
+	if err != nil {
+		return nil, err
+	}
+
+	return cluster, nil
+}
+
+func (cr *ClusterRegistration) GetClsuters(tenantLocalPath string) ([]*resourcev1alpha1.Cluster, error) {
+	clustersDir := concatClustersDir(tenantLocalPath)
+	_, err := os.Stat(clustersDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, errors.New("the cluster resource is empty")
+		}
+		return nil, err
+	}
+
+	files, err := ioutil.ReadDir(clustersDir)
+	if err != nil {
+		return nil, err
+	}
+
+	clusters := make([]*resourcev1alpha1.Cluster, 0)
+	for _, file := range files {
+		if !file.IsDir() {
+			filePath := fmt.Sprintf("%s/%s", clustersDir, file.Name())
+			content, err := ioutil.ReadFile(filePath)
+			if err != nil {
+				return nil, err
+			}
+
+			cluster := &resourcev1alpha1.Cluster{}
+			err = yaml.Unmarshal(content, cluster)
+			if err != nil {
+				return nil, err
+			}
+
+			if cluster.Kind == nodestree.Cluster {
+				clusters = append(clusters, cluster)
+			}
+		}
+	}
+
+	return clusters, nil
 }
 
 func GetHostClusterFromTenantConfigFile(tenantConfigRepoLocalPath, hostClusterName, tenantName string) (*resourcev1alpha1.Cluster, error) {

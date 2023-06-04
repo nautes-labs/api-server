@@ -38,6 +38,29 @@ func NewClusterService(cluster *biz.ClusterUsecase, configs *nautesconfigs.Confi
 	return &ClusterService{cluster: cluster, configs: configs}
 }
 
+func (s *ClusterService) GetCluster(ctx context.Context, req *clusterv1.GetRequest) (*clusterv1.GetReply, error) {
+	cluster, err := s.cluster.GetCluster(ctx, req.ClusterName)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.convertClustertoReply(cluster), nil
+}
+
+func (s *ClusterService) ListClusters(ctx context.Context, req *clusterv1.ListsRequest) (*clusterv1.ListsReply, error) {
+	clusters, err := s.cluster.ListClusters(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	reply := &clusterv1.ListsReply{}
+	for _, cluster := range clusters {
+		reply.Items = append(reply.Items, s.convertClustertoReply(cluster))
+	}
+
+	return reply, nil
+}
+
 func (s *ClusterService) SaveCluster(ctx context.Context, req *clusterv1.SaveRequest) (*clusterv1.SaveReply, error) {
 	err := s.Validate(req)
 	if err != nil {
@@ -128,4 +151,22 @@ func (s *ClusterService) Validate(req *clusterv1.SaveRequest) error {
 	}
 
 	return nil
+}
+
+func (s *ClusterService) convertClustertoReply(cluster *resourcev1alpha1.Cluster) *clusterv1.GetReply {
+	reply := &clusterv1.GetReply{}
+	reply.Name = cluster.Name
+
+	spec := &cluster.Spec
+	if spec != nil {
+		reply.ApiServer = cluster.Spec.ApiServer
+		reply.ClusterKind = string(cluster.Spec.ClusterKind)
+		reply.ClusterType = string(cluster.Spec.ClusterType)
+		reply.HostCluster = cluster.Spec.HostCluster
+		reply.Usage = string(cluster.Spec.Usage)
+		reply.WorkerType = string(cluster.Spec.WorkerType)
+		reply.PrimaryDomain = cluster.Spec.PrimaryDomain
+	}
+
+	return reply
 }

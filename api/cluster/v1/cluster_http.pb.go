@@ -20,17 +20,64 @@ var _ = binding.EncodeURL
 const _ = http.SupportPackageIsVersion1
 
 const OperationClusterDeleteCluster = "/api.cluster.v1.Cluster/DeleteCluster"
+const OperationClusterGetCluster = "/api.cluster.v1.Cluster/GetCluster"
+const OperationClusterListClusters = "/api.cluster.v1.Cluster/ListClusters"
 const OperationClusterSaveCluster = "/api.cluster.v1.Cluster/SaveCluster"
 
 type ClusterHTTPServer interface {
 	DeleteCluster(context.Context, *DeleteRequest) (*DeleteReply, error)
+	GetCluster(context.Context, *GetRequest) (*GetReply, error)
+	ListClusters(context.Context, *ListsRequest) (*ListsReply, error)
 	SaveCluster(context.Context, *SaveRequest) (*SaveReply, error)
 }
 
 func RegisterClusterHTTPServer(s *http.Server, srv ClusterHTTPServer) {
 	r := s.Route("/")
-	r.POST("/api/v1/clusters/{clusterName}", _Cluster_SaveCluster0_HTTP_Handler(srv))
-	r.DELETE("/api/v1/clusters/{clusterName}", _Cluster_DeleteCluster0_HTTP_Handler(srv))
+	r.GET("/api/v1/clusters/{cluster_name}", _Cluster_GetCluster0_HTTP_Handler(srv))
+	r.GET("/api/v1/clusters", _Cluster_ListClusters0_HTTP_Handler(srv))
+	r.POST("/api/v1/clusters/{cluster_name}", _Cluster_SaveCluster0_HTTP_Handler(srv))
+	r.DELETE("/api/v1/clusters/{cluster_name}", _Cluster_DeleteCluster0_HTTP_Handler(srv))
+}
+
+func _Cluster_GetCluster0_HTTP_Handler(srv ClusterHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in GetRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationClusterGetCluster)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetCluster(ctx, req.(*GetRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*GetReply)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _Cluster_ListClusters0_HTTP_Handler(srv ClusterHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationClusterListClusters)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListClusters(ctx, req.(*ListsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListsReply)
+		return ctx.Result(200, reply)
+	}
 }
 
 func _Cluster_SaveCluster0_HTTP_Handler(srv ClusterHTTPServer) func(ctx http.Context) error {
@@ -82,6 +129,8 @@ func _Cluster_DeleteCluster0_HTTP_Handler(srv ClusterHTTPServer) func(ctx http.C
 
 type ClusterHTTPClient interface {
 	DeleteCluster(ctx context.Context, req *DeleteRequest, opts ...http.CallOption) (rsp *DeleteReply, err error)
+	GetCluster(ctx context.Context, req *GetRequest, opts ...http.CallOption) (rsp *GetReply, err error)
+	ListClusters(ctx context.Context, req *ListsRequest, opts ...http.CallOption) (rsp *ListsReply, err error)
 	SaveCluster(ctx context.Context, req *SaveRequest, opts ...http.CallOption) (rsp *SaveReply, err error)
 }
 
@@ -95,7 +144,7 @@ func NewClusterHTTPClient(client *http.Client) ClusterHTTPClient {
 
 func (c *ClusterHTTPClientImpl) DeleteCluster(ctx context.Context, in *DeleteRequest, opts ...http.CallOption) (*DeleteReply, error) {
 	var out DeleteReply
-	pattern := "/api/v1/clusters/{clusterName}"
+	pattern := "/api/v1/clusters/{cluster_name}"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationClusterDeleteCluster))
 	opts = append(opts, http.PathTemplate(pattern))
@@ -106,9 +155,35 @@ func (c *ClusterHTTPClientImpl) DeleteCluster(ctx context.Context, in *DeleteReq
 	return &out, err
 }
 
+func (c *ClusterHTTPClientImpl) GetCluster(ctx context.Context, in *GetRequest, opts ...http.CallOption) (*GetReply, error) {
+	var out GetReply
+	pattern := "/api/v1/clusters/{cluster_name}"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationClusterGetCluster))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, err
+}
+
+func (c *ClusterHTTPClientImpl) ListClusters(ctx context.Context, in *ListsRequest, opts ...http.CallOption) (*ListsReply, error) {
+	var out ListsReply
+	pattern := "/api/v1/clusters"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationClusterListClusters))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, err
+}
+
 func (c *ClusterHTTPClientImpl) SaveCluster(ctx context.Context, in *SaveRequest, opts ...http.CallOption) (*SaveReply, error) {
 	var out SaveReply
-	pattern := "/api/v1/clusters/{clusterName}"
+	pattern := "/api/v1/clusters/{cluster_name}"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationClusterSaveCluster))
 	opts = append(opts, http.PathTemplate(pattern))

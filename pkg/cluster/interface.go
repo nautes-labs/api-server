@@ -14,10 +14,14 @@
 
 package cluster
 
+import resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
+
 type ClusterRegistrationOperator interface {
 	InitializeClusterConfig(param *ClusterRegistrationParam) error
 	Save() error
 	Remove() error
 	GetArgocdURL() (string, error)
 	GetTektonOAuthURL() (string, error)
+	GetClsuter(tenantLocalPath, clusterName string) (*resourcev1alpha1.Cluster, error)
+	GetClsuters(tenantLocalPath string) ([]*resourcev1alpha1.Cluster, error)
 }
