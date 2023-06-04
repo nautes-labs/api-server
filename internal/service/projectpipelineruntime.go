@@ -20,6 +20,7 @@ import (
 
 	projectpipelineruntimev1 "github.com/nautes-labs/api-server/api/projectpipelineruntime/v1"
 	"github.com/nautes-labs/api-server/internal/biz"
+	"github.com/nautes-labs/api-server/pkg/nodestree"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 )
 
@@ -133,6 +134,7 @@ func (s *ProjectPipelineRuntimeService) SaveProjectPipelineRuntime(ctx context.C
 		ProductName:       req.ProductName,
 		InsecureSkipCheck: req.InsecureSkipCheck,
 	}
+	ctx = biz.SetResourceContext(ctx, req.ProductName, biz.SaveMethod, nodestree.Project, req.Body.Project, nodestree.ProjectPipelineRuntime, req.ProjectPipelineRuntimeName)
 	err := s.projectPipelineRuntime.SaveProjectPipelineRuntime(ctx, options, data)
 	if err != nil {
 		return nil, err
@@ -140,6 +142,23 @@ func (s *ProjectPipelineRuntimeService) SaveProjectPipelineRuntime(ctx context.C
 
 	return &projectpipelineruntimev1.SaveReply{
 		Msg: fmt.Sprintf("Successfully saved %s configuration", req.ProjectPipelineRuntimeName),
+	}, nil
+}
+
+func (s *ProjectPipelineRuntimeService) DeleteProjectPipelineRuntime(ctx context.Context, req *projectpipelineruntimev1.DeleteRequest) (*projectpipelineruntimev1.DeleteReply, error) {
+	options := &biz.BizOptions{
+		ResouceName:       req.ProjectPipelineRuntimeName,
+		ProductName:       req.ProductName,
+		InsecureSkipCheck: req.InsecureSkipCheck,
+	}
+	ctx = biz.SetResourceContext(ctx, req.ProductName, biz.DeleteMethod, "", "", nodestree.ProjectPipelineRuntime, req.ProjectPipelineRuntimeName)
+	err := s.projectPipelineRuntime.DeleteProjectPipelineRuntime(ctx, options)
+	if err != nil {
+		return nil, err
+	}
+
+	return &projectpipelineruntimev1.DeleteReply{
+		Msg: fmt.Sprintf("Successfully deleted %s configuration", req.ProjectPipelineRuntimeName),
 	}, nil
 }
 
@@ -205,20 +224,4 @@ func (s *ProjectPipelineRuntimeService) convertEventSources(events []*projectpip
 	}
 
 	return eventSources
-}
-
-func (s *ProjectPipelineRuntimeService) DeleteProjectPipelineRuntime(ctx context.Context, req *projectpipelineruntimev1.DeleteRequest) (*projectpipelineruntimev1.DeleteReply, error) {
-	options := &biz.BizOptions{
-		ResouceName:       req.ProjectPipelineRuntimeName,
-		ProductName:       req.ProductName,
-		InsecureSkipCheck: req.InsecureSkipCheck,
-	}
-	err := s.projectPipelineRuntime.DeleteProjectPipelineRuntime(ctx, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return &projectpipelineruntimev1.DeleteReply{
-		Msg: fmt.Sprintf("Successfully deleted %s configuration", req.ProjectPipelineRuntimeName),
-	}, nil
 }

@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"strconv"
 
+	errors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/log"
 	commonv1 "github.com/nautes-labs/api-server/api/common/v1"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
@@ -39,7 +40,6 @@ type CodeRepoBindingUsecase struct {
 	config           *nautesconfigs.Config
 	client           client.Client
 	groupName        string
-	repositoryName   string
 }
 
 type CodeRepoBindingData struct {
@@ -77,13 +77,13 @@ func (c *CodeRepoBindingUsecase) GetCodeRepoBinding(ctx context.Context, options
 		return nil, err
 	}
 
-	repoName, err := c.resourcesUsecase.convertCodeRepoToRepoName(ctx, resource.Spec.CodeRepo)
+	repoName, err := c.resourcesUsecase.ConvertCodeRepoToRepoName(ctx, resource.Spec.CodeRepo)
 	if err != nil {
 		return nil, err
 	}
 	resource.Spec.CodeRepo = repoName
 
-	groupName, err := c.resourcesUsecase.convertProductToGroupName(ctx, resource.Spec.Product)
+	groupName, err := c.resourcesUsecase.ConvertProductToGroupName(ctx, resource.Spec.Product)
 	if err != nil {
 		return nil, err
 	}
@@ -104,13 +104,13 @@ func (c *CodeRepoBindingUsecase) ListCodeRepoBindings(ctx context.Context, optio
 	}
 
 	for _, codecodeRepoBinding := range codeRepoBindings {
-		repoName, err := c.resourcesUsecase.convertCodeRepoToRepoName(ctx, codecodeRepoBinding.Spec.CodeRepo)
+		repoName, err := c.resourcesUsecase.ConvertCodeRepoToRepoName(ctx, codecodeRepoBinding.Spec.CodeRepo)
 		if err != nil {
 			return nil, err
 		}
 		codecodeRepoBinding.Spec.CodeRepo = repoName
 
-		groupName, err := c.resourcesUsecase.convertProductToGroupName(ctx, codecodeRepoBinding.Spec.Product)
+		groupName, err := c.resourcesUsecase.ConvertProductToGroupName(ctx, codecodeRepoBinding.Spec.Product)
 		if err != nil {
 			return nil, err
 		}
@@ -121,19 +121,8 @@ func (c *CodeRepoBindingUsecase) ListCodeRepoBindings(ctx context.Context, optio
 }
 
 func (c *CodeRepoBindingUsecase) SaveCodeRepoBinding(ctx context.Context, options *BizOptions, data *CodeRepoBindingData) error {
-	productName, err := c.resourcesUsecase.convertGroupToProduct(ctx, data.Spec.Product)
-	if err != nil {
-		return err
-	}
-	c.groupName = data.Spec.Product
-	data.Spec.Product = productName
 
-	codeRepoName, err := c.resourcesUsecase.convertRepoNameToCodeRepo(ctx, options.ProductName, data.Spec.CodeRepo)
-	if err != nil {
-		return err
-	}
-	c.repositoryName = data.Spec.CodeRepo
-	data.Spec.CodeRepo = codeRepoName
+	c.groupName = options.ProductName
 
 	nodes, err := c.resourcesUsecase.loadDefaultProjectNodes(ctx, options.ProductName)
 	if err != nil {
@@ -148,7 +137,7 @@ func (c *CodeRepoBindingUsecase) SaveCodeRepoBinding(ctx context.Context, option
 		}
 
 		if lastCodeRepoBinding.Spec.CodeRepo != data.Spec.CodeRepo {
-			return fmt.Errorf("It is not allowed to modify the authorized repository. If you want to change the authorized repository, please delete the authorization")
+			return errors.New(500, "NOT_ALLOWED_MODIFY", "It is not allowed to modify the authorized repository. If you want to change the authorized repository, please delete the authorization")
 		}
 	}
 

@@ -47,7 +47,7 @@ func wireApp(confServer *conf.Server, confData *conf.Data, logger log.Logger, no
 	deploymentRuntimeUsecase := biz.NewDeploymentRuntimeUsecase(logger, codeRepo, nodesTree, resourcesUsecase)
 	deploymentruntimeService := service.NewDeploymentruntimeService(deploymentRuntimeUsecase)
 	codeRepoService := service.NewCodeRepoService(codeRepoUsecase, config)
-	codeRepoBindingService := service.NewCodeRepoBindingService(codeRepoBindingUsecase)
+	codeRepoBindingService := service.NewCodeRepoBindingService(codeRepoBindingUsecase, resourcesUsecase)
 	projectUsecase := biz.NewProjectUsecase(logger, codeRepo, secretrepo, nodesTree, config, resourcesUsecase)
 	projectService := service.NewProjectService(projectUsecase)
 	environmentUsecase := biz.NewEnviromentUsecase(logger, config, codeRepo, nodesTree, resourcesUsecase)

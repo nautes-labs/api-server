@@ -44,6 +44,8 @@ func (s *ClusterService) SaveCluster(ctx context.Context, req *clusterv1.SaveReq
 		return nil, err
 	}
 
+	ctx = biz.SetResourceContext(ctx, "", biz.SaveMethod, "", "", nodestree.Cluster, req.ClusterName)
+
 	cluster := &resourcev1alpha1.Cluster{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: resourcev1alpha1.GroupVersion.String(),
@@ -97,6 +99,8 @@ func (s *ClusterService) SaveCluster(ctx context.Context, req *clusterv1.SaveReq
 }
 
 func (s *ClusterService) DeleteCluster(ctx context.Context, req *clusterv1.DeleteRequest) (*clusterv1.DeleteReply, error) {
+	ctx = biz.SetResourceContext(ctx, "", biz.DeleteMethod, "", "", nodestree.Cluster, req.ClusterName)
+
 	err := s.cluster.DeleteCluster(ctx, req.ClusterName)
 	if err != nil {
 		return nil, err

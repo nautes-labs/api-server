@@ -243,7 +243,7 @@ var _ = Describe("Save deployment runtime", func() {
 		gitRepo.EXPECT().Diff(gomock.Any(), gomock.Any(), "main", "remotes/origin/main").Return("any", nil).AnyTimes()
 		gitRepo.EXPECT().Merge(gomock.Any(), localRepositoryPath).Return("successfully auto merge", nil).AnyTimes()
 		gitRepo.EXPECT().Push(gomock.Any(), gomock.Any()).Return(fmt.Errorf("unable to push code")).AnyTimes()
-		gitRepo.EXPECT().Commit(localRepositoryPath, gomock.Any()).AnyTimes()
+		gitRepo.EXPECT().Commit(gomock.Any(), localRepositoryPath).AnyTimes()
 
 		in := nodestree.NewMockNodesTree(ctl)
 		in.EXPECT().AppendOperators(gomock.Any())

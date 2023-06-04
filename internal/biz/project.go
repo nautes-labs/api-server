@@ -57,7 +57,7 @@ func (c *ProjectUsecase) convertProductToGroupName(ctx context.Context, project 
 		return fmt.Errorf("the product field value of project %s should not be empty", project.Name)
 	}
 
-	groupName, err := c.resourcesUsecase.convertProductToGroupName(ctx, project.Spec.Product)
+	groupName, err := c.resourcesUsecase.ConvertProductToGroupName(ctx, project.Spec.Product)
 	if err != nil {
 		return err
 	}

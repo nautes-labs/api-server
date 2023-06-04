@@ -20,6 +20,7 @@ import (
 
 	deploymentruntimev1 "github.com/nautes-labs/api-server/api/deploymentruntime/v1"
 	"github.com/nautes-labs/api-server/internal/biz"
+	"github.com/nautes-labs/api-server/pkg/nodestree"
 	"github.com/nautes-labs/pkg/api/v1alpha1"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 )
@@ -73,6 +74,8 @@ func (s *DeploymentruntimeService) ListDeploymentRuntimes(ctx context.Context, r
 }
 
 func (s *DeploymentruntimeService) SaveDeploymentRuntime(ctx context.Context, req *deploymentruntimev1.SaveRequest) (*deploymentruntimev1.SaveReply, error) {
+	ctx = biz.SetResourceContext(ctx, "", biz.SaveMethod, "", "", nodestree.DeploymentRuntime, req.DeploymentruntimeName)
+
 	data := &biz.DeploymentRuntimeData{
 		Name: req.DeploymentruntimeName,
 		Spec: v1alpha1.DeploymentRuntimeSpec{
@@ -102,6 +105,8 @@ func (s *DeploymentruntimeService) SaveDeploymentRuntime(ctx context.Context, re
 }
 
 func (s *DeploymentruntimeService) DeleteDeploymentRuntime(ctx context.Context, req *deploymentruntimev1.DeleteRequest) (*deploymentruntimev1.DeleteReply, error) {
+	ctx = biz.SetResourceContext(ctx, "", biz.DeleteMethod, "", "", nodestree.DeploymentRuntime, req.DeploymentruntimeName)
+
 	options := &biz.BizOptions{
 		ResouceName:       req.DeploymentruntimeName,
 		ProductName:       req.ProductName,

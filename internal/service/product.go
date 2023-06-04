@@ -22,6 +22,7 @@ import (
 
 	productv1 "github.com/nautes-labs/api-server/api/product/v1"
 	"github.com/nautes-labs/api-server/internal/biz"
+	"github.com/nautes-labs/api-server/pkg/nodestree"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 )
 
@@ -89,6 +90,8 @@ func (s *ProductService) ListProducts(ctx context.Context, req *productv1.ListPr
 }
 
 func (s *ProductService) SaveProduct(ctx context.Context, req *productv1.SaveProductRequest) (*productv1.SaveProductReply, error) {
+	ctx = biz.SetResourceContext(ctx, "", biz.SaveMethod, "", "", nodestree.Product, req.ProductName)
+
 	git := &biz.GitGroupOptions{}
 	if req.Git == nil {
 		return nil, fmt.Errorf("the git request parameter cannot be empty, request: %v", req)
@@ -108,6 +111,14 @@ func (s *ProductService) SaveProduct(ctx context.Context, req *productv1.SavePro
 		}
 
 		git.Gitlab = gitlab
+
+		if git.Gitlab == nil {
+			return nil, fmt.Errorf("failed to get gitlab parameter")
+		}
+
+		if git.Gitlab.Path != "" && git.Gitlab.Path != req.ProductName {
+			return nil, fmt.Errorf(`when creating a GitLab group, the path must be consistent with the product name. the expected name is %s, but it is currently %s`, req.ProductName, git.Gitlab.Path)
+		}
 
 		if git.Gitlab.Name == "" {
 			git.Gitlab.Name = req.ProductName
@@ -133,6 +144,8 @@ func (s *ProductService) SaveProduct(ctx context.Context, req *productv1.SavePro
 }
 
 func (s *ProductService) DeleteProduct(ctx context.Context, req *productv1.DeleteProductRequest) (*productv1.DeleteProductReply, error) {
+	ctx = biz.SetResourceContext(ctx, "", biz.DeleteMethod, "", "", nodestree.Product, req.ProductName)
+
 	err := s.product.DeleteProduct(ctx, req.ProductName)
 	if err != nil {
 		return nil, err

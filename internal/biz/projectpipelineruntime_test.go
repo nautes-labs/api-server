@@ -239,6 +239,8 @@ var _ = Describe("Save project pipeline runtime", func() {
 	})
 
 	It("failed to get product info", testUseCase.GetProductFail(func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
+		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Any()).Return(projectForBase, nil).AnyTimes()
+
 		biz := NewProjectPipelineRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
 		err := biz.SaveProjectPipelineRuntime(context.Background(), bizOptions, data)
 		Expect(err).Should(HaveOccurred())

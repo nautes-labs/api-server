@@ -20,6 +20,7 @@ import (
 
 	environmentv1 "github.com/nautes-labs/api-server/api/environment/v1"
 	"github.com/nautes-labs/api-server/internal/biz"
+	"github.com/nautes-labs/api-server/pkg/nodestree"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 )
 
@@ -65,6 +66,8 @@ func (s *EnvironmentService) ListEnvironments(ctx context.Context, req *environm
 }
 
 func (s *EnvironmentService) SaveEnvironment(ctx context.Context, req *environmentv1.SaveRequest) (*environmentv1.SaveReply, error) {
+	ctx = biz.SetResourceContext(ctx, "", biz.SaveMethod, "", "", nodestree.Environment, req.EnvironmentName)
+
 	options := &biz.BizOptions{
 		ResouceName:       req.EnvironmentName,
 		ProductName:       req.ProductName,
@@ -87,6 +90,8 @@ func (s *EnvironmentService) SaveEnvironment(ctx context.Context, req *environme
 }
 
 func (s *EnvironmentService) DeleteEnvironment(ctx context.Context, req *environmentv1.DeleteRequest) (*environmentv1.DeleteReply, error) {
+	ctx = biz.SetResourceContext(ctx, "", biz.DeleteMethod, "", "", nodestree.Environment, req.EnvironmentName)
+
 	options := &biz.BizOptions{
 		ResouceName:       req.EnvironmentName,
 		ProductName:       req.ProductName,

@@ -25,6 +25,7 @@ import (
 
 	git "github.com/go-git/go-git/v5"
 	"github.com/nautes-labs/api-server/internal/biz"
+	"github.com/nautes-labs/api-server/pkg/nodestree"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 )
 
@@ -149,7 +150,7 @@ func (g *gitRepo) Status(path string) (string, error) {
 	return status.String(), nil
 }
 
-func (g *gitRepo) Commit(path, message string) error {
+func (g *gitRepo) Commit(ctx context.Context, path string) error {
 	cmdAdd := exec.Command("git", "add", ".")
 	cmdAdd.Dir = path
 	_, err := cmdAdd.CombinedOutput()
@@ -157,7 +158,12 @@ func (g *gitRepo) Commit(path, message string) error {
 		return err
 	}
 
-	cmdCommit := exec.Command("git", "commit", "-m", message)
+	msg, err := generateCommitMessage(ctx)
+	if err != nil {
+		return err
+	}
+
+	cmdCommit := exec.Command("git", "commit", "-m", msg)
 	cmdCommit.Dir = path
 	data, err := cmdCommit.CombinedOutput()
 	if err != nil {
@@ -165,6 +171,40 @@ func (g *gitRepo) Commit(path, message string) error {
 	}
 
 	return nil
+}
+
+// generateCommitMessage is commit message through resource infomation splicing.
+// eg: [API] Save_CodeRepoBinding: coderepobinding1, Product: test-product, CodeRepo: repo-1.
+func generateCommitMessage(ctx context.Context) (string, error) {
+	var commitMsg string
+
+	value := ctx.Value(biz.ResourceInfoKey)
+	info, ok := value.(*biz.ResourceInfo)
+	if !ok {
+		return "", fmt.Errorf("failed to get resource info")
+	}
+	// If request resource kind is product,
+	// It means that when creating a product, the default commit message is initial.
+	if info.ResourceKind == nodestree.Product && info.Method == biz.SaveMethod {
+		commitMsg = "initial commit."
+		return commitMsg, nil
+	}
+
+	commitMsg = fmt.Sprintf("[API] %s_%s: %s", info.Method, info.ResourceKind, info.ResourceName)
+
+	// When creating a cluster, the product name may be empty.
+	if info.ProductName != "" {
+		commitMsg += fmt.Sprintf(", Product: %s", info.ProductName)
+	}
+
+	// If the parent resource is not empty, increase the information of the parent resource.
+	if info.ParentResouceKind != "" && info.ParentResourceName != "" {
+		commitMsg += fmt.Sprintf(", %s: %s.", info.ParentResouceKind, info.ParentResourceName)
+	} else {
+		commitMsg += "."
+	}
+
+	return commitMsg, nil
 }
 
 func (g *gitRepo) Push(ctx context.Context, path string, command ...string) error {
@@ -186,9 +226,7 @@ func (g *gitRepo) SaveConfig(ctx context.Context, path string) error {
 	}
 
 	if status != "" {
-		// Commits the current staging area to the repository, with the new file
-		message := "api: saved configuration file"
-		err = g.Commit(path, message)
+		err = g.Commit(ctx, path)
 		if err != nil {
 			return err
 		}

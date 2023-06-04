@@ -53,7 +53,7 @@ func (p *DeploymentRuntimeUsecase) convertCodeRepoToRepoName(ctx context.Context
 		return fmt.Errorf("the codeRepo field value of deploymentruntime %s should not be empty", runtime.Name)
 	}
 
-	repoName, err := p.resourcesUsecase.convertCodeRepoToRepoName(ctx, runtime.Spec.ManifestSource.CodeRepo)
+	repoName, err := p.resourcesUsecase.ConvertCodeRepoToRepoName(ctx, runtime.Spec.ManifestSource.CodeRepo)
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func (c *DeploymentRuntimeUsecase) convertProductToGroupName(ctx context.Context
 		return fmt.Errorf("the product field value of deploymentruntime %s should not be empty", runtime.Name)
 	}
 
-	groupName, err := c.resourcesUsecase.convertProductToGroupName(ctx, runtime.Spec.Product)
+	groupName, err := c.resourcesUsecase.ConvertProductToGroupName(ctx, runtime.Spec.Product)
 	if err != nil {
 		return err
 	}
@@ -237,7 +237,7 @@ func (d *DeploymentRuntimeUsecase) CheckReference(options nodestree.CompareOptio
 		}
 	}
 
-	ok = nodestree.IsResourceExist(options, deploymentRuntime.Spec.Destination, nodestree.Enviroment)
+	ok = nodestree.IsResourceExist(options, deploymentRuntime.Spec.Destination, nodestree.Environment)
 	if !ok {
 		return true, fmt.Errorf("the referenced environment %s by the deployment runtime %s does not exist while verifying the validity of the global template", deploymentRuntime.Spec.Destination, deploymentRuntime.Name)
 	}

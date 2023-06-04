@@ -539,17 +539,17 @@ func (mr *MockGitRepoMockRecorder) Clone(ctx, param interface{}) *gomock.Call {
 }
 
 // Commit mocks base method.
-func (m *MockGitRepo) Commit(path, message string) error {
+func (m *MockGitRepo) Commit(ctx context.Context, path string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Commit", path, message)
+	ret := m.ctrl.Call(m, "Commit", ctx, path)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Commit indicates an expected call of Commit.
-func (mr *MockGitRepoMockRecorder) Commit(path, message interface{}) *gomock.Call {
+func (mr *MockGitRepoMockRecorder) Commit(ctx, path interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Commit", reflect.TypeOf((*MockGitRepo)(nil).Commit), path, message)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Commit", reflect.TypeOf((*MockGitRepo)(nil).Commit), ctx, path)
 }
 
 // Diff mocks base method.

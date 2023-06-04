@@ -14,6 +14,10 @@
 
 package biz
 
+import (
+	"context"
+)
+
 const (
 	// CodeRepo naming prefix
 	RepoPrefix = "repo-"
@@ -39,7 +43,38 @@ const (
 	// Access token scope permissions
 	APIPermission AccessTokenPermission = "api"
 	// Access token authorization role
-	Developer  AccessLevelValue = 30
-	Maintainer AccessLevelValue = 40
-	Owner      AccessLevelValue = 50
+	Developer       AccessLevelValue = 30
+	Maintainer      AccessLevelValue = 40
+	Owner           AccessLevelValue = 50
+	ResourceInfoKey                  = "ResourceInfoKey"
+	SaveMethod                       = "Save"
+	DeleteMethod                     = "Delete"
 )
+
+type ResourceInfo struct {
+	// The product name to which the resource belongs
+	ProductName string
+	// Method of operating resources
+	Method string
+	// Parent class resource kind
+	ParentResouceKind string
+	// Parent class resource name
+	ParentResourceName string
+	// Current resource kind
+	ResourceKind string
+	// Current resource name
+	ResourceName string
+}
+
+// SetResourceContext is mount resource information to context.
+func SetResourceContext(ctx context.Context, productName, method, parentResouceKind, parentResouceName, resourceKind, resourceName string) context.Context {
+	info := &ResourceInfo{
+		ProductName:        productName,
+		Method:             method,
+		ParentResouceKind:  parentResouceKind,
+		ParentResourceName: parentResouceName,
+		ResourceKind:       resourceKind,
+		ResourceName:       resourceName,
+	}
+	return context.WithValue(ctx, ResourceInfoKey, info)
+}

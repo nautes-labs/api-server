@@ -20,16 +20,18 @@ import (
 
 	coderepobindingv1 "github.com/nautes-labs/api-server/api/coderepobinding/v1"
 	"github.com/nautes-labs/api-server/internal/biz"
+	"github.com/nautes-labs/api-server/pkg/nodestree"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 )
 
 type CodeRepoBindingService struct {
 	coderepobindingv1.UnimplementedCodeRepoBindingServer
 	codeRepoBindingUsecase *biz.CodeRepoBindingUsecase
+	resourcesUsecase       *biz.ResourcesUsecase
 }
 
-func NewCodeRepoBindingService(codeRepoBindingUsecase *biz.CodeRepoBindingUsecase) *CodeRepoBindingService {
-	return &CodeRepoBindingService{codeRepoBindingUsecase: codeRepoBindingUsecase}
+func NewCodeRepoBindingService(codeRepoBindingUsecase *biz.CodeRepoBindingUsecase, resourcesUsecase *biz.ResourcesUsecase) *CodeRepoBindingService {
+	return &CodeRepoBindingService{codeRepoBindingUsecase: codeRepoBindingUsecase, resourcesUsecase: resourcesUsecase}
 }
 
 func (s *CodeRepoBindingService) CovertCodeRepoBindingValueToReply(codeRepoBinding *resourcev1alpha1.CodeRepoBinding) *coderepobindingv1.GetReply {
@@ -74,6 +76,18 @@ func (s *CodeRepoBindingService) ListCodeRepoBindings(ctx context.Context, req *
 }
 
 func (s *CodeRepoBindingService) SaveCodeRepoBinding(ctx context.Context, req *coderepobindingv1.SaveRequest) (*coderepobindingv1.SaveReply, error) {
+	productResourceName, err := s.resourcesUsecase.ConvertGroupToProduct(ctx, req.ProductName)
+	if err != nil {
+		return nil, err
+	}
+
+	codeRepoResourceName, err := s.resourcesUsecase.ConvertRepoNameToCodeRepo(ctx, req.ProductName, req.Body.Coderepo)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx = biz.SetResourceContext(ctx, req.ProductName, biz.SaveMethod, nodestree.CodeRepo, codeRepoResourceName, nodestree.CodeRepoBinding, req.CoderepoBindingName)
+
 	options := &biz.BizOptions{
 		ProductName:       req.ProductName,
 		ResouceName:       req.CoderepoBindingName,
@@ -83,12 +97,13 @@ func (s *CodeRepoBindingService) SaveCodeRepoBinding(ctx context.Context, req *c
 	data := &biz.CodeRepoBindingData{
 		Name: req.CoderepoBindingName,
 		Spec: resourcev1alpha1.CodeRepoBindingSpec{
-			CodeRepo:    req.Body.Coderepo,
-			Product:     req.Body.Product,
+			CodeRepo:    codeRepoResourceName,
+			Product:     productResourceName,
 			Projects:    req.Body.Projects,
 			Permissions: req.Body.Permissions,
 		},
 	}
+
 	if err := s.codeRepoBindingUsecase.SaveCodeRepoBinding(ctx, options, data); err != nil {
 		return nil, err
 	}
@@ -99,6 +114,8 @@ func (s *CodeRepoBindingService) SaveCodeRepoBinding(ctx context.Context, req *c
 }
 
 func (s *CodeRepoBindingService) DeleteCodeRepoBinding(ctx context.Context, req *coderepobindingv1.DeleteRequest) (*coderepobindingv1.DeleteReply, error) {
+	ctx = biz.SetResourceContext(ctx, req.ProductName, biz.DeleteMethod, "", "", nodestree.CodeRepoBinding, req.CoderepoBindingName)
+
 	options := &biz.BizOptions{
 		ProductName:       req.ProductName,
 		ResouceName:       req.CoderepoBindingName,

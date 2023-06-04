@@ -292,7 +292,7 @@ func (t *testBiz) UpdateResourceAndAutoMerge(nodes nodestree.Node, node *nodestr
 		gitRepo.EXPECT().Fetch(gomock.Any(), gomock.Any()).Return("any", nil).After(fetchRemoteOrigin)
 		gitRepo.EXPECT().Diff(gomock.Any(), gomock.Any(), "main", "remotes/origin/main").Return("any", nil)
 		gitRepo.EXPECT().Merge(gomock.Any(), localRepositoryPath).Return("any", nil)
-		gitRepo.EXPECT().Commit(localRepositoryPath, gomock.Any())
+		gitRepo.EXPECT().Commit(gomock.Any(), localRepositoryPath)
 		gitRepo.EXPECT().Push(gomock.Any(), localRepositoryPath).Return(nil)
 
 		nodestree := nodestree.NewMockNodesTree(ctl)
@@ -324,7 +324,7 @@ func (t *testBiz) MergeConflictFail(nodes nodestree.Node, node *nodestree.Node, 
 		gitRepo.EXPECT().Fetch(gomock.Any(), gomock.Any()).Return("any", nil).After(fetchRemoteOrigin)
 		gitRepo.EXPECT().Diff(gomock.Any(), gomock.Any(), "main", "remotes/origin/main").Return("any", nil)
 		gitRepo.EXPECT().Merge(gomock.Any(), localRepositoryPath).Return("", fmt.Errorf("unabled to auto merge"))
-		gitRepo.EXPECT().Commit(localRepositoryPath, gomock.Any())
+		gitRepo.EXPECT().Commit(gomock.Any(), localRepositoryPath)
 
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any()).AnyTimes()
@@ -401,7 +401,7 @@ func (t *testBiz) CreateResourceAndAutoRetry(nodes nodestree.Node, fn BizFunc) i
 		gitRepo.EXPECT().Diff(gomock.Any(), gomock.Any(), "main", "remotes/origin/main").Return("any", nil).AnyTimes()
 		gitRepo.EXPECT().Merge(gomock.Any(), localRepositoryPath).Return("successfully auto merge", nil).AnyTimes()
 		gitRepo.EXPECT().Push(gomock.Any(), gomock.Any()).Return(fmt.Errorf("unable to push code")).AnyTimes()
-		gitRepo.EXPECT().Commit(localRepositoryPath, gomock.Any()).AnyTimes()
+		gitRepo.EXPECT().Commit(gomock.Any(), localRepositoryPath).AnyTimes()
 
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any()).AnyTimes()

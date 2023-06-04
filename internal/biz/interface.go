@@ -57,7 +57,7 @@ type Secretrepo interface {
 }
 
 type GitRepo interface {
-	Commit(path, message string) error
+	Commit(ctx context.Context, path string) error
 	SaveConfig(ctx context.Context, path string) error
 	Clone(ctx context.Context, param *CloneRepositoryParam) (string, error)
 	Merge(ctx context.Context, path string) (string, error)

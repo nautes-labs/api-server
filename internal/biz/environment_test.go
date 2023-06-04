@@ -39,7 +39,7 @@ var (
 func createEnvironmentResource(name string) *resourcev1alpha1.Environment {
 	return &resourcev1alpha1.Environment{
 		TypeMeta: v1.TypeMeta{
-			Kind: nodestree.Enviroment,
+			Kind: nodestree.Environment,
 		},
 		ObjectMeta: v1.ObjectMeta{
 			Name: name,
@@ -55,7 +55,7 @@ func createEnvironmentResource(name string) *resourcev1alpha1.Environment {
 func createEnvironmentNode(resource *resourcev1alpha1.Environment) *nodestree.Node {
 	return &nodestree.Node{
 		Name:    resource.Name,
-		Kind:    nodestree.Enviroment,
+		Kind:    nodestree.Environment,
 		Path:    fmt.Sprintf("%s/%s/%s.yaml", localRepositoryPath, _EnvSubDir, resource.Name),
 		Level:   3,
 		Content: resource,

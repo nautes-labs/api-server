@@ -57,7 +57,7 @@ func (c *EnvironmentUsecase) convertProductToGroupName(ctx context.Context, env 
 		return fmt.Errorf("the product field value of enviroment %s should not be empty", env.Spec.Product)
 	}
 
-	groupName, err := c.resourcesUsecase.convertProductToGroupName(ctx, env.Spec.Product)
+	groupName, err := c.resourcesUsecase.ConvertProductToGroupName(ctx, env.Spec.Product)
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,7 @@ func (c *EnvironmentUsecase) convertProductToGroupName(ctx context.Context, env 
 }
 
 func (e *EnvironmentUsecase) GetEnvironment(ctx context.Context, enviromentName, productName string) (*resourcev1alpha1.Environment, error) {
-	node, err := e.resourcesUsecase.Get(ctx, nodestree.Enviroment, productName, e, func(nodes nodestree.Node) (string, error) {
+	node, err := e.resourcesUsecase.Get(ctx, nodestree.Environment, productName, e, func(nodes nodestree.Node) (string, error) {
 		return enviromentName, nil
 	})
 	if err != nil {
@@ -153,7 +153,7 @@ func (e *EnvironmentUsecase) SaveEnvironment(ctx context.Context, options *BizOp
 
 	data.Spec.Product = fmt.Sprintf("%s%d", _ProductPrefix, int(group.Id))
 	resourceOptions := &resourceOptions{
-		resourceKind:      nodestree.Enviroment,
+		resourceKind:      nodestree.Environment,
 		productName:       options.ProductName,
 		insecureSkipCheck: options.InsecureSkipCheck,
 		operator:          e,
@@ -175,7 +175,7 @@ func (e *EnvironmentUsecase) CreateNode(path string, data interface{}) (*nodestr
 	env := &resourcev1alpha1.Environment{
 		TypeMeta: v1.TypeMeta{
 			APIVersion: resourcev1alpha1.GroupVersion.String(),
-			Kind:       nodestree.Enviroment,
+			Kind:       nodestree.Environment,
 		},
 		ObjectMeta: v1.ObjectMeta{
 			Name: val.Name,
@@ -190,7 +190,7 @@ func (e *EnvironmentUsecase) CreateNode(path string, data interface{}) (*nodestr
 		Name:    val.Name,
 		Path:    resourceFile,
 		Content: env,
-		Kind:    nodestree.Enviroment,
+		Kind:    nodestree.Environment,
 		Level:   3,
 	}, nil
 }
@@ -218,7 +218,7 @@ func (e *EnvironmentUsecase) UpdateNode(resourceNode *nodestree.Node, data inter
 }
 
 func (e *EnvironmentUsecase) CheckReference(options nodestree.CompareOptions, node *nodestree.Node, k8sClient client.Client) (bool, error) {
-	if node.Kind != nodestree.Enviroment {
+	if node.Kind != nodestree.Environment {
 		return false, nil
 	}
 
@@ -257,7 +257,7 @@ func (e *EnvironmentUsecase) CheckReference(options nodestree.CompareOptions, no
 }
 
 func (e *EnvironmentUsecase) CreateResource(kind string) interface{} {
-	if kind != nodestree.Enviroment {
+	if kind != nodestree.Environment {
 		return nil
 	}
 
@@ -266,7 +266,7 @@ func (e *EnvironmentUsecase) CreateResource(kind string) interface{} {
 
 func (e *EnvironmentUsecase) DeleteEnvironment(ctx context.Context, options *BizOptions) error {
 	resourceOptions := &resourceOptions{
-		resourceKind:      nodestree.Enviroment,
+		resourceKind:      nodestree.Environment,
 		productName:       options.ProductName,
 		insecureSkipCheck: options.InsecureSkipCheck,
 		operator:          e,
@@ -282,7 +282,7 @@ func (e *EnvironmentUsecase) DeleteEnvironment(ctx context.Context, options *Biz
 }
 
 func (e *EnvironmentUsecase) compare(nodes nodestree.Node) (bool, error) {
-	resourceNodes := nodestree.ListsResourceNodes(nodes, nodestree.Enviroment)
+	resourceNodes := nodestree.ListsResourceNodes(nodes, nodestree.Environment)
 	for i := 0; i < len(resourceNodes); i++ {
 		for j := i + 1; j < len(resourceNodes); j++ {
 			if v1, ok := resourceNodes[i].Content.(*resourcev1alpha1.Environment); ok {

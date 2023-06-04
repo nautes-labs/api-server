@@ -96,23 +96,19 @@ func (p *ProjectPipelineRuntimeUsecase) ListProjectPipelineRuntimes(ctx context.
 }
 
 func (p *ProjectPipelineRuntimeUsecase) SaveProjectPipelineRuntime(ctx context.Context, options *BizOptions, data *ProjectPipelineRuntimeData) error {
-	project, err := p.IsRepositoryExist(ctx, options.ProductName, data.Spec.PipelineSource)
+	var err error
+
+	data.Spec.PipelineSource, err = p.resourcesUsecase.ConvertRepoNameToCodeRepo(ctx, options.ProductName, data.Spec.PipelineSource)
 	if err != nil {
 		return err
 	}
 
-	data.Spec.PipelineSource = SpliceCodeRepoResourceName(int(project.Id))
-
 	for idx, eventSource := range data.Spec.EventSources {
 		if eventSource.Gitlab.RepoName != "" {
-			project, err := p.IsRepositoryExist(ctx, options.ProductName, eventSource.Gitlab.RepoName)
+			eventSource.Gitlab.RepoName, err = p.resourcesUsecase.ConvertRepoNameToCodeRepo(ctx, options.ProductName, eventSource.Gitlab.RepoName)
 			if err != nil {
 				return err
 			}
-			if project == nil {
-				return fmt.Errorf("failed to get repository %s in event sources", eventSource.Gitlab.RepoName)
-			}
-			eventSource.Gitlab.RepoName = fmt.Sprintf("repo-%d", int(project.Id))
 			data.Spec.EventSources[idx] = eventSource
 		}
 	}
@@ -166,7 +162,7 @@ func (p *ProjectPipelineRuntimeUsecase) convertCodeRepoToRepoName(ctx context.Co
 	}
 
 	if runtime.Spec.PipelineSource != "" {
-		repoName, err := p.resourcesUsecase.convertCodeRepoToRepoName(ctx, runtime.Spec.PipelineSource)
+		repoName, err := p.resourcesUsecase.ConvertCodeRepoToRepoName(ctx, runtime.Spec.PipelineSource)
 		if err != nil {
 			return err
 		}
@@ -175,7 +171,7 @@ func (p *ProjectPipelineRuntimeUsecase) convertCodeRepoToRepoName(ctx context.Co
 
 	for _, event := range runtime.Spec.EventSources {
 		if event.Gitlab != nil {
-			repoName, err := p.resourcesUsecase.convertCodeRepoToRepoName(ctx, event.Gitlab.RepoName)
+			repoName, err := p.resourcesUsecase.ConvertCodeRepoToRepoName(ctx, event.Gitlab.RepoName)
 			if err != nil {
 				return err
 			}
@@ -263,7 +259,7 @@ func (p *ProjectPipelineRuntimeUsecase) CheckReference(options nodestree.Compare
 	}
 
 	targetEnvironment := projectPipelineRuntime.Spec.Destination
-	ok = nodestree.IsResourceExist(options, targetEnvironment, nodestree.Enviroment)
+	ok = nodestree.IsResourceExist(options, targetEnvironment, nodestree.Environment)
 	if !ok {
 		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, _EnvironmentKind, targetEnvironment, _PipelineRuntimeKind,
 			projectPipelineRuntime.Name, resourceDirectory)

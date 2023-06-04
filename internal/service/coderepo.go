@@ -23,6 +23,7 @@ import (
 	coderepov1 "github.com/nautes-labs/api-server/api/coderepo/v1"
 	commonv1 "github.com/nautes-labs/api-server/api/common/v1"
 	"github.com/nautes-labs/api-server/internal/biz"
+	"github.com/nautes-labs/api-server/pkg/nodestree"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 )
@@ -105,6 +106,8 @@ func (s *CodeRepoService) ListCodeRepos(ctx context.Context, req *coderepov1.Lis
 }
 
 func (s *CodeRepoService) SaveCodeRepo(ctx context.Context, req *coderepov1.SaveRequest) (*coderepov1.SaveReply, error) {
+	ctx = biz.SetResourceContext(ctx, "", biz.SaveMethod, "", "", nodestree.CodeRepo, req.CoderepoName)
+
 	gitOptions := &biz.GitCodeRepoOptions{
 		Gitlab: &biz.GitlabCodeRepoOptions{},
 	}
@@ -155,6 +158,7 @@ func (s *CodeRepoService) SaveCodeRepo(ctx context.Context, req *coderepov1.Save
 		ProductName:       req.ProductName,
 		InsecureSkipCheck: req.InsecureSkipCheck,
 	}
+
 	err := s.codeRepo.SaveCodeRepo(ctx, options, data, gitOptions)
 	if err != nil {
 		if commonv1.IsRefreshPermissionsAccessDenied(err) {
@@ -172,6 +176,8 @@ func (s *CodeRepoService) SaveCodeRepo(ctx context.Context, req *coderepov1.Save
 }
 
 func (s *CodeRepoService) DeleteCodeRepo(ctx context.Context, req *coderepov1.DeleteRequest) (*coderepov1.DeleteReply, error) {
+	ctx = biz.SetResourceContext(ctx, "", biz.DeleteMethod, "", "", nodestree.CodeRepo, req.CoderepoName)
+
 	options := &biz.BizOptions{
 		ResouceName:       req.CoderepoName,
 		ProductName:       req.ProductName,

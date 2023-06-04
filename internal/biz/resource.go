@@ -533,7 +533,7 @@ func (r *ResourcesUsecase) SaveConfig(ctx context.Context, path string) error {
 	return nil
 }
 
-func (r *ResourcesUsecase) convertCodeRepoToRepoName(ctx context.Context, codeRepoName string) (string, error) {
+func (r *ResourcesUsecase) ConvertCodeRepoToRepoName(ctx context.Context, codeRepoName string) (string, error) {
 	id, err := utilstrings.ExtractNumber("repo-", codeRepoName)
 	if err != nil {
 		return "", err
@@ -547,7 +547,7 @@ func (r *ResourcesUsecase) convertCodeRepoToRepoName(ctx context.Context, codeRe
 	return project.Name, nil
 }
 
-func (r *ResourcesUsecase) convertRepoNameToCodeRepo(ctx context.Context, productName, codeRepoName string) (string, error) {
+func (r *ResourcesUsecase) ConvertRepoNameToCodeRepo(ctx context.Context, productName, codeRepoName string) (string, error) {
 	pid := fmt.Sprintf("%s/%s", productName, codeRepoName)
 	project, err := r.codeRepo.GetCodeRepo(ctx, pid)
 	if err != nil {
@@ -557,7 +557,7 @@ func (r *ResourcesUsecase) convertRepoNameToCodeRepo(ctx context.Context, produc
 	return fmt.Sprintf("%s%d", RepoPrefix, int(project.Id)), nil
 }
 
-func (r *ResourcesUsecase) convertProductToGroupName(ctx context.Context, productName string) (string, error) {
+func (r *ResourcesUsecase) ConvertProductToGroupName(ctx context.Context, productName string) (string, error) {
 	id, err := utilstrings.ExtractNumber("product-", productName)
 	if err != nil {
 		return "", err
@@ -571,7 +571,7 @@ func (r *ResourcesUsecase) convertProductToGroupName(ctx context.Context, produc
 	return group.Name, nil
 }
 
-func (r *ResourcesUsecase) convertGroupToProduct(ctx context.Context, productName string) (string, error) {
+func (r *ResourcesUsecase) ConvertGroupToProduct(ctx context.Context, productName string) (string, error) {
 	group, err := r.codeRepo.GetGroup(ctx, productName)
 	if err != nil {
 		return "", err
@@ -585,7 +585,7 @@ func (r *ResourcesUsecase) retryAutoMerge(ctx context.Context, path string) erro
 		return fmt.Errorf("when the save configuration cannot be fetch remote branch, err: %v", err)
 	}
 
-	err = r.gitRepo.Commit(path, "api: saved configuration")
+	err = r.gitRepo.Commit(ctx, path)
 	if err != nil {
 		return err
 	}
