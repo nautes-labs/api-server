@@ -145,6 +145,13 @@ func (s *ProjectPipelineRuntimeService) ListProjectPipelineRuntimes(ctx context.
 			return nil, fmt.Errorf("unexpected content type, resource: %s", node.Name)
 		}
 
+		err = s.ConvertCodeRepoToRepoName(ctx, runtime)
+		if err != nil {
+			return nil, err
+		}
+
+		node.Content = runtime
+
 		passed, err := selector.Match(req.FieldSelector, node.Content, projectPipelineRuntimeFilterFieldRules)
 		if err != nil {
 			return nil, err

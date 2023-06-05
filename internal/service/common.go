@@ -36,7 +36,7 @@ const (
 	_DeploymentRuntime       = "Spec.DeploymentRuntime"
 	_CodeRepo                = "Spec.CodeRepo"
 	_Product                 = "Spec.Product"
-	_ProjectsInProject       = "Projects.project"
+	_ProjectsInProject       = "Spec.Projects.In"
 	_PipelineTriggerPipeline = "Spec.PipelineTriggers.Pipeline"
 	_Project                 = "Spec.Project"
 	_PipelineSource          = "Spec.PipelineSource"
