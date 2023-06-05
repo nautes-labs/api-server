@@ -112,7 +112,7 @@ func (s *DeploymentruntimeService) ListDeploymentRuntimes(ctx context.Context, r
 }
 
 func (s *DeploymentruntimeService) SaveDeploymentRuntime(ctx context.Context, req *deploymentruntimev1.SaveRequest) (*deploymentruntimev1.SaveReply, error) {
-	ctx = biz.SetResourceContext(ctx, "", biz.SaveMethod, "", "", nodestree.DeploymentRuntime, req.DeploymentruntimeName)
+	ctx = biz.SetResourceContext(ctx, req.ProductName, biz.SaveMethod, "", "", nodestree.DeploymentRuntime, req.DeploymentruntimeName)
 
 	data := &biz.DeploymentRuntimeData{
 		Name: req.DeploymentruntimeName,
@@ -143,7 +143,7 @@ func (s *DeploymentruntimeService) SaveDeploymentRuntime(ctx context.Context, re
 }
 
 func (s *DeploymentruntimeService) DeleteDeploymentRuntime(ctx context.Context, req *deploymentruntimev1.DeleteRequest) (*deploymentruntimev1.DeleteReply, error) {
-	ctx = biz.SetResourceContext(ctx, "", biz.DeleteMethod, "", "", nodestree.DeploymentRuntime, req.DeploymentruntimeName)
+	ctx = biz.SetResourceContext(ctx, req.ProductName, biz.DeleteMethod, "", "", nodestree.DeploymentRuntime, req.DeploymentruntimeName)
 
 	options := &biz.BizOptions{
 		ResouceName:       req.DeploymentruntimeName,

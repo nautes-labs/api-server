@@ -149,7 +149,7 @@ func (s *CodeRepoService) ListCodeRepos(ctx context.Context, req *coderepov1.Lis
 }
 
 func (s *CodeRepoService) SaveCodeRepo(ctx context.Context, req *coderepov1.SaveRequest) (*coderepov1.SaveReply, error) {
-	ctx = biz.SetResourceContext(ctx, "", biz.SaveMethod, "", "", nodestree.CodeRepo, req.CoderepoName)
+	ctx = biz.SetResourceContext(ctx, req.ProductName, biz.SaveMethod, "", "", nodestree.CodeRepo, req.CoderepoName)
 
 	gitOptions := &biz.GitCodeRepoOptions{
 		Gitlab: &biz.GitlabCodeRepoOptions{},
@@ -219,7 +219,7 @@ func (s *CodeRepoService) SaveCodeRepo(ctx context.Context, req *coderepov1.Save
 }
 
 func (s *CodeRepoService) DeleteCodeRepo(ctx context.Context, req *coderepov1.DeleteRequest) (*coderepov1.DeleteReply, error) {
-	ctx = biz.SetResourceContext(ctx, "", biz.DeleteMethod, "", "", nodestree.CodeRepo, req.CoderepoName)
+	ctx = biz.SetResourceContext(ctx, req.ProductName, biz.DeleteMethod, "", "", nodestree.CodeRepo, req.CoderepoName)
 
 	options := &biz.BizOptions{
 		ResouceName:       req.CoderepoName,
