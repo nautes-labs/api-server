@@ -81,6 +81,12 @@ func (s *EnvironmentService) ListEnvironments(ctx context.Context, req *environm
 			continue
 		}
 
+		err := s.environment.ConvertProductToGroupName(ctx, env)
+		if err != nil {
+			return nil, err
+		}
+		node.Content = env
+
 		passed, err := selector.Match(req.FieldSelector, node.Content, environmentFilterFieldRules)
 		if err != nil {
 			return nil, err

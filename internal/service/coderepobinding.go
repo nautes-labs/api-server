@@ -90,17 +90,10 @@ func (s *CodeRepoBindingService) ListCodeRepoBindings(ctx context.Context, req *
 			continue
 		}
 
-		repoName, err := s.resourcesUsecase.ConvertCodeRepoToRepoName(ctx, codeRepoBinding.Spec.CodeRepo)
+		err = s.codeRepoBindingUsecase.ConvertRuntime(ctx, codeRepoBinding)
 		if err != nil {
 			return nil, err
 		}
-		codeRepoBinding.Spec.CodeRepo = repoName
-
-		groupName, err := s.resourcesUsecase.ConvertProductToGroupName(ctx, codeRepoBinding.Spec.Product)
-		if err != nil {
-			return nil, err
-		}
-		codeRepoBinding.Spec.Product = groupName
 		node.Content = codeRepoBinding
 
 		passed, err := selector.Match(req.FieldSelector, node.Content, codeRepoBindingFilterFieldRules)

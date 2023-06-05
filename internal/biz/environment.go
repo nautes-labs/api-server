@@ -51,7 +51,7 @@ func NewEnviromentUsecase(logger log.Logger, config *nautesconfigs.Config, codeR
 	return env
 }
 
-func (c *EnvironmentUsecase) convertProductToGroupName(ctx context.Context, env *resourcev1alpha1.Environment) error {
+func (c *EnvironmentUsecase) ConvertProductToGroupName(ctx context.Context, env *resourcev1alpha1.Environment) error {
 	if env.Spec.Product == "" {
 		return fmt.Errorf("the product field value of enviroment %s should not be empty", env.Spec.Product)
 	}
@@ -79,7 +79,7 @@ func (e *EnvironmentUsecase) GetEnvironment(ctx context.Context, enviromentName,
 		return nil, err
 	}
 
-	err = e.convertProductToGroupName(ctx, env)
+	err = e.ConvertProductToGroupName(ctx, env)
 	if err != nil {
 		return nil, err
 	}

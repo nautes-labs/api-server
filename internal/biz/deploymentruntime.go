@@ -90,17 +90,26 @@ func (d *DeploymentRuntimeUsecase) GetDeploymentRuntime(ctx context.Context, dep
 		return nil, fmt.Errorf("the resource type of %s is inconsistent", deploymentRuntimeName)
 	}
 
-	err = d.ConvertCodeRepoToRepoName(ctx, runtime)
-	if err != nil {
-		return nil, err
-	}
-
-	err = d.ConvertProductToGroupName(ctx, runtime)
+	err = d.ConvertRuntime(ctx, runtime)
 	if err != nil {
 		return nil, err
 	}
 
 	return runtime, nil
+}
+
+func (d *DeploymentRuntimeUsecase) ConvertRuntime(ctx context.Context, runtime *resourcev1alpha1.DeploymentRuntime) error {
+	err := d.ConvertCodeRepoToRepoName(ctx, runtime)
+	if err != nil {
+		return err
+	}
+
+	err = d.ConvertProductToGroupName(ctx, runtime)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (d *DeploymentRuntimeUsecase) ListDeploymentRuntimes(ctx context.Context, productName string) ([]*nodestree.Node, error) {

@@ -172,25 +172,6 @@ func (s *ProjectPipelineRuntimeService) ListProjectPipelineRuntimes(ctx context.
 	}, nil
 }
 
-func (s *ProjectPipelineRuntimeService) convertToReply(ctx context.Context, runtimes []*resourcev1alpha1.ProjectPipelineRuntime, productName string) ([]*projectpipelineruntimev1.GetReply, error) {
-	var items []*projectpipelineruntimev1.GetReply
-
-	for _, runtime := range runtimes {
-		err := s.ConvertCodeRepoToRepoName(ctx, runtime)
-		if err != nil {
-			return nil, err
-		}
-		item, err := covertProjectPipelineRuntime(runtime, productName)
-		if err != nil {
-			return nil, err
-		}
-
-		items = append(items, item)
-	}
-
-	return items, nil
-}
-
 func (s *ProjectPipelineRuntimeService) SaveProjectPipelineRuntime(ctx context.Context, req *projectpipelineruntimev1.SaveRequest) (*projectpipelineruntimev1.SaveReply, error) {
 	data := &biz.ProjectPipelineRuntimeData{
 		Name: req.ProjectPipelineRuntimeName,

@@ -49,7 +49,7 @@ func NewDeploymentruntimeService(deploymentRuntime *biz.DeploymentRuntimeUsecase
 	return &DeploymentruntimeService{deploymentRuntime: deploymentRuntime}
 }
 
-func (s *DeploymentruntimeService) CovertCodeRepoValueToReply(runtime *resourcev1alpha1.DeploymentRuntime) *deploymentruntimev1.GetReply {
+func (s *DeploymentruntimeService) CovertDeploymentRuntimeValueToReply(runtime *resourcev1alpha1.DeploymentRuntime) *deploymentruntimev1.GetReply {
 	return &deploymentruntimev1.GetReply{
 		Product:     runtime.Spec.Product,
 		Name:        runtime.Name,
@@ -69,7 +69,7 @@ func (s *DeploymentruntimeService) GetDeploymentRuntime(ctx context.Context, req
 		return nil, err
 	}
 
-	return s.CovertCodeRepoValueToReply(runtime), nil
+	return s.CovertDeploymentRuntimeValueToReply(runtime), nil
 }
 
 func (s *DeploymentruntimeService) ListDeploymentRuntimes(ctx context.Context, req *deploymentruntimev1.ListsRequest) (*deploymentruntimev1.ListsReply, error) {
@@ -85,6 +85,12 @@ func (s *DeploymentruntimeService) ListDeploymentRuntimes(ctx context.Context, r
 			continue
 		}
 
+		err := s.deploymentRuntime.ConvertRuntime(ctx, runtime)
+		if err != nil {
+			return nil, err
+		}
+		node.Content = runtime
+
 		passed, err := selector.Match(req.FieldSelector, node.Content, deploymentRuntimeFilterFieldRules)
 		if err != nil {
 			return nil, err
@@ -93,17 +99,7 @@ func (s *DeploymentruntimeService) ListDeploymentRuntimes(ctx context.Context, r
 			continue
 		}
 
-		err = s.deploymentRuntime.ConvertCodeRepoToRepoName(ctx, runtime)
-		if err != nil {
-			return nil, err
-		}
-
-		err = s.deploymentRuntime.ConvertProductToGroupName(ctx, runtime)
-		if err != nil {
-			return nil, err
-		}
-
-		items = append(items, s.CovertCodeRepoValueToReply(runtime))
+		items = append(items, s.CovertDeploymentRuntimeValueToReply(runtime))
 	}
 
 	return &deploymentruntimev1.ListsReply{

@@ -77,19 +77,28 @@ func (c *CodeRepoBindingUsecase) GetCodeRepoBinding(ctx context.Context, options
 		return nil, err
 	}
 
-	repoName, err := c.resourcesUsecase.ConvertCodeRepoToRepoName(ctx, resource.Spec.CodeRepo)
+	err = c.ConvertRuntime(ctx, resource)
 	if err != nil {
 		return nil, err
+	}
+
+	return resource, nil
+}
+
+func (c *CodeRepoBindingUsecase) ConvertRuntime(ctx context.Context, resource *resourcev1alpha1.CodeRepoBinding) error {
+	repoName, err := c.resourcesUsecase.ConvertCodeRepoToRepoName(ctx, resource.Spec.CodeRepo)
+	if err != nil {
+		return err
 	}
 	resource.Spec.CodeRepo = repoName
 
 	groupName, err := c.resourcesUsecase.ConvertProductToGroupName(ctx, resource.Spec.Product)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	resource.Spec.Product = groupName
 
-	return resource, nil
+	return nil
 }
 
 func (c *CodeRepoBindingUsecase) ListCodeRepoBindings(ctx context.Context, options *BizOptions) ([]*nodestree.Node, error) {

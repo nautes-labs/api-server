@@ -17,7 +17,7 @@ package service
 // Filter field for list api.
 const (
 	FieldPipelineTriggersPipeline = "pipeline_triggers.pipeline"
-	FeldManifestSourceCodeRepo    = "manifest_source.codeRepo"
+	FeldManifestSourceCodeRepo    = "manifest_source.code_repo"
 	FieldDestination              = "destination"
 	FieldPipelineSource           = "pipeline_source"
 	FieldProject                  = "project"
@@ -29,10 +29,13 @@ const (
 	FieldDeploymentRuntime        = "deployment_runtime"
 	FieldCluster                  = "cluster"
 	FieldEnvType                  = "env_type"
+	FieldClusterType              = "cluster_type"
+	FieldUsage                    = "usage"
+	FieldWorkType                 = "worker_type"
 )
 
 const (
-	_PilelineRuntime         = "Spec.PilelineRuntime"
+	_PilelineRuntime         = "Spec.PipelineRuntime"
 	_DeploymentRuntime       = "Spec.DeploymentRuntime"
 	_CodeRepo                = "Spec.CodeRepo"
 	_Product                 = "Spec.Product"
@@ -43,4 +46,7 @@ const (
 	_Destination             = "Spec.Destination"
 	_ProjectsRef             = "Spec.ProjectsRef.In"
 	_ManifestSource          = "Spec.ManifestSource.CodeRepo"
+	_ClusterType             = "Spec.ClusterType"
+	_Usage                   = "Spec.Usage"
+	_WorkType                = "Spec.WorkerType"
 )

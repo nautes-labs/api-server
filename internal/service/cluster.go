@@ -29,15 +29,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	FieldClusterType = "cluster_type"
-	FieldUsage       = "usage"
-	FieldWorkType    = "worker_type"
-	_ClusterType     = "Spec.ClusterType"
-	_Usage           = "Spec.Usage"
-	_WorkType        = "Spec.WorkType"
-)
-
 var (
 	clustrFilterFieldRules = map[string]map[string]selector.FieldSelector{
 		FieldClusterType: {
