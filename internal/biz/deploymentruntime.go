@@ -129,6 +129,7 @@ func (d *DeploymentRuntimeUsecase) SaveDeploymentRuntime(ctx context.Context, op
 	data.Spec.ManifestSource.CodeRepo = fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
 	data.Spec.Product = fmt.Sprintf("%s%d", _ProductPrefix, int(group.Id))
 	resourceOptions := &resourceOptions{
+		resourceName:      options.ResouceName,
 		resourceKind:      nodestree.DeploymentRuntime,
 		productName:       options.ProductName,
 		insecureSkipCheck: options.InsecureSkipCheck,

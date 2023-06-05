@@ -169,6 +169,7 @@ func (c *CodeRepoUsecase) SaveCodeRepo(ctx context.Context, options *BizOptions,
 	data.Name = codeRepoName
 
 	resourceOptions := &resourceOptions{
+		resourceName:      options.ResouceName,
 		resourceKind:      nodestree.CodeRepo,
 		productName:       options.ProductName,
 		insecureSkipCheck: options.InsecureSkipCheck,

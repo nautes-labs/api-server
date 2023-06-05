@@ -90,6 +90,7 @@ func (p *ProjectPipelineRuntimeUsecase) SaveProjectPipelineRuntime(ctx context.C
 	}
 
 	resourceOptions := &resourceOptions{
+		resourceName:      options.ResouceName,
 		resourceKind:      nodestree.ProjectPipelineRuntime,
 		productName:       options.ProductName,
 		insecureSkipCheck: options.InsecureSkipCheck,

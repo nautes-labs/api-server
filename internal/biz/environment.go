@@ -142,6 +142,7 @@ func (e *EnvironmentUsecase) SaveEnvironment(ctx context.Context, options *BizOp
 
 	data.Spec.Product = fmt.Sprintf("%s%d", _ProductPrefix, int(group.Id))
 	resourceOptions := &resourceOptions{
+		resourceName:      options.ResouceName,
 		resourceKind:      nodestree.Environment,
 		productName:       options.ProductName,
 		insecureSkipCheck: options.InsecureSkipCheck,

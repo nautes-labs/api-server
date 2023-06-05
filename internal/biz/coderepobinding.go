@@ -92,34 +92,6 @@ func (c *CodeRepoBindingUsecase) GetCodeRepoBinding(ctx context.Context, options
 	return resource, nil
 }
 
-func (c *CodeRepoBindingUsecase) ListCodeRepoBindings1(ctx context.Context, options *BizOptions) ([]*resourcev1alpha1.CodeRepoBinding, error) {
-	nodes, err := c.resourcesUsecase.List(ctx, options.ProductName, c)
-	if err != nil {
-		return nil, err
-	}
-
-	codeRepoBindings, err := c.nodesToLists(*nodes)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, codecodeRepoBinding := range codeRepoBindings {
-		repoName, err := c.resourcesUsecase.ConvertCodeRepoToRepoName(ctx, codecodeRepoBinding.Spec.CodeRepo)
-		if err != nil {
-			return nil, err
-		}
-		codecodeRepoBinding.Spec.CodeRepo = repoName
-
-		groupName, err := c.resourcesUsecase.ConvertProductToGroupName(ctx, codecodeRepoBinding.Spec.Product)
-		if err != nil {
-			return nil, err
-		}
-		codecodeRepoBinding.Spec.Product = groupName
-	}
-
-	return codeRepoBindings, nil
-}
-
 func (c *CodeRepoBindingUsecase) ListCodeRepoBindings(ctx context.Context, options *BizOptions) ([]*nodestree.Node, error) {
 	nodes, err := c.resourcesUsecase.List(ctx, options.ProductName, c)
 	if err != nil {
@@ -132,27 +104,10 @@ func (c *CodeRepoBindingUsecase) ListCodeRepoBindings(ctx context.Context, optio
 }
 
 func (c *CodeRepoBindingUsecase) SaveCodeRepoBinding(ctx context.Context, options *BizOptions, data *CodeRepoBindingData) error {
-
 	c.groupName = options.ProductName
 
-	nodes, err := c.resourcesUsecase.loadDefaultProjectNodes(ctx, options.ProductName)
-	if err != nil {
-		return err
-	}
-
-	node := c.nodestree.GetNode(nodes, nodestree.CodeRepoBinding, options.ResouceName)
-	if node != nil {
-		lastCodeRepoBinding, ok := node.Content.(*resourcev1alpha1.CodeRepoBinding)
-		if !ok {
-			return fmt.Errorf("resource type is inconsistent, please check if this resource %s is legal", options.ResouceName)
-		}
-
-		if lastCodeRepoBinding.Spec.CodeRepo != data.Spec.CodeRepo {
-			return errors.New(500, "NOT_ALLOWED_MODIFY", "It is not allowed to modify the authorized repository. If you want to change the authorized repository, please delete the authorization")
-		}
-	}
-
 	resourceOptions := &resourceOptions{
+		resourceName:      options.ResouceName,
 		resourceKind:      nodestree.CodeRepoBinding,
 		productName:       options.ProductName,
 		insecureSkipCheck: options.InsecureSkipCheck,
@@ -912,13 +867,17 @@ func (c *CodeRepoBindingUsecase) UpdateNode(resourceNode *nodestree.Node, data i
 		val.Spec.Projects = make([]string, 0)
 	}
 
-	codeRepo, ok := resourceNode.Content.(*resourcev1alpha1.CodeRepoBinding)
+	codeRepoBinding, ok := resourceNode.Content.(*resourcev1alpha1.CodeRepoBinding)
 	if !ok {
 		return nil, fmt.Errorf("failed to get coderepo %s when updating node", resourceNode.Name)
 	}
 
-	codeRepo.Spec = val.Spec
-	resourceNode.Content = codeRepo
+	if val.Spec.CodeRepo != codeRepoBinding.Spec.CodeRepo {
+		return nil, errors.New(500, "NOT_ALLOWED_MODIFY", "It is not allowed to modify the authorized repository. If you want to change the authorized repository, please delete the authorization")
+	}
+
+	codeRepoBinding.Spec = val.Spec
+	resourceNode.Content = codeRepoBinding
 
 	return resourceNode, nil
 }
