@@ -33,10 +33,10 @@ type CodeRepoHTTPServer interface {
 
 func RegisterCodeRepoHTTPServer(s *http.Server, srv CodeRepoHTTPServer) {
 	r := s.Route("/")
-	r.GET("/api/v1/products/{productName}/coderepos/{coderepoName}", _CodeRepo_GetCodeRepo0_HTTP_Handler(srv))
-	r.GET("/api/v1/products/{productName}/coderepos", _CodeRepo_ListCodeRepos0_HTTP_Handler(srv))
-	r.POST("/api/v1/products/{productName}/coderepos/{coderepoName}", _CodeRepo_SaveCodeRepo0_HTTP_Handler(srv))
-	r.DELETE("/api/v1/products/{productName}/coderepos/{coderepoName}", _CodeRepo_DeleteCodeRepo0_HTTP_Handler(srv))
+	r.GET("/api/v1/products/{product_name}/coderepos/{coderepoName}", _CodeRepo_GetCodeRepo0_HTTP_Handler(srv))
+	r.GET("/api/v1/products/{product_name}/coderepos", _CodeRepo_ListCodeRepos0_HTTP_Handler(srv))
+	r.POST("/api/v1/products/{product_name}/coderepos/{coderepoName}", _CodeRepo_SaveCodeRepo0_HTTP_Handler(srv))
+	r.DELETE("/api/v1/products/{product_name}/coderepos/{coderepoName}", _CodeRepo_DeleteCodeRepo0_HTTP_Handler(srv))
 }
 
 func _CodeRepo_GetCodeRepo0_HTTP_Handler(srv CodeRepoHTTPServer) func(ctx http.Context) error {
@@ -147,7 +147,7 @@ func NewCodeRepoHTTPClient(client *http.Client) CodeRepoHTTPClient {
 
 func (c *CodeRepoHTTPClientImpl) DeleteCodeRepo(ctx context.Context, in *DeleteRequest, opts ...http.CallOption) (*DeleteReply, error) {
 	var out DeleteReply
-	pattern := "/api/v1/products/{productName}/coderepos/{coderepoName}"
+	pattern := "/api/v1/products/{product_name}/coderepos/{coderepoName}"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationCodeRepoDeleteCodeRepo))
 	opts = append(opts, http.PathTemplate(pattern))
@@ -160,7 +160,7 @@ func (c *CodeRepoHTTPClientImpl) DeleteCodeRepo(ctx context.Context, in *DeleteR
 
 func (c *CodeRepoHTTPClientImpl) GetCodeRepo(ctx context.Context, in *GetRequest, opts ...http.CallOption) (*GetReply, error) {
 	var out GetReply
-	pattern := "/api/v1/products/{productName}/coderepos/{coderepoName}"
+	pattern := "/api/v1/products/{product_name}/coderepos/{coderepoName}"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationCodeRepoGetCodeRepo))
 	opts = append(opts, http.PathTemplate(pattern))
@@ -173,7 +173,7 @@ func (c *CodeRepoHTTPClientImpl) GetCodeRepo(ctx context.Context, in *GetRequest
 
 func (c *CodeRepoHTTPClientImpl) ListCodeRepos(ctx context.Context, in *ListsRequest, opts ...http.CallOption) (*ListsReply, error) {
 	var out ListsReply
-	pattern := "/api/v1/products/{productName}/coderepos"
+	pattern := "/api/v1/products/{product_name}/coderepos"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationCodeRepoListCodeRepos))
 	opts = append(opts, http.PathTemplate(pattern))
@@ -186,7 +186,7 @@ func (c *CodeRepoHTTPClientImpl) ListCodeRepos(ctx context.Context, in *ListsReq
 
 func (c *CodeRepoHTTPClientImpl) SaveCodeRepo(ctx context.Context, in *SaveRequest, opts ...http.CallOption) (*SaveReply, error) {
 	var out SaveReply
-	pattern := "/api/v1/products/{productName}/coderepos/{coderepoName}"
+	pattern := "/api/v1/products/{product_name}/coderepos/{coderepoName}"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationCodeRepoSaveCodeRepo))
 	opts = append(opts, http.PathTemplate(pattern))

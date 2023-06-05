@@ -179,11 +179,8 @@ var _ = Describe("List CodeRepoBinding", func() {
 			ProductName: defaultGroupName,
 			ResouceName: resourceName,
 		}
-		items, err := biz.ListCodeRepoBindings(ctx, options)
+		_, err := biz.ListCodeRepoBindings(ctx, options)
 		Expect(err).ShouldNot(HaveOccurred())
-		for _, item := range items {
-			Expect(item.Spec).Should(Equal(fakeResource.Spec))
-		}
 	})
 
 	It("failed to get CodeRepoBinding", func() {

@@ -92,7 +92,7 @@ func (c *CodeRepoBindingUsecase) GetCodeRepoBinding(ctx context.Context, options
 	return resource, nil
 }
 
-func (c *CodeRepoBindingUsecase) ListCodeRepoBindings(ctx context.Context, options *BizOptions) ([]*resourcev1alpha1.CodeRepoBinding, error) {
+func (c *CodeRepoBindingUsecase) ListCodeRepoBindings1(ctx context.Context, options *BizOptions) ([]*resourcev1alpha1.CodeRepoBinding, error) {
 	nodes, err := c.resourcesUsecase.List(ctx, options.ProductName, c)
 	if err != nil {
 		return nil, err
@@ -118,6 +118,17 @@ func (c *CodeRepoBindingUsecase) ListCodeRepoBindings(ctx context.Context, optio
 	}
 
 	return codeRepoBindings, nil
+}
+
+func (c *CodeRepoBindingUsecase) ListCodeRepoBindings(ctx context.Context, options *BizOptions) ([]*nodestree.Node, error) {
+	nodes, err := c.resourcesUsecase.List(ctx, options.ProductName, c)
+	if err != nil {
+		return nil, err
+	}
+
+	codeRepoBindingNodes := nodestree.ListsResourceNodes(*nodes, nodestree.CodeRepoBinding)
+
+	return codeRepoBindingNodes, nil
 }
 
 func (c *CodeRepoBindingUsecase) SaveCodeRepoBinding(ctx context.Context, options *BizOptions, data *CodeRepoBindingData) error {

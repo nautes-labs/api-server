@@ -69,8 +69,10 @@ message GetReply {
 
 // Defines the ListsRequest message which is used to retrieve a list of projects.
 message ListsRequest {
-  // The name of the product the projects belong to.
-  string product_name = 1 [json_name = "product_name"]; 
+  // To list the product name of the repository.
+  string product_name = 1 [json_name = "product_name"];
+  // Filter the list by field.
+  string field_selector = 2 [json_name = "field_selector"];
 }
 
 // Defines the ListsReply message which is used to return a list of projects.

@@ -21,7 +21,22 @@ import (
 	coderepobindingv1 "github.com/nautes-labs/api-server/api/coderepobinding/v1"
 	"github.com/nautes-labs/api-server/internal/biz"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
+	"github.com/nautes-labs/api-server/pkg/selector"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
+)
+
+var (
+	codeRepoBindingFilterFieldRules = map[string]map[string]selector.FieldSelector{
+		FieldCodeRepo: {
+			selector.EqualOperator: selector.NewStringSelector(_CodeRepo, selector.In),
+		},
+		FieldProduct: {
+			selector.EqualOperator: selector.NewStringSelector(_Product, selector.In),
+		},
+		FiledProjectsInProject: {
+			selector.EqualOperator: selector.NewStringSelector(_ProjectsInProject, selector.In),
+		},
+	}
 )
 
 type CodeRepoBindingService struct {
@@ -62,14 +77,33 @@ func (s *CodeRepoBindingService) ListCodeRepoBindings(ctx context.Context, req *
 		ProductName: req.ProductName,
 	}
 
-	codeRepoBindings, err := s.codeRepoBindingUsecase.ListCodeRepoBindings(ctx, options)
+	nodes, err := s.codeRepoBindingUsecase.ListCodeRepoBindings(ctx, options)
 	if err != nil {
 		return nil, err
 	}
 
 	var items []*coderepobindingv1.GetReply
-	for _, codeRepoBinding := range codeRepoBindings {
-		items = append(items, s.CovertCodeRepoBindingValueToReply(codeRepoBinding))
+
+	for _, node := range nodes {
+		codeRepoBinding, ok := node.Content.(*resourcev1alpha1.CodeRepoBinding)
+		if !ok {
+			continue
+		}
+
+		passed, err := selector.Match(req.FieldSelector, node.Content, codeRepoBindingFilterFieldRules)
+		if err != nil {
+			return nil, err
+		}
+		if !passed {
+			continue
+		}
+
+		item := s.CovertCodeRepoBindingValueToReply(codeRepoBinding)
+		if err != nil {
+			return nil, err
+		}
+
+		items = append(items, item)
 	}
 
 	return &coderepobindingv1.ListsReply{Items: items}, nil

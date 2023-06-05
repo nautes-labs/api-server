@@ -61,3 +61,19 @@ func ExtractNumber(prefix, str string) (int, error) {
 	}
 	return num, nil
 }
+
+func ReplaceSeparator(s, oldSep, newSep string) string {
+	return strings.ReplaceAll(s, oldSep, newSep)
+}
+
+func ParseMetadataString(metadataStr string) map[string]string {
+	metadataMap := make(map[string]string)
+	splits := strings.Split(metadataStr, ",")
+	for _, split := range splits {
+		keyValue := strings.Split(split, "=")
+		if len(keyValue) == 2 {
+			metadataMap[keyValue[0]] = keyValue[1]
+		}
+	}
+	return metadataMap
+}

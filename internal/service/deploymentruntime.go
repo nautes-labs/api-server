@@ -21,8 +21,23 @@ import (
 	deploymentruntimev1 "github.com/nautes-labs/api-server/api/deploymentruntime/v1"
 	"github.com/nautes-labs/api-server/internal/biz"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
+	"github.com/nautes-labs/api-server/pkg/selector"
 	"github.com/nautes-labs/pkg/api/v1alpha1"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
+)
+
+var (
+	deploymentRuntimeFilterFieldRules = map[string]map[string]selector.FieldSelector{
+		FieldProjectsRef: {
+			selector.EqualOperator: selector.NewStringSelector(_ProjectsRef, selector.In),
+		},
+		FeldManifestSourceCodeRepo: {
+			selector.EqualOperator: selector.NewStringSelector(_ManifestSource, selector.In),
+		},
+		FieldDestination: {
+			selector.EqualOperator: selector.NewStringSelector(_Destination, selector.In),
+		},
+	}
 )
 
 type DeploymentruntimeService struct {
@@ -58,13 +73,36 @@ func (s *DeploymentruntimeService) GetDeploymentRuntime(ctx context.Context, req
 }
 
 func (s *DeploymentruntimeService) ListDeploymentRuntimes(ctx context.Context, req *deploymentruntimev1.ListsRequest) (*deploymentruntimev1.ListsReply, error) {
-	runtimes, err := s.deploymentRuntime.ListDeploymentRuntimes(ctx, req.ProductName)
+	nodes, err := s.deploymentRuntime.ListDeploymentRuntimes(ctx, req.ProductName)
 	if err != nil {
 		return nil, err
 	}
 
 	var items []*deploymentruntimev1.GetReply
-	for _, runtime := range runtimes {
+	for _, node := range nodes {
+		runtime, ok := node.Content.(*resourcev1alpha1.DeploymentRuntime)
+		if !ok {
+			continue
+		}
+
+		passed, err := selector.Match(req.FieldSelector, node.Content, deploymentRuntimeFilterFieldRules)
+		if err != nil {
+			return nil, err
+		}
+		if !passed {
+			continue
+		}
+
+		err = s.deploymentRuntime.ConvertCodeRepoToRepoName(ctx, runtime)
+		if err != nil {
+			return nil, err
+		}
+
+		err = s.deploymentRuntime.ConvertProductToGroupName(ctx, runtime)
+		if err != nil {
+			return nil, err
+		}
+
 		items = append(items, s.CovertCodeRepoValueToReply(runtime))
 	}
 

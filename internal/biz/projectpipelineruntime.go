@@ -49,50 +49,26 @@ func NewProjectPipelineRuntimeUsecase(logger log.Logger, codeRepo CodeRepo, node
 	return runtime
 }
 
-func (p *ProjectPipelineRuntimeUsecase) GetProjectPipelineRuntime(ctx context.Context, projectPipelineName, productName string) (*resourcev1alpha1.ProjectPipelineRuntime, error) {
-	resourceNode, err := p.resourcesUsecase.Get(ctx, nodestree.ProjectPipelineRuntime, productName, p, func(nodes nodestree.Node) (string, error) {
+func (p *ProjectPipelineRuntimeUsecase) GetProjectPipelineRuntime(ctx context.Context, projectPipelineName, productName string) (*nodestree.Node, error) {
+	node, err := p.resourcesUsecase.Get(ctx, nodestree.ProjectPipelineRuntime, productName, p, func(nodes nodestree.Node) (string, error) {
 		return projectPipelineName, nil
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	runtime, ok := resourceNode.Content.(*resourcev1alpha1.ProjectPipelineRuntime)
-	if !ok {
-		return nil, fmt.Errorf("the resource %s type is inconsistent", projectPipelineName)
-	}
-
-	err = p.convertCodeRepoToRepoName(ctx, runtime)
-	if err != nil {
-		return nil, err
-	}
-
-	return runtime, nil
+	return node, nil
 }
 
-func (p *ProjectPipelineRuntimeUsecase) ListProjectPipelineRuntimes(ctx context.Context, productName string) ([]*resourcev1alpha1.ProjectPipelineRuntime, error) {
-	var runtimes []*resourcev1alpha1.ProjectPipelineRuntime
-
-	resourceNodes, err := p.resourcesUsecase.List(ctx, productName, p)
+func (p *ProjectPipelineRuntimeUsecase) ListProjectPipelineRuntimes(ctx context.Context, productName string) ([]*nodestree.Node, error) {
+	nodes, err := p.resourcesUsecase.List(ctx, productName, p)
 	if err != nil {
 		return nil, err
 	}
 
-	nodes := nodestree.ListsResourceNodes(*resourceNodes, nodestree.ProjectPipelineRuntime)
-	for _, node := range nodes {
-		if node.Kind == nodestree.ProjectPipelineRuntime && !node.IsDir {
-			runtime, ok := node.Content.(*resourcev1alpha1.ProjectPipelineRuntime)
-			if ok {
-				err = p.convertCodeRepoToRepoName(ctx, runtime)
-				if err != nil {
-					return nil, err
-				}
-				runtimes = append(runtimes, runtime)
-			}
-		}
-	}
+	projectPipelineRuntimeNodes := nodestree.ListsResourceNodes(*nodes, nodestree.ProjectPipelineRuntime)
 
-	return runtimes, nil
+	return projectPipelineRuntimeNodes, nil
 }
 
 func (p *ProjectPipelineRuntimeUsecase) SaveProjectPipelineRuntime(ctx context.Context, options *BizOptions, data *ProjectPipelineRuntimeData) error {
@@ -156,7 +132,7 @@ func (p *ProjectPipelineRuntimeUsecase) IsRepositoryExist(ctx context.Context, p
 	return project, nil
 }
 
-func (p *ProjectPipelineRuntimeUsecase) convertCodeRepoToRepoName(ctx context.Context, runtime *resourcev1alpha1.ProjectPipelineRuntime) error {
+func (p *ProjectPipelineRuntimeUsecase) ConvertCodeRepoToRepoName(ctx context.Context, runtime *resourcev1alpha1.ProjectPipelineRuntime) error {
 	if runtime.Spec.PipelineSource == "" {
 		return fmt.Errorf("the pipelineSource field value of projectPipelineRuntime %s should not be empty", runtime.Name)
 	}
@@ -261,7 +237,7 @@ func (p *ProjectPipelineRuntimeUsecase) CheckReference(options nodestree.Compare
 	targetEnvironment := projectPipelineRuntime.Spec.Destination
 	ok = nodestree.IsResourceExist(options, targetEnvironment, nodestree.Environment)
 	if !ok {
-		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, _EnvironmentKind, targetEnvironment, _PipelineRuntimeKind,
+		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, nodestree.Environment, targetEnvironment, _PipelineRuntimeKind,
 			projectPipelineRuntime.Name, resourceDirectory)
 	}
 

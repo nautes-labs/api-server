@@ -43,7 +43,7 @@ func wireApp(confServer *conf.Server, confData *conf.Data, logger log.Logger, no
 	productService := service.NewProductService(productUsecase, config)
 	grpcServer := server.NewGRPCServer(confServer, productService, logger)
 	projectPipelineRuntimeUsecase := biz.NewProjectPipelineRuntimeUsecase(logger, codeRepo, nodesTree, resourcesUsecase)
-	projectPipelineRuntimeService := service.NewProjectPipelineRuntimeService(projectPipelineRuntimeUsecase)
+	projectPipelineRuntimeService := service.NewProjectPipelineRuntimeService(projectPipelineRuntimeUsecase, resourcesUsecase)
 	deploymentRuntimeUsecase := biz.NewDeploymentRuntimeUsecase(logger, codeRepo, nodesTree, resourcesUsecase)
 	deploymentruntimeService := service.NewDeploymentruntimeService(deploymentRuntimeUsecase)
 	codeRepoService := service.NewCodeRepoService(codeRepoUsecase, config)

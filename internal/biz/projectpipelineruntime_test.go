@@ -126,16 +126,10 @@ var _ = Describe("Get project pipeline runtime", func() {
 		fakeNodes    = createFakeProjectPipelineRuntimeNodes(fakeNode)
 	)
 	It("will get success", testUseCase.GetResourceSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		tmp, _ := fakeNode.Content.(*resourcev1alpha1.ProjectPipelineRuntime)
-		tmp.Spec.PipelineSource = "repo-1"
-		tmp.Spec.EventSources[0].Gitlab.RepoName = "repo-2"
-		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), 1).Return(defautlProject, nil)
-		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), 2).Return(defautlProject, nil)
-
 		biz := NewProjectPipelineRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
 		result, err := biz.GetProjectPipelineRuntime(context.Background(), resourceName, defaultGroupName)
 		Expect(err).ShouldNot(HaveOccurred())
-		Expect(result).Should(Equal(fakeResource))
+		Expect(result).Should(Equal(fakeNode))
 	}))
 
 	It("will fail when resource is not found", testUseCase.GetResourceFail(func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
@@ -153,17 +147,12 @@ var _ = Describe("List project pipeline runtimes", func() {
 		fakeNodes    = createFakeProjectPipelineRuntimeNodes(fakeNode)
 	)
 	It("will list successfully", testUseCase.ListResourceSuccess(fakeNodes, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		tmp, _ := fakeNode.Content.(*resourcev1alpha1.ProjectPipelineRuntime)
-		tmp.Spec.PipelineSource = "repo-1"
-		tmp.Spec.EventSources[0].Gitlab.RepoName = "repo-2"
-		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), 1).Return(defautlProject, nil)
-		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), 2).Return(defautlProject, nil)
 
 		biz := NewProjectPipelineRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
 		results, err := biz.ListProjectPipelineRuntimes(ctx, defaultGroupName)
 		Expect(err).ShouldNot(HaveOccurred())
 		for _, result := range results {
-			Expect(result).Should(Equal(fakeResource))
+			Expect(result).Should(Equal(fakeNode))
 		}
 	}))
 

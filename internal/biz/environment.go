@@ -29,8 +29,7 @@ import (
 )
 
 const (
-	_EnvironmentKind = "Environment"
-	_EnvSubDir       = "envs"
+	_EnvSubDir = "envs"
 )
 
 type EnvironmentUsecase struct {
@@ -88,25 +87,15 @@ func (e *EnvironmentUsecase) GetEnvironment(ctx context.Context, enviromentName,
 	return env, nil
 }
 
-func (e *EnvironmentUsecase) ListEnvironments(ctx context.Context, productName string) ([]*resourcev1alpha1.Environment, error) {
-	nodes, err := e.resourcesUsecase.List(ctx, productName, e)
+func (e *EnvironmentUsecase) ListEnvironments(ctx context.Context, productName string) ([]*nodestree.Node, error) {
+	resourceNodes, err := e.resourcesUsecase.List(ctx, productName, e)
 	if err != nil {
 		return nil, err
 	}
 
-	envs, err := e.nodesToLists(*nodes)
-	if err != nil {
-		return nil, err
-	}
+	nodes := nodestree.ListsResourceNodes(*resourceNodes, nodestree.Environment)
 
-	for _, env := range envs {
-		err = e.convertProductToGroupName(ctx, env)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return envs, nil
+	return nodes, nil
 }
 
 func (e *EnvironmentUsecase) nodesToLists(nodes nodestree.Node) ([]*resourcev1alpha1.Environment, error) {
@@ -245,7 +234,7 @@ func (e *EnvironmentUsecase) CheckReference(options nodestree.CompareOptions, no
 	err := k8sClient.Get(context.TODO(), objKey, &resourcev1alpha1.Cluster{})
 	if err != nil {
 		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable+"err: "+err.Error(), nodestree.Cluster, env.Spec.Cluster,
-			_EnvironmentKind, env.Name, _EnvSubDir)
+			nodestree.Environment, env.Name, _EnvSubDir)
 	}
 
 	ok, err = e.compare(options.Nodes)

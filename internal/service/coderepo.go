@@ -24,8 +24,23 @@ import (
 	commonv1 "github.com/nautes-labs/api-server/api/common/v1"
 	"github.com/nautes-labs/api-server/internal/biz"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
+	"github.com/nautes-labs/api-server/pkg/selector"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
+)
+
+var (
+	codeRepoFilterFieldRules = map[string]map[string]selector.FieldSelector{
+		FieldPilelineRuntime: {
+			selector.EqualOperator: selector.NewBoolSelector(_PilelineRuntime, selector.Eq),
+		},
+		FieldDeploymentRuntime: {
+			selector.EqualOperator: selector.NewBoolSelector(_DeploymentRuntime, selector.Eq),
+		},
+		FieldProject: {
+			selector.EqualOperator: selector.NewStringSelector(_Project, selector.In),
+		},
+	}
 )
 
 type CodeRepoService struct {
@@ -41,8 +56,18 @@ func NewCodeRepoService(codeRepo *biz.CodeRepoUsecase, configs *nautesconfigs.Co
 	}
 }
 
-func (s *CodeRepoService) CovertCodeRepoValueToReply(codeRepo *resourcev1alpha1.CodeRepo, project *biz.Project) *coderepov1.GetReply {
+func (s *CodeRepoService) CovertCodeRepoValueToReply(ctx context.Context, productName string, node *nodestree.Node) (*coderepov1.GetReply, error) {
 	var git *coderepov1.GitProject
+	codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
+	if !ok {
+		return nil, fmt.Errorf("wrong type for codeRepo %s", node.Name)
+	}
+
+	codeRepo, project, err := s.codeRepo.GetProjectByCodeRepoName(ctx, codeRepo.Spec.RepoName, productName)
+	if err != nil {
+		return nil, err
+	}
+
 	if s.configs.Git.GitType == nautesconfigs.GIT_TYPE_GITLAB {
 		git = &coderepov1.GitProject{
 			Gitlab: &coderepov1.GitlabProject{
@@ -77,27 +102,45 @@ func (s *CodeRepoService) CovertCodeRepoValueToReply(codeRepo *resourcev1alpha1.
 		PipelineRuntime:   codeRepo.Spec.PipelineRuntime,
 		DeploymentRuntime: codeRepo.Spec.DeploymentRuntime,
 		Git:               git,
-	}
+	}, nil
 }
 
 func (s *CodeRepoService) GetCodeRepo(ctx context.Context, req *coderepov1.GetRequest) (*coderepov1.GetReply, error) {
-	codeRepo, project, err := s.codeRepo.GetCodeRepo(ctx, req.CoderepoName, req.ProductName)
+	node, err := s.codeRepo.GetCodeRepo(ctx, req.CoderepoName, req.ProductName)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.CovertCodeRepoValueToReply(codeRepo, project), nil
+	reply, err := s.CovertCodeRepoValueToReply(ctx, req.ProductName, node)
+	if err != nil {
+		return nil, err
+	}
+
+	return reply, nil
 }
 
 func (s *CodeRepoService) ListCodeRepos(ctx context.Context, req *coderepov1.ListsRequest) (*coderepov1.ListsReply, error) {
-	codeRepoAndProjects, err := s.codeRepo.ListCodeRepos(ctx, req.ProductName)
+	var items []*coderepov1.GetReply
+
+	nodes, err := s.codeRepo.ListCodeRepos(ctx, req.ProductName)
 	if err != nil {
 		return nil, err
 	}
 
-	var items []*coderepov1.GetReply
-	for _, cp := range codeRepoAndProjects {
-		items = append(items, s.CovertCodeRepoValueToReply(cp.CodeRepo, cp.Project))
+	for _, node := range nodes {
+		passed, err := selector.Match(req.FieldSelector, node.Content, codeRepoFilterFieldRules)
+		if err != nil {
+			return nil, err
+		}
+		if !passed {
+			continue
+		}
+
+		item, err := s.CovertCodeRepoValueToReply(ctx, req.ProductName, node)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
 	}
 
 	return &coderepov1.ListsReply{

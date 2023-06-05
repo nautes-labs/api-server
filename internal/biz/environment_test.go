@@ -114,14 +114,12 @@ var _ = Describe("List enviroments", func() {
 		fakeNodes    = createContainEnvironmentNodes(fakeNode)
 	)
 	It("will list successfully", testUseCase.ListResourceSuccess(fakeNodes, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		id, _ := utilstrings.ExtractNumber("product-", fakeResource.Spec.Product)
-		codeRepo.EXPECT().GetGroup(gomock.Any(), id).Return(defaultProductGroup, nil)
 
 		biz := NewEnviromentUsecase(logger, nautesConfigs, codeRepo, nodestree, resourceUseCase)
 		results, err := biz.ListEnvironments(ctx, defaultGroupName)
 		Expect(err).ShouldNot(HaveOccurred())
 		for _, result := range results {
-			Expect(result).Should(Equal(fakeResource))
+			Expect(result).Should(Equal(fakeNode))
 		}
 	}))
 

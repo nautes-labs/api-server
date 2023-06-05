@@ -118,16 +118,12 @@ var _ = Describe("List deployment runtimes", func() {
 	)
 
 	It("will successfully", testUseCase.ListResourceSuccess(fakeNodes, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		id, _ := utilstrings.ExtractNumber("product-", fakeResource.Spec.Product)
-		codeRepo.EXPECT().GetGroup(gomock.Any(), id).Return(defaultProductGroup, nil)
-		id, _ = utilstrings.ExtractNumber("repo-", fakeResource.Spec.ManifestSource.CodeRepo)
-		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), id).Return(defautlProject, nil)
 
 		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
 		results, err := biz.ListDeploymentRuntimes(ctx, defaultGroupName)
 		Expect(err).ShouldNot(HaveOccurred())
 		for _, result := range results {
-			Expect(result).Should(Equal(fakeResource))
+			Expect(result).Should(Equal(fakeNode))
 		}
 	}))
 

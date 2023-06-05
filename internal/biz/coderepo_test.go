@@ -25,7 +25,6 @@ import (
 	commonv1 "github.com/nautes-labs/api-server/api/common/v1"
 	"github.com/nautes-labs/api-server/pkg/kubernetes"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
-	utilstrings "github.com/nautes-labs/api-server/util/string"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -107,48 +106,35 @@ var _ = Describe("Get codeRepo", func() {
 
 	It("will get successfully", testUseCase.GetResourceSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourcesUsecase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(toGetCodeRepoPath)).Return(project, nil)
-		id, _ := utilstrings.ExtractNumber("product-", fakeResource.Spec.Product)
-		codeRepo.EXPECT().GetGroup(gomock.Any(), id).Return(defaultProductGroup, nil)
 
 		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil, nil)
-		item, _, err := biz.GetCodeRepo(context.Background(), resourceName, defaultGroupName)
+		node, err := biz.GetCodeRepo(context.Background(), resourceName, defaultGroupName)
 		Expect(err).ShouldNot(HaveOccurred())
-		Expect(item).To(Equal(fakeResource))
+		Expect(node).To(Equal(fakeNode))
 	}))
 
 	It("will fail when resource is not found", testUseCase.GetResourceFail(func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(toGetCodeRepoPath)).Return(project, nil)
 
 		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, nil, nil)
-		_, _, err := biz.GetCodeRepo(context.Background(), resourceName, defaultGroupName)
+		_, err := biz.GetCodeRepo(context.Background(), resourceName, defaultGroupName)
 		Expect(err).Should(HaveOccurred())
 	}))
 })
 
 var _ = Describe("List coderepos", func() {
 	var (
-		resourceName       = "toGetCodeRepo"
-		fakeResource       = createFakeCodeRepoResource(resourceName)
-		fakeNode           = createFakeCodeRepoNode(fakeResource)
-		fakeNodes          = createFakeCcontainingCodeRepoNodes(fakeNode)
-		codeRepoAndProject = &CodeRepoWithProject{
-			CodeRepo: fakeResource,
-			Project:  defautlProject,
-		}
+		resourceName = "toGetCodeRepo"
+		fakeResource = createFakeCodeRepoResource(resourceName)
+		fakeNode     = createFakeCodeRepoNode(fakeResource)
+		fakeNodes    = createFakeCcontainingCodeRepoNodes(fakeNode)
 	)
 
 	It("will list successfully", testUseCase.ListResourceSuccess(fakeNodes, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		gid, _ := utilstrings.ExtractNumber("product-", fakeResource.Spec.Product)
-		pid := fmt.Sprintf("%s/%s", defaultGroupName, fakeResource.Spec.RepoName)
-		codeRepo.EXPECT().GetGroup(gomock.Any(), gid).Return(defaultProductGroup, nil)
-		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), pid).Return(defautlProject, nil)
 
 		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, nil, nil)
-		results, err := biz.ListCodeRepos(ctx, defaultGroupName)
+		_, err := biz.ListCodeRepos(ctx, defaultGroupName)
 		Expect(err).ShouldNot(HaveOccurred())
-		for _, result := range results {
-			Expect(result).Should(Equal(codeRepoAndProject))
-		}
 	}))
 
 	It("does not conform to the template layout", testUseCase.ListResourceNotMatch(fakeNodes, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {

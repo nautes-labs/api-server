@@ -170,8 +170,13 @@ paths:
             parameters:
                 - name: product_name
                   in: path
-                  description: The name of the product to list repositories for
+                  description: To list the product name of the repository.
                   required: true
+                  schema:
+                    type: string
+                - name: field_selector
+                  in: query
+                  description: Filter the list by field.
                   schema:
                     type: string
             responses:
@@ -273,8 +278,13 @@ paths:
             parameters:
                 - name: product_name
                   in: path
-                  description: The name of the product to list repositories for
+                  description: To list the product name of the repository.
                   required: true
+                  schema:
+                    type: string
+                - name: field_selector
+                  in: query
+                  description: Filter the list by field.
                   schema:
                     type: string
             responses:
@@ -373,8 +383,13 @@ paths:
             parameters:
                 - name: product_name
                   in: path
-                  description: ProductName is the name of the product.
+                  description: To list the product name of the repository.
                   required: true
+                  schema:
+                    type: string
+                - name: field_selector
+                  in: query
+                  description: Filter the list by field.
                   schema:
                     type: string
             responses:
@@ -481,8 +496,13 @@ paths:
             parameters:
                 - name: product_name
                   in: path
-                  description: The name of the product
+                  description: To list the product name of the repository.
                   required: true
+                  schema:
+                    type: string
+                - name: field_selector
+                  in: query
+                  description: Filter the list by field.
                   schema:
                     type: string
             responses:
@@ -590,8 +610,13 @@ paths:
             parameters:
                 - name: product_name
                   in: path
-                  description: Name of the product associated with the pipelines to be listed.
+                  description: To list the product name of the repository.
                   required: true
+                  schema:
+                    type: string
+                - name: field_selector
+                  in: query
+                  description: Filter the list by field.
                   schema:
                     type: string
             responses:
@@ -698,8 +723,13 @@ paths:
             parameters:
                 - name: product_name
                   in: path
-                  description: The name of the product the projects belong to.
+                  description: To list the product name of the repository.
                   required: true
+                  schema:
+                    type: string
+                - name: field_selector
+                  in: query
+                  description: Filter the list by field.
                   schema:
                     type: string
             responses:

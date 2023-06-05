@@ -33,10 +33,10 @@ type EnvironmentHTTPServer interface {
 
 func RegisterEnvironmentHTTPServer(s *http.Server, srv EnvironmentHTTPServer) {
 	r := s.Route("/")
-	r.GET("/api/v1/products/{productName}/environments/{environmentName}", _Environment_GetEnvironment0_HTTP_Handler(srv))
-	r.GET("/api/v1/products/{productName}/environments", _Environment_ListEnvironments0_HTTP_Handler(srv))
-	r.POST("/api/v1/products/{productName}/environments/{environmentName}", _Environment_SaveEnvironment0_HTTP_Handler(srv))
-	r.DELETE("/api/v1/products/{productName}/environments/{environmentName}", _Environment_DeleteEnvironment0_HTTP_Handler(srv))
+	r.GET("/api/v1/products/{product_name}/environments/{environmentName}", _Environment_GetEnvironment0_HTTP_Handler(srv))
+	r.GET("/api/v1/products/{product_name}/environments", _Environment_ListEnvironments0_HTTP_Handler(srv))
+	r.POST("/api/v1/products/{product_name}/environments/{environmentName}", _Environment_SaveEnvironment0_HTTP_Handler(srv))
+	r.DELETE("/api/v1/products/{product_name}/environments/{environmentName}", _Environment_DeleteEnvironment0_HTTP_Handler(srv))
 }
 
 func _Environment_GetEnvironment0_HTTP_Handler(srv EnvironmentHTTPServer) func(ctx http.Context) error {
@@ -147,7 +147,7 @@ func NewEnvironmentHTTPClient(client *http.Client) EnvironmentHTTPClient {
 
 func (c *EnvironmentHTTPClientImpl) DeleteEnvironment(ctx context.Context, in *DeleteRequest, opts ...http.CallOption) (*DeleteReply, error) {
 	var out DeleteReply
-	pattern := "/api/v1/products/{productName}/environments/{environmentName}"
+	pattern := "/api/v1/products/{product_name}/environments/{environmentName}"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationEnvironmentDeleteEnvironment))
 	opts = append(opts, http.PathTemplate(pattern))
@@ -160,7 +160,7 @@ func (c *EnvironmentHTTPClientImpl) DeleteEnvironment(ctx context.Context, in *D
 
 func (c *EnvironmentHTTPClientImpl) GetEnvironment(ctx context.Context, in *GetRequest, opts ...http.CallOption) (*GetReply, error) {
 	var out GetReply
-	pattern := "/api/v1/products/{productName}/environments/{environmentName}"
+	pattern := "/api/v1/products/{product_name}/environments/{environmentName}"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationEnvironmentGetEnvironment))
 	opts = append(opts, http.PathTemplate(pattern))
@@ -173,7 +173,7 @@ func (c *EnvironmentHTTPClientImpl) GetEnvironment(ctx context.Context, in *GetR
 
 func (c *EnvironmentHTTPClientImpl) ListEnvironments(ctx context.Context, in *ListsRequest, opts ...http.CallOption) (*ListsReply, error) {
 	var out ListsReply
-	pattern := "/api/v1/products/{productName}/environments"
+	pattern := "/api/v1/products/{product_name}/environments"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationEnvironmentListEnvironments))
 	opts = append(opts, http.PathTemplate(pattern))
@@ -186,7 +186,7 @@ func (c *EnvironmentHTTPClientImpl) ListEnvironments(ctx context.Context, in *Li
 
 func (c *EnvironmentHTTPClientImpl) SaveEnvironment(ctx context.Context, in *SaveRequest, opts ...http.CallOption) (*SaveReply, error) {
 	var out SaveReply
-	pattern := "/api/v1/products/{productName}/environments/{environmentName}"
+	pattern := "/api/v1/products/{product_name}/environments/{environmentName}"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationEnvironmentSaveEnvironment))
 	opts = append(opts, http.PathTemplate(pattern))

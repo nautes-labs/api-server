@@ -21,7 +21,24 @@ import (
 	environmentv1 "github.com/nautes-labs/api-server/api/environment/v1"
 	"github.com/nautes-labs/api-server/internal/biz"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
+	"github.com/nautes-labs/api-server/pkg/selector"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
+)
+
+const (
+	_Cluster = "Spec.Cluster"
+	_EnvType = "Spec.EnvType"
+)
+
+var (
+	environmentFilterFieldRules = map[string]map[string]selector.FieldSelector{
+		FieldCluster: {
+			selector.EqualOperator: selector.NewStringSelector(_Cluster, selector.In),
+		},
+		FieldEnvType: {
+			selector.EqualOperator: selector.NewStringSelector(_EnvType, selector.In),
+		},
+	}
 )
 
 type EnvironmentService struct {
@@ -52,13 +69,26 @@ func (s *EnvironmentService) GetEnvironment(ctx context.Context, req *environmen
 }
 
 func (s *EnvironmentService) ListEnvironments(ctx context.Context, req *environmentv1.ListsRequest) (*environmentv1.ListsReply, error) {
-	envs, err := s.environment.ListEnvironments(ctx, req.ProductName)
+	nodes, err := s.environment.ListEnvironments(ctx, req.ProductName)
 	if err != nil {
 		return nil, err
 	}
 
 	var items []*environmentv1.GetReply
-	for _, env := range envs {
+	for _, node := range nodes {
+		env, ok := node.Content.(*resourcev1alpha1.Environment)
+		if !ok {
+			continue
+		}
+
+		passed, err := selector.Match(req.FieldSelector, node.Content, environmentFilterFieldRules)
+		if err != nil {
+			return nil, err
+		}
+		if !passed {
+			continue
+		}
+
 		items = append(items, s.CovertCodeRepoValueToReply(env))
 	}
 

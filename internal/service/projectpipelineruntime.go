@@ -21,19 +21,41 @@ import (
 	projectpipelineruntimev1 "github.com/nautes-labs/api-server/api/projectpipelineruntime/v1"
 	"github.com/nautes-labs/api-server/internal/biz"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
+	"github.com/nautes-labs/api-server/pkg/selector"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
+)
+
+var (
+	projectPipelineRuntimeFilterFieldRules = map[string]map[string]selector.FieldSelector{
+		FieldPipelineTriggersPipeline: {
+			selector.EqualOperator: selector.NewStringSelector(_PipelineTriggerPipeline, selector.In),
+		},
+		FieldDestination: {
+			selector.EqualOperator: selector.NewStringSelector(_Destination, selector.In),
+		},
+		FieldPipelineSource: {
+			selector.EqualOperator: selector.NewStringSelector(_PipelineSource, selector.In),
+		},
+		FieldProject: {
+			selector.EqualOperator: selector.NewStringSelector(_Project, selector.In),
+		},
+	}
 )
 
 type ProjectPipelineRuntimeService struct {
 	projectpipelineruntimev1.UnimplementedProjectPipelineRuntimeServer
 	projectPipelineRuntime *biz.ProjectPipelineRuntimeUsecase
+	resourcesUsecase       *biz.ResourcesUsecase
 }
 
-func NewProjectPipelineRuntimeService(projectPipelineRuntime *biz.ProjectPipelineRuntimeUsecase) *ProjectPipelineRuntimeService {
-	return &ProjectPipelineRuntimeService{projectPipelineRuntime: projectPipelineRuntime}
+func NewProjectPipelineRuntimeService(projectPipelineRuntime *biz.ProjectPipelineRuntimeUsecase, resourcesUsecase *biz.ResourcesUsecase) *ProjectPipelineRuntimeService {
+	return &ProjectPipelineRuntimeService{
+		projectPipelineRuntime: projectPipelineRuntime,
+		resourcesUsecase:       resourcesUsecase,
+	}
 }
 
-func (s *ProjectPipelineRuntimeService) covertCodeRepoValueToReply(projectPipelineRuntime *resourcev1alpha1.ProjectPipelineRuntime, productName string) *projectpipelineruntimev1.GetReply {
+func covertProjectPipelineRuntime(projectPipelineRuntime *resourcev1alpha1.ProjectPipelineRuntime, productName string) (*projectpipelineruntimev1.GetReply, error) {
 	var pipelines []*projectpipelineruntimev1.Pipeline
 	for _, pipeline := range projectPipelineRuntime.Spec.Pipelines {
 		pipelines = append(pipelines, &projectpipelineruntimev1.Pipeline{
@@ -87,32 +109,79 @@ func (s *ProjectPipelineRuntimeService) covertCodeRepoValueToReply(projectPipeli
 		Pipelines:        pipelines,
 		PipelineTriggers: pipelineTriggers,
 		Destination:      projectPipelineRuntime.Spec.Destination,
-	}
+	}, nil
 }
 
 func (s *ProjectPipelineRuntimeService) GetProjectPipelineRuntime(ctx context.Context, req *projectpipelineruntimev1.GetRequest) (*projectpipelineruntimev1.GetReply, error) {
-	runtime, err := s.projectPipelineRuntime.GetProjectPipelineRuntime(ctx, req.ProjectPipelineRuntimeName, req.ProductName)
+	node, err := s.projectPipelineRuntime.GetProjectPipelineRuntime(ctx, req.ProjectPipelineRuntimeName, req.ProductName)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.covertCodeRepoValueToReply(runtime, req.ProductName), nil
+	runtime, ok := node.Content.(*resourcev1alpha1.ProjectPipelineRuntime)
+	if !ok {
+		return nil, fmt.Errorf("unexpected content type, resource: %s", node.Name)
+	}
+
+	err = s.ConvertCodeRepoToRepoName(ctx, runtime)
+	if err != nil {
+		return nil, err
+	}
+
+	return covertProjectPipelineRuntime(runtime, req.ProductName)
 }
 
 func (s *ProjectPipelineRuntimeService) ListProjectPipelineRuntimes(ctx context.Context, req *projectpipelineruntimev1.ListsRequest) (*projectpipelineruntimev1.ListsReply, error) {
-	runtimes, err := s.projectPipelineRuntime.ListProjectPipelineRuntimes(ctx, req.ProductName)
+	var items []*projectpipelineruntimev1.GetReply
+
+	nodes, err := s.projectPipelineRuntime.ListProjectPipelineRuntimes(ctx, req.ProductName)
 	if err != nil {
 		return nil, err
 	}
 
-	var items []*projectpipelineruntimev1.GetReply
-	for _, runtime := range runtimes {
-		items = append(items, s.covertCodeRepoValueToReply(runtime, req.ProductName))
+	for _, node := range nodes {
+		runtime, ok := node.Content.(*resourcev1alpha1.ProjectPipelineRuntime)
+		if !ok {
+			return nil, fmt.Errorf("unexpected content type, resource: %s", node.Name)
+		}
+
+		passed, err := selector.Match(req.FieldSelector, node.Content, projectPipelineRuntimeFilterFieldRules)
+		if err != nil {
+			return nil, err
+		}
+		if !passed {
+			continue
+		}
+
+		item, err := covertProjectPipelineRuntime(runtime, req.ProductName)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
 	}
 
 	return &projectpipelineruntimev1.ListsReply{
 		Items: items,
 	}, nil
+}
+
+func (s *ProjectPipelineRuntimeService) convertToReply(ctx context.Context, runtimes []*resourcev1alpha1.ProjectPipelineRuntime, productName string) ([]*projectpipelineruntimev1.GetReply, error) {
+	var items []*projectpipelineruntimev1.GetReply
+
+	for _, runtime := range runtimes {
+		err := s.ConvertCodeRepoToRepoName(ctx, runtime)
+		if err != nil {
+			return nil, err
+		}
+		item, err := covertProjectPipelineRuntime(runtime, productName)
+		if err != nil {
+			return nil, err
+		}
+
+		items = append(items, item)
+	}
+
+	return items, nil
 }
 
 func (s *ProjectPipelineRuntimeService) SaveProjectPipelineRuntime(ctx context.Context, req *projectpipelineruntimev1.SaveRequest) (*projectpipelineruntimev1.SaveReply, error) {
@@ -160,6 +229,32 @@ func (s *ProjectPipelineRuntimeService) DeleteProjectPipelineRuntime(ctx context
 	return &projectpipelineruntimev1.DeleteReply{
 		Msg: fmt.Sprintf("Successfully deleted %s configuration", req.ProjectPipelineRuntimeName),
 	}, nil
+}
+
+func (p *ProjectPipelineRuntimeService) ConvertCodeRepoToRepoName(ctx context.Context, projectPipelineRuntime *resourcev1alpha1.ProjectPipelineRuntime) error {
+	if projectPipelineRuntime.Spec.PipelineSource == "" {
+		return fmt.Errorf("the pipelineSource field value of projectPipelineRuntime %s should not be empty", projectPipelineRuntime.Name)
+	}
+
+	if projectPipelineRuntime.Spec.PipelineSource != "" {
+		repoName, err := p.resourcesUsecase.ConvertCodeRepoToRepoName(ctx, projectPipelineRuntime.Spec.PipelineSource)
+		if err != nil {
+			return err
+		}
+		projectPipelineRuntime.Spec.PipelineSource = repoName
+	}
+
+	for _, event := range projectPipelineRuntime.Spec.EventSources {
+		if event.Gitlab != nil {
+			repoName, err := p.resourcesUsecase.ConvertCodeRepoToRepoName(ctx, event.Gitlab.RepoName)
+			if err != nil {
+				return err
+			}
+			event.Gitlab.RepoName = repoName
+		}
+	}
+
+	return nil
 }
 
 func (s *ProjectPipelineRuntimeService) convertPipelineTriggers(triggers []*projectpipelineruntimev1.PipelineTriggers) (pipelineTriggers []resourcev1alpha1.PipelineTrigger) {

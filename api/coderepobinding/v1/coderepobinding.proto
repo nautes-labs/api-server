@@ -49,8 +49,10 @@ service CodeRepoBinding {
 
 // Request message for listing items
 message ListsRequest {
-  // The name of the product to list repositories for
+  // To list the product name of the repository.
   string product_name = 1 [json_name = "product_name"];
+  // Filter the list by field.
+  string field_selector = 2 [json_name = "field_selector"];
 }
 
 // Define the GetRequest message, which includes the product_name and coderepo_binding_name fields.

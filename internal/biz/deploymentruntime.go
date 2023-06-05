@@ -48,7 +48,7 @@ func NewDeploymentRuntimeUsecase(logger log.Logger, codeRepo CodeRepo, nodestree
 	return runtime
 }
 
-func (p *DeploymentRuntimeUsecase) convertCodeRepoToRepoName(ctx context.Context, runtime *resourcev1alpha1.DeploymentRuntime) error {
+func (p *DeploymentRuntimeUsecase) ConvertCodeRepoToRepoName(ctx context.Context, runtime *resourcev1alpha1.DeploymentRuntime) error {
 	if runtime.Spec.ManifestSource.CodeRepo == "" {
 		return fmt.Errorf("the codeRepo field value of deploymentruntime %s should not be empty", runtime.Name)
 	}
@@ -62,7 +62,7 @@ func (p *DeploymentRuntimeUsecase) convertCodeRepoToRepoName(ctx context.Context
 	return nil
 }
 
-func (c *DeploymentRuntimeUsecase) convertProductToGroupName(ctx context.Context, runtime *resourcev1alpha1.DeploymentRuntime) error {
+func (c *DeploymentRuntimeUsecase) ConvertProductToGroupName(ctx context.Context, runtime *resourcev1alpha1.DeploymentRuntime) error {
 	if runtime.Spec.Product == "" {
 		return fmt.Errorf("the product field value of deploymentruntime %s should not be empty", runtime.Name)
 	}
@@ -90,12 +90,12 @@ func (d *DeploymentRuntimeUsecase) GetDeploymentRuntime(ctx context.Context, dep
 		return nil, fmt.Errorf("the resource type of %s is inconsistent", deploymentRuntimeName)
 	}
 
-	err = d.convertCodeRepoToRepoName(ctx, runtime)
+	err = d.ConvertCodeRepoToRepoName(ctx, runtime)
 	if err != nil {
 		return nil, err
 	}
 
-	err = d.convertProductToGroupName(ctx, runtime)
+	err = d.ConvertProductToGroupName(ctx, runtime)
 	if err != nil {
 		return nil, err
 	}
@@ -103,36 +103,15 @@ func (d *DeploymentRuntimeUsecase) GetDeploymentRuntime(ctx context.Context, dep
 	return runtime, nil
 }
 
-func (d *DeploymentRuntimeUsecase) ListDeploymentRuntimes(ctx context.Context, productName string) ([]*resourcev1alpha1.DeploymentRuntime, error) {
-	var runtimes []*resourcev1alpha1.DeploymentRuntime
-
+func (d *DeploymentRuntimeUsecase) ListDeploymentRuntimes(ctx context.Context, productName string) ([]*nodestree.Node, error) {
 	resourceNodes, err := d.resourcesUsecase.List(ctx, productName, d)
 	if err != nil {
 		return nil, err
 	}
 
 	nodes := nodestree.ListsResourceNodes(*resourceNodes, nodestree.DeploymentRuntime)
-	for _, node := range nodes {
-		if node.Kind == nodestree.DeploymentRuntime && !node.IsDir {
-			runtime, ok := node.Content.(*resourcev1alpha1.DeploymentRuntime)
-			if ok {
 
-				err = d.convertCodeRepoToRepoName(ctx, runtime)
-				if err != nil {
-					return nil, err
-				}
-
-				err = d.convertProductToGroupName(ctx, runtime)
-				if err != nil {
-					return nil, err
-				}
-
-				runtimes = append(runtimes, runtime)
-			}
-		}
-	}
-
-	return runtimes, nil
+	return nodes, nil
 }
 
 func (d *DeploymentRuntimeUsecase) SaveDeploymentRuntime(ctx context.Context, options *BizOptions, data *DeploymentRuntimeData) error {
