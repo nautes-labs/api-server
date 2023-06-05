@@ -23,9 +23,33 @@ import (
 	ClusterRegistration "github.com/nautes-labs/api-server/pkg/cluster"
 	registercluster "github.com/nautes-labs/api-server/pkg/cluster"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
+	"github.com/nautes-labs/api-server/pkg/selector"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+const (
+	FieldClusterType = "cluster_type"
+	FieldUsage       = "usage"
+	FieldWorkType    = "worker_type"
+	_ClusterType     = "Spec.ClusterType"
+	_Usage           = "Spec.Usage"
+	_WorkType        = "Spec.WorkType"
+)
+
+var (
+	clustrFilterFieldRules = map[string]map[string]selector.FieldSelector{
+		FieldClusterType: {
+			selector.EqualOperator: selector.NewStringSelector(_ClusterType, selector.Eq),
+		},
+		FieldUsage: {
+			selector.EqualOperator: selector.NewStringSelector(_Usage, selector.Eq),
+		},
+		FieldWorkType: {
+			selector.EqualOperator: selector.NewStringSelector(_WorkType, selector.Eq),
+		},
+	}
 )
 
 type ClusterService struct {
@@ -55,6 +79,14 @@ func (s *ClusterService) ListClusters(ctx context.Context, req *clusterv1.ListsR
 
 	reply := &clusterv1.ListsReply{}
 	for _, cluster := range clusters {
+		passed, err := selector.Match(req.FieldSelector, cluster, clustrFilterFieldRules)
+		if err != nil {
+			return nil, err
+		}
+		if !passed {
+			continue
+		}
+
 		reply.Items = append(reply.Items, s.convertClustertoReply(cluster))
 	}
 

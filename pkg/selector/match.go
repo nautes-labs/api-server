@@ -33,7 +33,7 @@ func Match(fieldSelectorStr string, content interface{}, rules map[string]map[st
 	for _, filter := range filters {
 		selector, ok := rules[filter.Field][filter.Symbol]
 		if !ok {
-			return false, fmt.Errorf("please check if field %s supports filtering using operator '%s'", filter.Field, filter.Symbol)
+			return false, fmt.Errorf("the filter field %s operator symbol %s is not supported", filter.Field, filter.Symbol)
 		}
 
 		matchFn, err := selector.GetMatchFunc(filter.Symbol)

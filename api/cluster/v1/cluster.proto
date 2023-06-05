@@ -86,6 +86,8 @@ message GetReply {
 
 // ListsRequest represents a request to list clusters.
 message ListsRequest {
+  // Filter the list by field.
+  string field_selector = 1 [json_name = "field_selector"];
 }
 
 // ListsReply represents a response to a list request.

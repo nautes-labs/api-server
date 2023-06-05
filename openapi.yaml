@@ -11,6 +11,12 @@ paths:
             tags:
                 - Cluster
             operationId: Cluster_ListClusters
+            parameters:
+                - name: field_selector
+                  in: query
+                  description: Filter the list by field.
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK
