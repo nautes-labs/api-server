@@ -274,9 +274,16 @@ func (p *ProjectPipelineRuntimeUsecase) CheckReference(options nodestree.Compare
 	}
 
 	validateClient := validate.NewValidateClient(nil, p.nodestree, &options.Nodes)
-	_, err = projectPipelineRuntime.Validate(context.TODO(), validateClient)
+	illegalEventSources, err := projectPipelineRuntime.Validate(context.TODO(), validateClient)
 	if err != nil {
-		return true, err
+		return true, fmt.Errorf("verify project pipeline runtime failed, err: %w", err)
+	}
+	if len(illegalEventSources) != 0 {
+		errMsg := ""
+		for _, source := range illegalEventSources {
+			errMsg += fmt.Sprintf("reason: %s", source.Reason)
+		}
+		return true, fmt.Errorf("verify project pipeline runtime failed, err: %s", errMsg)
 	}
 
 	return true, nil

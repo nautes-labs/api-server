@@ -54,7 +54,9 @@ func (v *validateClient) ListCodeRepoBinding(ctx context.Context, productName, r
 		if !ok {
 			continue
 		}
-		list.Items = append(list.Items, *codeRepoBinding)
+		if codeRepoBinding.Spec.CodeRepo == repoName {
+			list.Items = append(list.Items, *codeRepoBinding)
+		}
 	}
 
 	return list, nil
@@ -69,6 +71,7 @@ func (v *validateClient) ListDeploymentRuntime(ctx context.Context, productName 
 		if !ok {
 			continue
 		}
+		runtime.Namespace = productName
 		list.Items = append(list.Items, *runtime)
 	}
 
@@ -84,6 +87,7 @@ func (v *validateClient) ListProjectPipelineRuntime(ctx context.Context, product
 		if !ok {
 			continue
 		}
+		runtime.Namespace = productName
 		list.Items = append(list.Items, *runtime)
 	}
 

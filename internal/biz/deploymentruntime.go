@@ -247,9 +247,16 @@ func (d *DeploymentRuntimeUsecase) CheckReference(options nodestree.CompareOptio
 	}
 
 	validateClient := validate.NewValidateClient(nil, d.nodestree, &options.Nodes)
-	_, err = deploymentRuntime.Validate(context.Background(), validateClient)
+	illegalProjectRefs, err := deploymentRuntime.Validate(context.Background(), validateClient)
 	if err != nil {
-		return true, err
+		return true, fmt.Errorf("verify deployment runtime failed, err: %w", err)
+	}
+	if len(illegalProjectRefs) != 0 {
+		errMsg := ""
+		for _, project := range illegalProjectRefs {
+			errMsg += fmt.Sprintf("reason: %s", project.Reason)
+		}
+		return true, fmt.Errorf("verify deployment runtime failed, err: %s", errMsg)
 	}
 
 	return true, nil
