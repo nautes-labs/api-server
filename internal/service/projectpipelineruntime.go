@@ -55,63 +55,6 @@ func NewProjectPipelineRuntimeService(projectPipelineRuntime *biz.ProjectPipelin
 	}
 }
 
-func covertProjectPipelineRuntime(projectPipelineRuntime *resourcev1alpha1.ProjectPipelineRuntime, productName string) (*projectpipelineruntimev1.GetReply, error) {
-	var pipelines []*projectpipelineruntimev1.Pipeline
-	for _, pipeline := range projectPipelineRuntime.Spec.Pipelines {
-		pipelines = append(pipelines, &projectpipelineruntimev1.Pipeline{
-			Name:  pipeline.Name,
-			Label: pipeline.Label,
-			Path:  pipeline.Path,
-		})
-	}
-
-	var eventSources []*projectpipelineruntimev1.EventSource
-	for _, source := range projectPipelineRuntime.Spec.EventSources {
-		event := &projectpipelineruntimev1.EventSource{}
-		if source.Name != "" {
-			event.Name = source.Name
-		}
-
-		if source.Gitlab != nil {
-			event.Gitlab = &projectpipelineruntimev1.Gitlab{
-				RepoName: source.Gitlab.RepoName,
-				Revision: source.Gitlab.Revision,
-				Events:   source.Gitlab.Events,
-			}
-		}
-
-		if event.Calendar != nil {
-			event.Calendar = &projectpipelineruntimev1.Calendar{
-				Schedule:       source.Calendar.Schedule,
-				Interval:       source.Calendar.Interval,
-				ExclusionDates: source.Calendar.ExclusionDates,
-				Timezone:       source.Calendar.Timezone,
-			}
-		}
-
-		eventSources = append(eventSources, event)
-	}
-
-	var pipelineTriggers []*projectpipelineruntimev1.PipelineTriggers
-	for _, trigger := range projectPipelineRuntime.Spec.PipelineTriggers {
-		pipelineTriggers = append(pipelineTriggers, &projectpipelineruntimev1.PipelineTriggers{
-			EventSource: trigger.EventSource,
-			Pipeline:    trigger.Pipeline,
-			Revision:    trigger.Revision,
-		})
-	}
-
-	return &projectpipelineruntimev1.GetReply{
-		Name:             projectPipelineRuntime.Name,
-		Project:          projectPipelineRuntime.Spec.Project,
-		PipelineSource:   projectPipelineRuntime.Spec.PipelineSource,
-		EventSources:     eventSources,
-		Pipelines:        pipelines,
-		PipelineTriggers: pipelineTriggers,
-		Destination:      projectPipelineRuntime.Spec.Destination,
-	}, nil
-}
-
 func (s *ProjectPipelineRuntimeService) GetProjectPipelineRuntime(ctx context.Context, req *projectpipelineruntimev1.GetRequest) (*projectpipelineruntimev1.GetReply, error) {
 	node, err := s.projectPipelineRuntime.GetProjectPipelineRuntime(ctx, req.ProjectPipelineRuntimeName, req.ProductName)
 	if err != nil {
@@ -221,6 +164,64 @@ func (s *ProjectPipelineRuntimeService) DeleteProjectPipelineRuntime(ctx context
 
 	return &projectpipelineruntimev1.DeleteReply{
 		Msg: fmt.Sprintf("Successfully deleted %s configuration", req.ProjectPipelineRuntimeName),
+	}, nil
+}
+
+func covertProjectPipelineRuntime(projectPipelineRuntime *resourcev1alpha1.ProjectPipelineRuntime, productName string) (*projectpipelineruntimev1.GetReply, error) {
+	var pipelines []*projectpipelineruntimev1.Pipeline
+	for _, pipeline := range projectPipelineRuntime.Spec.Pipelines {
+		pipelines = append(pipelines, &projectpipelineruntimev1.Pipeline{
+			Name:  pipeline.Name,
+			Label: pipeline.Label,
+			Path:  pipeline.Path,
+		})
+	}
+
+	var eventSources []*projectpipelineruntimev1.EventSource
+	for _, source := range projectPipelineRuntime.Spec.EventSources {
+		event := &projectpipelineruntimev1.EventSource{}
+		if source.Name != "" {
+			event.Name = source.Name
+		}
+
+		if source.Gitlab != nil {
+			event.Gitlab = &projectpipelineruntimev1.Gitlab{
+				RepoName: source.Gitlab.RepoName,
+				Revision: source.Gitlab.Revision,
+				Events:   source.Gitlab.Events,
+			}
+		}
+
+		if event.Calendar != nil {
+			event.Calendar = &projectpipelineruntimev1.Calendar{
+				Schedule:       source.Calendar.Schedule,
+				Interval:       source.Calendar.Interval,
+				ExclusionDates: source.Calendar.ExclusionDates,
+				Timezone:       source.Calendar.Timezone,
+			}
+		}
+
+		eventSources = append(eventSources, event)
+	}
+
+	var pipelineTriggers []*projectpipelineruntimev1.PipelineTriggers
+	for _, trigger := range projectPipelineRuntime.Spec.PipelineTriggers {
+		pipelineTriggers = append(pipelineTriggers, &projectpipelineruntimev1.PipelineTriggers{
+			EventSource: trigger.EventSource,
+			Pipeline:    trigger.Pipeline,
+			Revision:    trigger.Revision,
+		})
+	}
+
+	return &projectpipelineruntimev1.GetReply{
+		Name:             projectPipelineRuntime.Name,
+		Project:          projectPipelineRuntime.Spec.Project,
+		PipelineSource:   projectPipelineRuntime.Spec.PipelineSource,
+		EventSources:     eventSources,
+		Pipelines:        pipelines,
+		PipelineTriggers: pipelineTriggers,
+		Destination:      projectPipelineRuntime.Spec.Destination,
+		Isolation:        projectPipelineRuntime.Spec.Isolation,
 	}, nil
 }
 
