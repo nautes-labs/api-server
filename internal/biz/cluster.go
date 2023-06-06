@@ -201,6 +201,11 @@ func (c *ClusterUsecase) DeleteCluster(ctx context.Context, clusterName string) 
 		return fmt.Errorf("cluster %s does not exist or is invalid", clusterName)
 	}
 
+	err = resourceCluster.ValidateCluster(ctx, resourceCluster, c.client, true)
+	if err != nil {
+		return err
+	}
+
 	param := &cluster.ClusterRegistrationParam{
 		Cluster:                      resourceCluster,
 		RepoURL:                      project.SshUrlToRepo,

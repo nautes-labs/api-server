@@ -27,6 +27,7 @@ import (
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
 	utilstrings "github.com/nautes-labs/api-server/util/string"
+	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 	sjson "github.com/tidwall/sjson"
 	kustomize "sigs.k8s.io/kustomize/api/types"
@@ -50,6 +51,7 @@ type ResourcesUsecase struct {
 	gitRepo    GitRepo
 	nodestree  nodestree.NodesTree
 	configs    *nautesconfigs.Config
+	validate   resourcev1alpha1.ValidateClient
 }
 
 func NewResourcesUsecase(log log.Logger, codeRepo CodeRepo, secretRepo Secretrepo, gitRepo GitRepo, nodestree nodestree.NodesTree, configs *nautesconfigs.Config) *ResourcesUsecase {

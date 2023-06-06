@@ -22,6 +22,7 @@ import (
 	"github.com/go-kratos/kratos/v2/log"
 	enviromentv1 "github.com/nautes-labs/api-server/api/environment/v1"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
+	"github.com/nautes-labs/api-server/pkg/validate"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -261,8 +262,21 @@ func (e *EnvironmentUsecase) DeleteEnvironment(ctx context.Context, options *Biz
 		insecureSkipCheck: options.InsecureSkipCheck,
 		operator:          e,
 	}
+
 	err := e.resourcesUsecase.Delete(ctx, resourceOptions, func(nodes nodestree.Node) (string, error) {
-		return options.ResouceName, nil
+		node := e.nodestree.GetNode(&nodes, nodestree.Environment, options.ResouceName)
+		env, ok := node.Content.(*resourcev1alpha1.Environment)
+		if !ok {
+			return "", fmt.Errorf("the resource %s content type is incorrect", node.Name)
+		}
+
+		validateClient := validate.NewValidateClient(nil, e.nodestree, &nodes)
+		err := env.IsDeletable(context.TODO(), validateClient)
+		if err != nil {
+			return "", err
+		}
+
+		return env.Name, nil
 	})
 	if err != nil {
 		return err

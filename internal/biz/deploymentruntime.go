@@ -226,15 +226,18 @@ func (d *DeploymentRuntimeUsecase) CheckReference(options nodestree.CompareOptio
 		}
 	}
 
-	ok = nodestree.IsResourceExist(options, deploymentRuntime.Spec.Destination, nodestree.Environment)
+	envName := deploymentRuntime.Spec.Destination
+	ok = nodestree.IsResourceExist(options, envName, nodestree.Environment)
 	if !ok {
-		return true, fmt.Errorf("the referenced environment %s by the deployment runtime %s does not exist while verifying the validity of the global template", deploymentRuntime.Spec.Destination, deploymentRuntime.Name)
+		err := fmt.Errorf("failed to get environment %s", envName)
+		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable+"err: "+err.Error(), nodestree.Environment, fmt.Sprintf("%s/%s", _RuntimesDir, deploymentRuntime.Name))
 	}
 
 	codeRepoName := deploymentRuntime.Spec.ManifestSource.CodeRepo
 	ok = nodestree.IsResourceExist(options, codeRepoName, nodestree.CodeRepo)
 	if !ok {
-		return true, fmt.Errorf("the referenced repository %s by the deployment runtime %s does not exist while verifying the validity of the global template", codeRepoName, deploymentRuntime.Name)
+		err := fmt.Errorf("failed to get codeRepo %s", codeRepoName)
+		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable+"err: "+err.Error(), nodestree.CodeRepo, fmt.Sprintf("%s/%s", _CodeReposSubDir, deploymentRuntime.Name))
 	}
 
 	ok, err := d.compare(options.Nodes)

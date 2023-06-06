@@ -424,6 +424,9 @@ var _ = Describe("Save project pipeline runtime", func() {
 			fakeNodes.Children = append(fakeNodes.Children, codeRepoNodes.Children...)
 			codeRepoNodes = createFakeCcontainingCodeRepoNodes(createFakeCodeRepoNode(createFakeCodeRepoResource(projectForBaseRepoID)))
 			fakeNodes.Children = append(fakeNodes.Children, codeRepoNodes.Children...)
+			codeRepoBinding := createFakeCodeRepoBindingResource("codeRepoBinding1", "project1")
+			codeRepoBindingNode := createFakeCodeRepoBindingNode(codeRepoBinding)
+			fakeNodes.Children = append(fakeNodes.Children, codeRepoBindingNode)
 
 			options := nodestree.CompareOptions{
 				Nodes:       fakeNodes,
@@ -431,6 +434,8 @@ var _ = Describe("Save project pipeline runtime", func() {
 			}
 			nodestree := nodestree.NewMockNodesTree(ctl)
 			nodestree.EXPECT().AppendOperators(gomock.Any())
+			createFakeCodeRepoNode(createFakeCodeRepoResource(projectForBaseRepoID))
+			nodestree.EXPECT().GetNode(gomock.Any(), gomock.Any(), gomock.Any()).Return(createFakeCodeRepoNode(createFakeCodeRepoResource(projectForBaseRepoID))).AnyTimes()
 
 			newResouce := fakeResource.DeepCopy()
 			newResouce.Spec.PipelineSource = projectForPipelineRepoID
@@ -443,7 +448,6 @@ var _ = Describe("Save project pipeline runtime", func() {
 			Expect(ok).To(BeTrue())
 		})
 	})
-
 })
 
 var _ = Describe("Delete project pipeline runtime", func() {

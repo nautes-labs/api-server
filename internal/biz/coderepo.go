@@ -33,7 +33,6 @@ import (
 )
 
 const (
-	_CodeRepoKind    = "CodeRepo"
 	_CodeReposSubDir = "code-repos"
 )
 
@@ -871,7 +870,7 @@ func (c *CodeRepoUsecase) CheckReference(options nodestree.CompareOptions, node 
 		ok = nodestree.IsResourceExist(options, codeRepo.Spec.Project, nodestree.Project)
 		if !ok {
 			return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, _ProjectKind,
-				codeRepo.Spec.Project, _CodeRepoKind, codeRepo.Spec.RepoName, _CodeReposSubDir+"/"+codeRepo.ObjectMeta.Name)
+				codeRepo.Spec.Project, nodestree.CodeRepo, codeRepo.Spec.RepoName, _CodeReposSubDir+"/"+codeRepo.ObjectMeta.Name)
 		}
 	}
 

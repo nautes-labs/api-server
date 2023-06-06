@@ -25,6 +25,8 @@ import (
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/nautes-labs/api-server/pkg/validate"
 )
 
 const (
@@ -44,7 +46,11 @@ type ProjectPipelineRuntimeData struct {
 }
 
 func NewProjectPipelineRuntimeUsecase(logger log.Logger, codeRepo CodeRepo, nodestree nodestree.NodesTree, resourcesUsecase *ResourcesUsecase) *ProjectPipelineRuntimeUsecase {
-	runtime := &ProjectPipelineRuntimeUsecase{log: log.NewHelper(log.With(logger)), codeRepo: codeRepo, nodestree: nodestree, resourcesUsecase: resourcesUsecase}
+	runtime := &ProjectPipelineRuntimeUsecase{
+		log:      log.NewHelper(log.With(logger)),
+		codeRepo: codeRepo, nodestree: nodestree,
+		resourcesUsecase: resourcesUsecase,
+	}
 	nodestree.AppendOperators(runtime)
 	return runtime
 }
@@ -245,7 +251,7 @@ func (p *ProjectPipelineRuntimeUsecase) CheckReference(options nodestree.Compare
 	pipelineRepository := projectPipelineRuntime.Spec.PipelineSource
 	ok = nodestree.IsResourceExist(options, pipelineRepository, nodestree.CodeRepo)
 	if !ok {
-		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, _CodeRepoKind, pipelineRepository, _PipelineRuntimeKind,
+		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, nodestree.CodeRepo, pipelineRepository, _PipelineRuntimeKind,
 			projectPipelineRuntime.Name, resourceDirectory)
 	}
 
@@ -255,7 +261,7 @@ func (p *ProjectPipelineRuntimeUsecase) CheckReference(options nodestree.Compare
 				// TODO
 				// In the future, cross product query codeRepo will be supported.
 				if ok := nodestree.IsResourceExist(options, event.Gitlab.RepoName, nodestree.CodeRepo); !ok {
-					return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, _CodeRepoKind, event.Gitlab.RepoName, _PipelineRuntimeKind,
+					return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, nodestree.CodeRepo, event.Gitlab.RepoName, _PipelineRuntimeKind,
 						projectPipelineRuntime.Name, resourceDirectory)
 				}
 			}
@@ -267,9 +273,8 @@ func (p *ProjectPipelineRuntimeUsecase) CheckReference(options nodestree.Compare
 		return true, err
 	}
 
-	client := &PipelineRuntimeValidateClient{nodes: options.Nodes}
-	projectPipelineRuntime.Namespace = options.ProductName
-	_, err = projectPipelineRuntime.Validate(client)
+	validateClient := validate.NewValidateClient(nil, p.nodestree, &options.Nodes)
+	_, err = projectPipelineRuntime.Validate(context.TODO(), validateClient)
 	if err != nil {
 		return true, err
 	}

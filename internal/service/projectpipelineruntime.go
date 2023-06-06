@@ -186,13 +186,18 @@ func (s *ProjectPipelineRuntimeService) SaveProjectPipelineRuntime(ctx context.C
 		},
 	}
 
+	err := s.Validate(data.Spec)
+	if err != nil {
+		return nil, err
+	}
+
 	options := &biz.BizOptions{
 		ResouceName:       req.ProjectPipelineRuntimeName,
 		ProductName:       req.ProductName,
 		InsecureSkipCheck: req.InsecureSkipCheck,
 	}
 	ctx = biz.SetResourceContext(ctx, req.ProductName, biz.SaveMethod, nodestree.Project, req.Body.Project, nodestree.ProjectPipelineRuntime, req.ProjectPipelineRuntimeName)
-	err := s.projectPipelineRuntime.SaveProjectPipelineRuntime(ctx, options, data)
+	err = s.projectPipelineRuntime.SaveProjectPipelineRuntime(ctx, options, data)
 	if err != nil {
 		return nil, err
 	}
@@ -239,6 +244,43 @@ func (p *ProjectPipelineRuntimeService) ConvertCodeRepoToRepoName(ctx context.Co
 				return err
 			}
 			event.Gitlab.RepoName = repoName
+		}
+	}
+
+	return nil
+}
+
+func (s *ProjectPipelineRuntimeService) Validate(spec resourcev1alpha1.ProjectPipelineRuntimeSpec) error {
+	eventSourcesMap := make(map[string]resourcev1alpha1.EventSource)
+	for _, event := range spec.EventSources {
+		eventSourcesMap[event.Name] = event
+	}
+
+	pipelinesMap := make(map[string]resourcev1alpha1.Pipeline)
+	for _, pipeline := range spec.Pipelines {
+		pipelinesMap[pipeline.Name] = pipeline
+	}
+
+	for _, trigger := range spec.PipelineTriggers {
+		eventName := trigger.EventSource
+		pipelineName := trigger.Pipeline
+
+		eventExists := false
+		if _, ok := eventSourcesMap[eventName]; ok {
+			eventExists = true
+		}
+
+		pipelineExists := false
+		if _, ok := pipelinesMap[pipelineName]; ok {
+			pipelineExists = true
+		}
+
+		if !eventExists {
+			return fmt.Errorf("event source %s does not exist, please check if the parameters filled in the 'pipeline_triggers.event_source' field are correct", eventName)
+		}
+
+		if !pipelineExists {
+			return fmt.Errorf("pipeline %s does not exist, please check if the parameters filled in the 'pipeline_triggers.pipeline' field are correct", pipelineName)
 		}
 	}
 
