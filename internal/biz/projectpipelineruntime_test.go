@@ -434,7 +434,6 @@ var _ = Describe("Save project pipeline runtime", func() {
 			}
 			nodestree := nodestree.NewMockNodesTree(ctl)
 			nodestree.EXPECT().AppendOperators(gomock.Any())
-			createFakeCodeRepoNode(createFakeCodeRepoResource(projectForBaseRepoID))
 			nodestree.EXPECT().GetNode(gomock.Any(), gomock.Any(), gomock.Any()).Return(createFakeCodeRepoNode(createFakeCodeRepoResource(projectForBaseRepoID))).AnyTimes()
 
 			newResouce := fakeResource.DeepCopy()

@@ -21,6 +21,7 @@ import (
 
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
+	"github.com/nautes-labs/api-server/pkg/validate"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -242,6 +243,12 @@ func (d *DeploymentRuntimeUsecase) CheckReference(options nodestree.CompareOptio
 
 	ok, err := d.compare(options.Nodes)
 	if ok {
+		return true, err
+	}
+
+	validateClient := validate.NewValidateClient(nil, d.nodestree, &options.Nodes)
+	_, err = deploymentRuntime.Validate(context.Background(), validateClient)
+	if err != nil {
 		return true, err
 	}
 

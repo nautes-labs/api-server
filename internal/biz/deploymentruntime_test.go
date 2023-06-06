@@ -272,6 +272,10 @@ var _ = Describe("Save deployment runtime", func() {
 	}))
 
 	Describe("check reference by resources", func() {
+		var (
+			projectForBase       = &Project{Name: "base", Id: 1223, HttpUrlToRepo: fmt.Sprintf("ssh://git@gitlab.io/nautes-labs/%s.git", resourceName)}
+			projectForBaseRepoID = fmt.Sprintf("%s%d", RepoPrefix, int(projectForBase.Id))
+		)
 		It("incorrect product name", testUseCase.CheckReferenceButIncorrectProduct(fakeNodes, func(options nodestree.CompareOptions, nodestree *nodestree.MockNodesTree) {
 			biz := NewDeploymentRuntimeUsecase(logger, nil, nodestree, nil)
 			ok, err := biz.CheckReference(options, fakeNode, nil)
@@ -343,6 +347,7 @@ var _ = Describe("Save deployment runtime", func() {
 			}
 			nodestree := nodestree.NewMockNodesTree(ctl)
 			nodestree.EXPECT().AppendOperators(gomock.Any())
+			nodestree.EXPECT().GetNode(gomock.Any(), gomock.Any(), gomock.Any()).Return(createFakeCodeRepoNode(createFakeCodeRepoResource(projectForBaseRepoID))).AnyTimes()
 
 			biz := NewDeploymentRuntimeUsecase(logger, nil, nodestree, nil)
 			ok, err := biz.CheckReference(options, fakeNode, nil)
