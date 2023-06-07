@@ -257,7 +257,7 @@ func (d *DeploymentRuntimeUsecase) CheckReference(options nodestree.CompareOptio
 	}
 
 	validateClient := validate.NewValidateClient(d.client, d.nodestree, &options.Nodes, d.config.Nautes.Namespace)
-	illegalProjectRefs, err := deploymentRuntime.Validate(context.Background(), validateClient)
+	illegalProjectRefs, err := deploymentRuntime.Validate(context.TODO(), validateClient)
 	if err != nil {
 		return true, fmt.Errorf("verify deployment runtime failed, err: %w", err)
 	}
