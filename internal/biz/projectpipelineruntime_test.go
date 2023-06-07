@@ -151,12 +151,6 @@ var _ = Describe("List project pipeline runtimes", func() {
 			Expect(result).Should(Equal(fakeNode))
 		}
 	}))
-
-	It("does not conform to the template layout", testUseCase.ListResourceNotMatch(fakeNodes, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		biz := NewProjectPipelineRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase, client, nautesConfigs)
-		_, err := biz.ListProjectPipelineRuntimes(ctx, defaultGroupName)
-		Expect(err).Should(HaveOccurred())
-	}))
 })
 
 var _ = Describe("Save project pipeline runtime", func() {

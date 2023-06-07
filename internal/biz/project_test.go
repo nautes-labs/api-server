@@ -130,12 +130,6 @@ var _ = Describe("List projects", func() {
 			Expect(result).Should(Equal(fakeResource))
 		}
 	}))
-
-	It("does not conform to the template layout", testUseCase.ListResourceNotMatch(fakeNodes, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		biz := NewProjectUsecase(logger, codeRepo, nil, nodestree, nautesConfigs, resourceUseCase)
-		_, err := biz.ListProjects(ctx, defaultGroupName)
-		Expect(err).Should(HaveOccurred())
-	}))
 })
 
 var _ = Describe("Save project", func() {

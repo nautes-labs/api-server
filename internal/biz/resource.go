@@ -66,7 +66,7 @@ func NewResourcesUsecase(log log.Logger, codeRepo CodeRepo, secretRepo Secretrep
 }
 
 func (r *ResourcesUsecase) Get(ctx context.Context, resourceKind, productName string, operator nodestree.NodesOperator, getResourceName getResouceName) (*nodestree.Node, error) {
-	product, project, err := r.GetGroupAndProjectByGroupID(ctx, productName)
+	_, project, err := r.GetGroupAndProjectByGroupID(ctx, productName)
 	if err != nil {
 		return nil, err
 	}
@@ -84,16 +84,6 @@ func (r *ResourcesUsecase) Get(ctx context.Context, resourceKind, productName st
 	}
 
 	nodes, err := r.nodestree.Load(localPath)
-	if err != nil {
-		return nil, err
-	}
-
-	options := nodestree.CompareOptions{
-		Nodes:       nodes,
-		ProductName: fmt.Sprintf("%s%d", _ProductPrefix, int(product.Id)),
-	}
-
-	err = r.nodestree.Compare(options)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +102,7 @@ func (r *ResourcesUsecase) Get(ctx context.Context, resourceKind, productName st
 }
 
 func (r *ResourcesUsecase) List(ctx context.Context, gid interface{}, operator nodestree.NodesOperator) (*nodestree.Node, error) {
-	product, project, err := r.GetGroupAndProjectByGroupID(ctx, gid)
+	_, project, err := r.GetGroupAndProjectByGroupID(ctx, gid)
 	if err != nil {
 		return nil, err
 	}
@@ -130,16 +120,6 @@ func (r *ResourcesUsecase) List(ctx context.Context, gid interface{}, operator n
 	}
 
 	nodes, err := r.nodestree.Load(localPath)
-	if err != nil {
-		return nil, err
-	}
-
-	options := nodestree.CompareOptions{
-		Nodes:       nodes,
-		ProductName: fmt.Sprintf("%s%d", _ProductPrefix, int(product.Id)),
-	}
-
-	err = r.nodestree.Compare(options)
 	if err != nil {
 		return nil, err
 	}

@@ -143,12 +143,6 @@ var _ = Describe("List deployment runtimes", func() {
 		_, err := biz.ListDeploymentRuntimes(ctx, defaultGroupName)
 		Expect(err).Should(HaveOccurred())
 	})
-
-	It("does not conform to the template layout", testUseCase.ListResourceNotMatch(fakeNodes, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase, client, nautesConfigs)
-		_, err := biz.ListDeploymentRuntimes(ctx, defaultGroupName)
-		Expect(err).Should(HaveOccurred())
-	}))
 })
 
 var _ = Describe("Save deployment runtime", func() {

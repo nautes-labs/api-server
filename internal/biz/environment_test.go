@@ -124,12 +124,6 @@ var _ = Describe("List enviroments", func() {
 			Expect(result).Should(Equal(fakeNode))
 		}
 	}))
-
-	It("does not conform to the template layout", testUseCase.ListResourceNotMatch(fakeNodes, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		biz := NewEnviromentUsecase(logger, nautesConfigs, codeRepo, nodestree, resourceUseCase)
-		_, err := biz.ListEnvironments(ctx, defaultGroupName)
-		Expect(err).Should(HaveOccurred())
-	}))
 })
 
 var _ = Describe("Save environment", func() {

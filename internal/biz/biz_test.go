@@ -39,7 +39,6 @@ type GetRequestTestCases interface {
 
 type ListRequestTestCases interface {
 	ListResourceSuccess(nodes nodestree.Node, fn BizFunc) interface{}
-	ListResourceNotMatch(nodes nodestree.Node, fn BizFunc) interface{}
 }
 
 type SaveRequestTestCases interface {
@@ -100,7 +99,6 @@ func (t *testBiz) GetResourceSuccess(nodes nodestree.Node, node *nodestree.Node,
 
 		secretRepo := NewMockSecretrepo(ctl)
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, nil, gitRepo, nodestree, nautesConfigs)
-		nodestree.EXPECT().Compare(gomock.Any()).Return(nil)
 
 		fn(codeRepo, secretRepo, resourcesUsecase, nodestree, gitRepo, nil)
 	}
@@ -121,7 +119,6 @@ func (t *testBiz) GetResourceFail(fn BizFunc) interface{} {
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, nil, gitRepo, nodestree, nautesConfigs)
 
 		nodestree.EXPECT().Load(gomock.Eq(localRepositoryPath)).Return(emptyNodes, nil)
-		nodestree.EXPECT().Compare(gomock.Any()).Return(nil)
 		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		nodestree.EXPECT().FilterIgnoreByLayout(localRepositoryPath).Return(nil)
 
@@ -142,7 +139,6 @@ func (t *testBiz) GetResourceNoMatch(fn BizFunc) interface{} {
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any()).AnyTimes()
 		nodestree.EXPECT().Load(gomock.Eq(localRepositoryPath)).Return(emptyNodes, nil)
-		nodestree.EXPECT().Compare(gomock.Any()).Return(nil)
 		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		nodestree.EXPECT().FilterIgnoreByLayout(localRepositoryPath).Return(nil)
 
@@ -165,7 +161,6 @@ func (t *testBiz) ListResourceSuccess(nodes nodestree.Node, fn BizFunc) interfac
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any()).AnyTimes()
 		nodestree.EXPECT().Load(gomock.Eq(localRepositoryPath)).Return(nodes, nil).AnyTimes()
-		nodestree.EXPECT().Compare(gomock.Any()).Return(nil)
 		nodestree.EXPECT().FilterIgnoreByLayout(localRepositoryPath).Return(nil)
 
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, nil, gitRepo, nodestree, nautesConfigs)
@@ -187,7 +182,6 @@ func (t *testBiz) ListResourceNotMatch(nodes nodestree.Node, fn BizFunc) interfa
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any()).AnyTimes()
 		nodestree.EXPECT().Load(gomock.Eq(localRepositoryPath)).Return(nodes, nil).AnyTimes()
-		nodestree.EXPECT().Compare(gomock.Any()).Return(ErrorResourceNoMatch)
 		nodestree.EXPECT().FilterIgnoreByLayout(localRepositoryPath).Return(nil)
 
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, nil, gitRepo, nodestree, nautesConfigs)
