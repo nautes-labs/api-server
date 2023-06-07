@@ -271,6 +271,7 @@ func (e *EnvironmentUsecase) DeleteEnvironment(ctx context.Context, options *Biz
 		}
 
 		validateClient := validate.NewValidateClient(nil, e.nodestree, &nodes, e.config.Nautes.Namespace)
+		env.Namespace = options.ProductName
 		err := env.IsDeletable(context.TODO(), validateClient)
 		if err != nil {
 			return "", err
