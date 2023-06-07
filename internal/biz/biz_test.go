@@ -22,6 +22,12 @@ import (
 	"github.com/nautes-labs/api-server/pkg/nodestree"
 )
 
+const (
+	_TestProject            = "project1"
+	_TestEnvenvironmentName = "env1"
+	_TestCodeRepoName       = "repo-1222"
+)
+
 type BizFunc func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient)
 type CompareFunc func(options nodestree.CompareOptions, nodestree *nodestree.MockNodesTree)
 

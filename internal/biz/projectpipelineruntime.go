@@ -23,6 +23,7 @@ import (
 	projectpipelineruntimev1 "github.com/nautes-labs/api-server/api/projectpipelineruntime/v1"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
+	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -38,6 +39,8 @@ type ProjectPipelineRuntimeUsecase struct {
 	codeRepo         CodeRepo
 	nodestree        nodestree.NodesTree
 	resourcesUsecase *ResourcesUsecase
+	client           client.Client
+	config           *nautesconfigs.Config
 }
 
 type ProjectPipelineRuntimeData struct {
@@ -45,11 +48,13 @@ type ProjectPipelineRuntimeData struct {
 	Spec resourcev1alpha1.ProjectPipelineRuntimeSpec
 }
 
-func NewProjectPipelineRuntimeUsecase(logger log.Logger, codeRepo CodeRepo, nodestree nodestree.NodesTree, resourcesUsecase *ResourcesUsecase) *ProjectPipelineRuntimeUsecase {
+func NewProjectPipelineRuntimeUsecase(logger log.Logger, codeRepo CodeRepo, nodestree nodestree.NodesTree, resourcesUsecase *ResourcesUsecase, client client.Client, config *nautesconfigs.Config) *ProjectPipelineRuntimeUsecase {
 	runtime := &ProjectPipelineRuntimeUsecase{
 		log:      log.NewHelper(log.With(logger)),
 		codeRepo: codeRepo, nodestree: nodestree,
 		resourcesUsecase: resourcesUsecase,
+		client:           client,
+		config:           config,
 	}
 	nodestree.AppendOperators(runtime)
 	return runtime
@@ -273,7 +278,7 @@ func (p *ProjectPipelineRuntimeUsecase) CheckReference(options nodestree.Compare
 		return true, err
 	}
 
-	validateClient := validate.NewValidateClient(nil, p.nodestree, &options.Nodes)
+	validateClient := validate.NewValidateClient(p.client, p.nodestree, &options.Nodes, p.config.Nautes.Namespace)
 	illegalEventSources, err := projectPipelineRuntime.Validate(context.TODO(), validateClient)
 	if err != nil {
 		return true, fmt.Errorf("verify project pipeline runtime failed, err: %w", err)

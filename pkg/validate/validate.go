@@ -24,13 +24,14 @@ import (
 )
 
 type validateClient struct {
-	client    *client.Client
-	nodes     *nodestree.Node
-	nodestree nodestree.NodesTree
+	client               client.Client
+	nodes                *nodestree.Node
+	nodestree            nodestree.NodesTree
+	tenantAdminNamespace string
 }
 
-func NewValidateClient(client *client.Client, nodestree nodestree.NodesTree, nodes *nodestree.Node) resourcev1alpha1.ValidateClient {
-	return &validateClient{client: client, nodestree: nodestree, nodes: nodes}
+func NewValidateClient(client client.Client, nodestree nodestree.NodesTree, nodes *nodestree.Node, tenantAdminNamespace string) resourcev1alpha1.ValidateClient {
+	return &validateClient{client: client, nodestree: nodestree, nodes: nodes, tenantAdminNamespace: tenantAdminNamespace}
 }
 
 func (v *validateClient) GetCodeRepo(ctx context.Context, repoName string) (*resourcev1alpha1.CodeRepo, error) {
@@ -40,9 +41,37 @@ func (v *validateClient) GetCodeRepo(ctx context.Context, repoName string) (*res
 	}
 	codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
 	if !ok {
-		return nil, fmt.Errorf("the content type is wrong: %s", node.Name)
+		return nil, fmt.Errorf("the node %s content type is wrong", node.Name)
 	}
 	return codeRepo, nil
+}
+
+func (v *validateClient) GetEnvironment(ctx context.Context, productName, name string) (*resourcev1alpha1.Environment, error) {
+	node := v.nodestree.GetNode(v.nodes, nodestree.Environment, name)
+	if node == nil {
+		return nil, fmt.Errorf("the environment %s is not found", name)
+	}
+	env, ok := node.Content.(*resourcev1alpha1.Environment)
+	if !ok {
+		return nil, fmt.Errorf("the node %s content type is wrong", node.Name)
+	}
+
+	return env, nil
+}
+
+func (v *validateClient) GetCluster(ctx context.Context, name string) (*resourcev1alpha1.Cluster, error) {
+	objKey := client.ObjectKey{
+		Namespace: v.tenantAdminNamespace,
+		Name:      name,
+	}
+
+	cluster := &resourcev1alpha1.Cluster{}
+	err := v.client.Get(ctx, objKey, cluster)
+	if err != nil {
+		return nil, err
+	}
+
+	return cluster, nil
 }
 
 func (v *validateClient) ListCodeRepoBinding(ctx context.Context, productName, repoName string) (*resourcev1alpha1.CodeRepoBindingList, error) {

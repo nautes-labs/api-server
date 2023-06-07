@@ -31,12 +31,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var (
-	clusterName = "deployment-test"
-	envType     = "host"
+const (
+	_TestDeploymentClusterName = "deployment-test"
+	_TestPipelineClusterName   = "pipeline-test"
+	_TestClusterHostEnvType    = "host"
+	_TestClusterWorkerEnvType  = "worker"
 )
 
-func createEnvironmentResource(name string) *resourcev1alpha1.Environment {
+func createEnvironmentResource(name, _TestClusterHostEnvType, _TestDeploymentClusterName string) *resourcev1alpha1.Environment {
 	return &resourcev1alpha1.Environment{
 		TypeMeta: v1.TypeMeta{
 			Kind: nodestree.Environment,
@@ -46,8 +48,8 @@ func createEnvironmentResource(name string) *resourcev1alpha1.Environment {
 		},
 		Spec: resourcev1alpha1.EnvironmentSpec{
 			Product: defaultProductId,
-			Cluster: clusterName,
-			EnvType: envType,
+			Cluster: _TestDeploymentClusterName,
+			EnvType: _TestClusterHostEnvType,
 		},
 	}
 }
@@ -85,7 +87,7 @@ func createContainEnvironmentNodes(node *nodestree.Node) nodestree.Node {
 var _ = Describe("Get environment", func() {
 	var (
 		resourceName = "env1"
-		fakeResource = createEnvironmentResource(resourceName)
+		fakeResource = createEnvironmentResource(resourceName, _TestClusterHostEnvType, _TestDeploymentClusterName)
 		fakeNode     = createEnvironmentNode(fakeResource)
 		fakeNodes    = createContainEnvironmentNodes(fakeNode)
 	)
@@ -109,7 +111,7 @@ var _ = Describe("Get environment", func() {
 var _ = Describe("List enviroments", func() {
 	var (
 		resourceName = "env1"
-		fakeResource = createEnvironmentResource(resourceName)
+		fakeResource = createEnvironmentResource(resourceName, _TestClusterHostEnvType, _TestDeploymentClusterName)
 		fakeNode     = createEnvironmentNode(fakeResource)
 		fakeNodes    = createContainEnvironmentNodes(fakeNode)
 	)
@@ -133,7 +135,7 @@ var _ = Describe("List enviroments", func() {
 var _ = Describe("Save environment", func() {
 	var (
 		resourceName   = "env1"
-		fakeResource   = createEnvironmentResource(resourceName)
+		fakeResource   = createEnvironmentResource(resourceName, _TestClusterHostEnvType, _TestDeploymentClusterName)
 		fakeNode       = createEnvironmentNode(fakeResource)
 		fakeNodes      = createContainEnvironmentNodes(fakeNode)
 		enviromentData = &EnviromentData{
@@ -141,7 +143,7 @@ var _ = Describe("Save environment", func() {
 			Spec: resourcev1alpha1.EnvironmentSpec{
 				Product: defaultGroupName,
 				Cluster: "test-cluster",
-				EnvType: envType,
+				EnvType: _TestClusterHostEnvType,
 			},
 		}
 		bizOptions = &BizOptions{
@@ -237,7 +239,7 @@ var _ = Describe("Save environment", func() {
 var _ = Describe("Delete environment", func() {
 	var (
 		resourceName = "env1"
-		fakeResource = createEnvironmentResource(resourceName)
+		fakeResource = createEnvironmentResource(resourceName, _TestClusterHostEnvType, _TestDeploymentClusterName)
 		fakeNode     = createEnvironmentNode(fakeResource)
 		fakeNodes    = createContainEnvironmentNodes(fakeNode)
 		bizOptions   = &BizOptions{

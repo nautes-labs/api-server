@@ -270,7 +270,7 @@ func (e *EnvironmentUsecase) DeleteEnvironment(ctx context.Context, options *Biz
 			return "", fmt.Errorf("the resource %s content type is incorrect", node.Name)
 		}
 
-		validateClient := validate.NewValidateClient(nil, e.nodestree, &nodes)
+		validateClient := validate.NewValidateClient(nil, e.nodestree, &nodes, e.config.Nautes.Namespace)
 		err := env.IsDeletable(context.TODO(), validateClient)
 		if err != nil {
 			return "", err

@@ -23,6 +23,7 @@ import (
 	"github.com/nautes-labs/api-server/pkg/nodestree"
 	"github.com/nautes-labs/api-server/pkg/validate"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
+	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -36,6 +37,8 @@ type DeploymentRuntimeUsecase struct {
 	codeRepo         CodeRepo
 	nodestree        nodestree.NodesTree
 	resourcesUsecase *ResourcesUsecase
+	client           client.Client
+	config           *nautesconfigs.Config
 }
 
 type DeploymentRuntimeData struct {
@@ -43,8 +46,15 @@ type DeploymentRuntimeData struct {
 	Spec resourcev1alpha1.DeploymentRuntimeSpec
 }
 
-func NewDeploymentRuntimeUsecase(logger log.Logger, codeRepo CodeRepo, nodestree nodestree.NodesTree, resourcesUsecase *ResourcesUsecase) *DeploymentRuntimeUsecase {
-	runtime := &DeploymentRuntimeUsecase{log: log.NewHelper(log.With(logger)), codeRepo: codeRepo, nodestree: nodestree, resourcesUsecase: resourcesUsecase}
+func NewDeploymentRuntimeUsecase(logger log.Logger, codeRepo CodeRepo, nodestree nodestree.NodesTree, resourcesUsecase *ResourcesUsecase, client client.Client, config *nautesconfigs.Config) *DeploymentRuntimeUsecase {
+	runtime := &DeploymentRuntimeUsecase{
+		log:              log.NewHelper(log.With(logger)),
+		codeRepo:         codeRepo,
+		nodestree:        nodestree,
+		resourcesUsecase: resourcesUsecase,
+		client:           client,
+		config:           config,
+	}
 	nodestree.AppendOperators(runtime)
 	return runtime
 }
@@ -246,7 +256,7 @@ func (d *DeploymentRuntimeUsecase) CheckReference(options nodestree.CompareOptio
 		return true, err
 	}
 
-	validateClient := validate.NewValidateClient(nil, d.nodestree, &options.Nodes)
+	validateClient := validate.NewValidateClient(d.client, d.nodestree, &options.Nodes, d.config.Nautes.Namespace)
 	illegalProjectRefs, err := deploymentRuntime.Validate(context.Background(), validateClient)
 	if err != nil {
 		return true, fmt.Errorf("verify deployment runtime failed, err: %w", err)

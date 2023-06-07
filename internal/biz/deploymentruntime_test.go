@@ -94,14 +94,14 @@ var _ = Describe("Get deployment runtime", func() {
 		id, _ = utilstrings.ExtractNumber("repo-", fakeResource.Spec.ManifestSource.CodeRepo)
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), id).Return(defautlProject, nil)
 
-		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourcesUsecase)
+		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourcesUsecase, client, nautesConfigs)
 		result, err := biz.GetDeploymentRuntime(context.Background(), resourceName, defaultGroupName)
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(result).Should(Equal(fakeResource))
 	}))
 
 	It("will fail when resource is not found", testUseCase.GetResourceFail(func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
+		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase, client, nautesConfigs)
 		_, err := biz.GetDeploymentRuntime(context.Background(), resourceName, defaultGroupName)
 		Expect(err).Should(HaveOccurred())
 	}))
@@ -115,11 +115,12 @@ var _ = Describe("List deployment runtimes", func() {
 		fakeResource = createDeploymentRuntimeResource(resourceName, repoID)
 		fakeNode     = createFakeDeploymentRuntimeNode(fakeResource)
 		fakeNodes    = createFakeDeployRuntimeNodes(fakeNode)
+		client       = kubernetes.NewMockClient(ctl)
 	)
 
 	It("will successfully", testUseCase.ListResourceSuccess(fakeNodes, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 
-		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
+		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase, client, nautesConfigs)
 		results, err := biz.ListDeploymentRuntimes(ctx, defaultGroupName)
 		Expect(err).ShouldNot(HaveOccurred())
 		for _, result := range results {
@@ -138,13 +139,13 @@ var _ = Describe("List deployment runtimes", func() {
 		in.EXPECT().AppendOperators(gomock.Any())
 
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, nil, gitRepo, in, nautesConfigs)
-		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, in, resourcesUsecase)
+		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, in, resourcesUsecase, client, nautesConfigs)
 		_, err := biz.ListDeploymentRuntimes(ctx, defaultGroupName)
 		Expect(err).Should(HaveOccurred())
 	})
 
 	It("does not conform to the template layout", testUseCase.ListResourceNotMatch(fakeNodes, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
+		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase, client, nautesConfigs)
 		_, err := biz.ListDeploymentRuntimes(ctx, defaultGroupName)
 		Expect(err).Should(HaveOccurred())
 	}))
@@ -171,21 +172,21 @@ var _ = Describe("Save deployment runtime", func() {
 	)
 
 	It("failed to get product info", testUseCase.GetProductFail(func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
+		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase, client, nautesConfigs)
 		err := biz.SaveDeploymentRuntime(context.Background(), bizOptions, deploymentRuntimeData)
 		Expect(err).Should(HaveOccurred())
 	}))
 
 	It("failed to get default project info", testUseCase.GetDefaultProjectFail(func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), pid).Return(project, nil)
-		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
+		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase, client, nautesConfigs)
 		err := biz.SaveDeploymentRuntime(context.Background(), bizOptions, deploymentRuntimeData)
 		Expect(err).Should(HaveOccurred())
 	}))
 
 	It("will created successfully", testUseCase.CreateResourceSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), pid).Return(project, nil)
-		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
+		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase, client, nautesConfigs)
 		err := biz.SaveDeploymentRuntime(context.Background(), bizOptions, deploymentRuntimeData)
 		Expect(err).ShouldNot(HaveOccurred())
 	}))
@@ -193,7 +194,7 @@ var _ = Describe("Save deployment runtime", func() {
 	It("will updated successfully", testUseCase.UpdateResoureSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), pid).Return(project, nil)
 
-		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
+		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase, client, nautesConfigs)
 		err := biz.SaveDeploymentRuntime(context.Background(), bizOptions, deploymentRuntimeData)
 		Expect(err).ShouldNot(HaveOccurred())
 	}))
@@ -201,7 +202,7 @@ var _ = Describe("Save deployment runtime", func() {
 	It("auto merge conflict, updated successfully", testUseCase.UpdateResourceAndAutoMerge(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), pid).Return(project, nil)
 
-		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
+		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase, client, nautesConfigs)
 		err := biz.SaveDeploymentRuntime(context.Background(), bizOptions, deploymentRuntimeData)
 		Expect(err).ShouldNot(HaveOccurred())
 	}))
@@ -209,7 +210,7 @@ var _ = Describe("Save deployment runtime", func() {
 	It("failed to save config", testUseCase.SaveConfigFail(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), pid).Return(project, nil)
 
-		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
+		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase, client, nautesConfigs)
 		err := biz.SaveDeploymentRuntime(context.Background(), bizOptions, deploymentRuntimeData)
 		Expect(err).Should(HaveOccurred())
 	}))
@@ -217,7 +218,7 @@ var _ = Describe("Save deployment runtime", func() {
 	It("failed to push code retry three times", testUseCase.CreateResourceAndAutoRetry(fakeNodes, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), pid).Return(project, nil)
 
-		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
+		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase, client, nautesConfigs)
 		err := biz.SaveDeploymentRuntime(context.Background(), bizOptions, deploymentRuntimeData)
 		Expect(err).Should(HaveOccurred())
 	}))
@@ -244,7 +245,9 @@ var _ = Describe("Save deployment runtime", func() {
 		in := nodestree.NewMockNodesTree(ctl)
 		in.EXPECT().AppendOperators(gomock.Any())
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, nil, gitRepo, in, nautesConfigs)
-		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, in, resourcesUsecase)
+
+		client := kubernetes.NewMockClient(ctl)
+		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, in, resourcesUsecase, client, nautesConfigs)
 		in.EXPECT().Load(gomock.Eq(localRepositoryPath)).Return(emptyNodes, nil)
 		in.EXPECT().Compare(gomock.Any()).Return(nil).AnyTimes()
 		in.EXPECT().GetNode(gomock.Any(), gomock.Any(), gomock.Any()).Return(fakeNode)
@@ -258,7 +261,7 @@ var _ = Describe("Save deployment runtime", func() {
 	It("failed to auto merge conflict", testUseCase.MergeConflictFail(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), pid).Return(project, nil)
 
-		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
+		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase, client, nautesConfigs)
 		err := biz.SaveDeploymentRuntime(context.Background(), bizOptions, deploymentRuntimeData)
 		Expect(err).Should(HaveOccurred())
 	}))
@@ -266,7 +269,7 @@ var _ = Describe("Save deployment runtime", func() {
 	It("modify resource but non compliant layout", testUseCase.UpdateResourceButNotConformTemplate(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), pid).Return(project, nil)
 
-		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
+		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase, client, nautesConfigs)
 		err := biz.SaveDeploymentRuntime(context.Background(), bizOptions, deploymentRuntimeData)
 		Expect(err).Should(HaveOccurred())
 	}))
@@ -275,9 +278,11 @@ var _ = Describe("Save deployment runtime", func() {
 		var (
 			projectForBase       = &Project{Name: "base", Id: 1223, HttpUrlToRepo: fmt.Sprintf("ssh://git@gitlab.io/nautes-labs/%s.git", resourceName)}
 			projectForBaseRepoID = fmt.Sprintf("%s%d", RepoPrefix, int(projectForBase.Id))
+			environmentName      = "env1"
 		)
 		It("incorrect product name", testUseCase.CheckReferenceButIncorrectProduct(fakeNodes, func(options nodestree.CompareOptions, nodestree *nodestree.MockNodesTree) {
-			biz := NewDeploymentRuntimeUsecase(logger, nil, nodestree, nil)
+			client := kubernetes.NewMockClient(ctl)
+			biz := NewDeploymentRuntimeUsecase(logger, nil, nodestree, nil, client, nautesConfigs)
 			ok, err := biz.CheckReference(options, fakeNode, nil)
 			Expect(err).Should(HaveOccurred())
 			Expect(ok).To(BeTrue())
@@ -290,7 +295,8 @@ var _ = Describe("Save deployment runtime", func() {
 			nodestree := nodestree.NewMockNodesTree(ctl)
 			nodestree.EXPECT().AppendOperators(gomock.Any())
 
-			biz := NewDeploymentRuntimeUsecase(logger, nil, nodestree, nil)
+			client := kubernetes.NewMockClient(ctl)
+			biz := NewDeploymentRuntimeUsecase(logger, nil, nodestree, nil, client, nautesConfigs)
 			ok, err := biz.CheckReference(options, fakeNode, nil)
 			Expect(err).Should(HaveOccurred())
 			Expect(ok).To(BeTrue())
@@ -306,7 +312,9 @@ var _ = Describe("Save deployment runtime", func() {
 			}
 			nodestree := nodestree.NewMockNodesTree(ctl)
 			nodestree.EXPECT().AppendOperators(gomock.Any())
-			biz := NewDeploymentRuntimeUsecase(logger, nil, nodestree, nil)
+
+			client := kubernetes.NewMockClient(ctl)
+			biz := NewDeploymentRuntimeUsecase(logger, nil, nodestree, nil, client, nautesConfigs)
 			ok, err := biz.CheckReference(options, fakeNode, nil)
 			Expect(err).Should(HaveOccurred())
 			Expect(ok).To(BeTrue())
@@ -315,7 +323,7 @@ var _ = Describe("Save deployment runtime", func() {
 			projectName := fakeResource.Spec.ProjectsRef[0]
 			projectNodes := createProjectNodes(createProjectNode(createProjectResource(projectName)))
 			env := fakeResource.Spec.Destination
-			envProjects := createContainEnvironmentNodes(createEnvironmentNode(createEnvironmentResource(env)))
+			envProjects := createContainEnvironmentNodes(createEnvironmentNode(createEnvironmentResource(env, _TestClusterHostEnvType, _TestDeploymentClusterName)))
 			fakeNodes.Children = append(fakeNodes.Children, projectNodes.Children...)
 			fakeNodes.Children = append(fakeNodes.Children, envProjects.Children...)
 
@@ -326,7 +334,8 @@ var _ = Describe("Save deployment runtime", func() {
 			nodestree := nodestree.NewMockNodesTree(ctl)
 			nodestree.EXPECT().AppendOperators(gomock.Any())
 
-			biz := NewDeploymentRuntimeUsecase(logger, nil, nodestree, nil)
+			client := kubernetes.NewMockClient(ctl)
+			biz := NewDeploymentRuntimeUsecase(logger, nil, nodestree, nil, client, nautesConfigs)
 			ok, err := biz.CheckReference(options, fakeNode, nil)
 			Expect(err).Should(HaveOccurred())
 			Expect(ok).To(BeTrue())
@@ -335,7 +344,7 @@ var _ = Describe("Save deployment runtime", func() {
 			projectName := fakeResource.Spec.ProjectsRef[0]
 			projectNodes := createProjectNodes(createProjectNode(createProjectResource(projectName)))
 			env := fakeResource.Spec.Destination
-			envProjects := createContainEnvironmentNodes(createEnvironmentNode(createEnvironmentResource(env)))
+			envProjects := createContainEnvironmentNodes(createEnvironmentNode(createEnvironmentResource(env, _TestClusterHostEnvType, _TestDeploymentClusterName)))
 			fakeNodes.Children = append(fakeNodes.Children, projectNodes.Children...)
 			fakeNodes.Children = append(fakeNodes.Children, envProjects.Children...)
 			codeRepoNodes := createFakeCcontainingCodeRepoNodes(createFakeCodeRepoNode(createFakeCodeRepoResource(repoID)))
@@ -345,11 +354,18 @@ var _ = Describe("Save deployment runtime", func() {
 				Nodes:       fakeNodes,
 				ProductName: defaultProductId,
 			}
+
+			codeRepoKind := nodestree.CodeRepo
+			environmentKind := nodestree.Environment
 			nodestree := nodestree.NewMockNodesTree(ctl)
 			nodestree.EXPECT().AppendOperators(gomock.Any())
-			nodestree.EXPECT().GetNode(gomock.Any(), gomock.Any(), gomock.Any()).Return(createFakeCodeRepoNode(createFakeCodeRepoResource(projectForBaseRepoID))).AnyTimes()
+			nodestree.EXPECT().GetNode(gomock.Any(), codeRepoKind, gomock.Any()).Return(createFakeCodeRepoNode(createFakeCodeRepoResource(projectForBaseRepoID))).AnyTimes()
+			nodestree.EXPECT().GetNode(gomock.Any(), environmentKind, gomock.Any()).Return(createEnvironmentNode(createEnvironmentResource(environmentName, _TestClusterHostEnvType, _TestDeploymentClusterName))).AnyTimes()
 
-			biz := NewDeploymentRuntimeUsecase(logger, nil, nodestree, nil)
+			client := kubernetes.NewMockClient(ctl)
+			client.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+			biz := NewDeploymentRuntimeUsecase(logger, nil, nodestree, nil, client, nautesConfigs)
 			ok, err := biz.CheckReference(options, fakeNode, nil)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(ok).To(BeTrue())
@@ -379,13 +395,13 @@ var _ = Describe("Delete deployment runtime", func() {
 	})
 
 	It("will deleted successfully", testUseCase.DeleteResourceSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
+		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase, client, nautesConfigs)
 		err := biz.DeleteDeploymentRuntime(context.Background(), bizOptions)
 		Expect(err).ShouldNot(HaveOccurred())
 	}))
 
 	It("modify resource but non compliant layout standards", testUseCase.DeleteResourceErrorLayout(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase)
+		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourceUseCase, client, nautesConfigs)
 		err := biz.DeleteDeploymentRuntime(context.Background(), bizOptions)
 		Expect(err).Should(HaveOccurred())
 	}))
