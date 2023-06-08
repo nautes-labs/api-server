@@ -335,12 +335,17 @@ func (c *CodeRepoBindingUsecase) AuthorizeForSameProjectRepository(ctx context.C
 	}
 
 	for _, repo1 := range tmpCodeRepos {
+
+		if repo1.Spec.Project != currentProject {
+			continue
+		}
+
 		for _, repo2 := range tmpCodeRepos {
 			if repo1.Name == repo2.Name {
 				continue
 			}
 
-			if repo1.Spec.Project != currentProject && repo1.Spec.Project != repo2.Spec.Project {
+			if repo1.Spec.Project != repo2.Spec.Project {
 				continue
 			}
 
