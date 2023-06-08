@@ -693,19 +693,25 @@ func (c *CodeRepoBindingUsecase) RevokeDeployKey(ctx context.Context, concodeRep
 			return err
 		}
 
-		deploykey, err := c.codeRepo.GetDeployKey(ctx, pid, secretData.ID)
+		_, err = c.codeRepo.GetCodeRepo(ctx, pid)
 		if err != nil {
-			if commonv1.IsDeploykeyNotFound(err) {
-				return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from git, please check if the key exists or is invalid for the repository %s under organization %s", permissions, repository.Name, c.groupName)
+			if !commonv1.IsProjectNotFound(err) {
+				return err
 			}
-			return err
-		}
 
-		err = c.codeRepo.DeleteDeployKey(ctx, authpid, deploykey.ID)
-		if err != nil && !commonv1.IsDeploykeyNotFound(err) {
-			return err
-		}
+			deploykey, err := c.codeRepo.GetDeployKey(ctx, pid, secretData.ID)
+			if err != nil {
+				if commonv1.IsDeploykeyNotFound(err) {
+					return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from git, please check if the key exists or is invalid for the repository %s under organization %s", permissions, repository.Name, c.groupName)
+				}
+				return err
+			}
 
+			err = c.codeRepo.DeleteDeployKey(ctx, authpid, deploykey.ID)
+			if err != nil && !commonv1.IsDeploykeyNotFound(err) {
+				return err
+			}
+		}
 	}
 
 	return nil
