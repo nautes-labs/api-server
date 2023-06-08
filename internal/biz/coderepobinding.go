@@ -260,7 +260,7 @@ func (c *CodeRepoBindingUsecase) applyDeploykey(ctx context.Context, pid interfa
 }
 
 func (c *CodeRepoBindingUsecase) refreshAuthorization(ctx context.Context, nodes nodestree.Node, codeRepoName string) error {
-	if err := c.clearInvalidDeployKey(ctx, codeRepoName); err != nil {
+	if err := c.clearInvalidDeployKey(ctx, nodes); err != nil {
 		return err
 	}
 
@@ -324,74 +324,80 @@ func (c *CodeRepoBindingUsecase) processAuthorization(ctx context.Context, nodes
 }
 
 func (c *CodeRepoBindingUsecase) AuthorizeForSameProjectRepository(ctx context.Context, nodes nodestree.Node, permissions, currentProject string) error {
-	codeRepos := nodestree.ListsResourceNodes(nodes, nodestree.CodeRepo)
-	repoCount := len(codeRepos)
-	for i := 0; i < repoCount-1; i++ {
-		for j := i + 1; j < repoCount; j++ {
-			repo1, ok := codeRepos[i].Content.(*resourcev1alpha1.CodeRepo)
-			if !ok {
-				return fmt.Errorf("failed to convert code repository")
+	codeRepoNodes := nodestree.ListsResourceNodes(nodes, nodestree.CodeRepo)
+	tmpCodeRepos := make([]*resourcev1alpha1.CodeRepo, 0)
+
+	for _, codeRepoNode := range codeRepoNodes {
+		codeRepo, ok := codeRepoNode.Content.(*resourcev1alpha1.CodeRepo)
+		if ok {
+			tmpCodeRepos = append(tmpCodeRepos, codeRepo)
+		}
+	}
+
+	for _, repo1 := range tmpCodeRepos {
+		for _, repo2 := range tmpCodeRepos {
+			if repo1.Name == repo2.Name {
+				continue
 			}
-			repo2, ok := codeRepos[j].Content.(*resourcev1alpha1.CodeRepo)
-			if !ok {
-				return fmt.Errorf("failed to convert code repository")
+
+			if repo1.Spec.Project != currentProject && repo1.Spec.Project != repo2.Spec.Project {
+				continue
 			}
-			if repo1.Spec.Project == currentProject && repo1.Spec.Project == repo2.Spec.Project {
-				pid1, err := utilstrings.ExtractNumber(RepoPrefix, repo1.Name)
-				if err != nil {
-					return err
-				}
-				pid2, err := utilstrings.ExtractNumber(RepoPrefix, repo2.Name)
-				if err != nil {
-					return err
-				}
 
-				deployKey1, err := c.GetDeployKeyFromSecretRepo(ctx, repo1.Name, DefaultUser, permissions)
-				if err != nil {
-					if commonv1.IsDeploykeyNotFound(err) {
-						return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from secret repo, please check if the key under /%s/%s exists or is invalid", permissions, c.config.Git.GitType, repo1.Name)
-					}
-					return err
-				}
-				deployKey2, err := c.GetDeployKeyFromSecretRepo(ctx, repo2.Name, DefaultUser, permissions)
-				if err != nil {
-					if commonv1.IsDeploykeyNotFound(err) {
-						return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from secret repo, please check if the key under /%s/%s exists or is invalid", permissions, c.config.Git.GitType, repo2.Name)
-					}
-					return err
-				}
+			pid1, err := utilstrings.ExtractNumber(RepoPrefix, repo1.Name)
+			if err != nil {
+				return err
+			}
+			pid2, err := utilstrings.ExtractNumber(RepoPrefix, repo2.Name)
+			if err != nil {
+				return err
+			}
 
-				deployKey1Info, err := c.codeRepo.GetDeployKey(ctx, pid1, deployKey1.ID)
-				if err != nil {
-					return err
+			deployKey1, err := c.GetDeployKeyFromSecretRepo(ctx, repo1.Name, DefaultUser, permissions)
+			if err != nil {
+				if commonv1.IsDeploykeyNotFound(err) {
+					return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from secret repo, please check if the key under /%s/%s exists or is invalid", permissions, c.config.Git.GitType, repo1.Name)
 				}
-				deployKey2Info, err := c.codeRepo.GetDeployKey(ctx, pid2, deployKey2.ID)
-				if err != nil {
-					return err
+				return err
+			}
+			deployKey2, err := c.GetDeployKeyFromSecretRepo(ctx, repo2.Name, DefaultUser, permissions)
+			if err != nil {
+				if commonv1.IsDeploykeyNotFound(err) {
+					return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from secret repo, please check if the key under /%s/%s exists or is invalid", permissions, c.config.Git.GitType, repo2.Name)
 				}
+				return err
+			}
 
-				_, err = c.codeRepo.EnableProjectDeployKey(ctx, pid1, deployKey2Info.ID)
-				if err != nil {
-					return err
-				}
-				_, err = c.codeRepo.EnableProjectDeployKey(ctx, pid2, deployKey1Info.ID)
-				if err != nil {
-					return err
-				}
+			deployKey1Info, err := c.codeRepo.GetDeployKey(ctx, pid1, deployKey1.ID)
+			if err != nil {
+				return err
+			}
+			deployKey2Info, err := c.codeRepo.GetDeployKey(ctx, pid2, deployKey2.ID)
+			if err != nil {
+				return err
+			}
 
-				if permissions != string(ReadWrite) {
-					return nil
-				}
+			_, err = c.codeRepo.EnableProjectDeployKey(ctx, pid1, deployKey2Info.ID)
+			if err != nil {
+				return err
+			}
+			_, err = c.codeRepo.EnableProjectDeployKey(ctx, pid2, deployKey1Info.ID)
+			if err != nil {
+				return err
+			}
 
-				_, err = c.codeRepo.UpdateDeployKey(ctx, pid1, deployKey2Info.ID, deployKey2Info.Title, true)
-				if err != nil {
-					return err
-				}
+			if permissions == string(ReadOnly) {
+				continue
+			}
 
-				_, err = c.codeRepo.UpdateDeployKey(ctx, pid2, deployKey1Info.ID, deployKey1Info.Title, true)
-				if err != nil {
-					return err
-				}
+			_, err = c.codeRepo.UpdateDeployKey(ctx, pid1, deployKey2Info.ID, deployKey2Info.Title, true)
+			if err != nil {
+				return err
+			}
+
+			_, err = c.codeRepo.UpdateDeployKey(ctx, pid2, deployKey1Info.ID, deployKey1Info.Title, true)
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -577,55 +583,64 @@ func (c *CodeRepoBindingUsecase) recycleAuthorization(ctx context.Context, proje
 	return nil
 }
 
-func (c *CodeRepoBindingUsecase) clearInvalidDeployKey(ctx context.Context, authorizedRepository string) error {
-	pid, err := utilstrings.ExtractNumber(RepoPrefix, authorizedRepository)
-	if err != nil {
-		return err
-	}
-
-	projectDeployKeys, err := GetAllDeployKeys(ctx, c.codeRepo, pid)
-	if err != nil {
-		return err
-	}
-	for _, projectDeployKey := range projectDeployKeys {
-		re := regexp.MustCompile(`repo-(\d+)-`)
-		match := re.FindStringSubmatch(projectDeployKey.Title)
-		if len(match) == 0 {
+func (c *CodeRepoBindingUsecase) clearInvalidDeployKey(ctx context.Context, nodes nodestree.Node) error {
+	codeRepoNodes := nodestree.ListsResourceNodes(nodes, nodestree.CodeRepo)
+	for _, codeRepoNode := range codeRepoNodes {
+		codeRepo, ok := codeRepoNode.Content.(*resourcev1alpha1.CodeRepo)
+		if !ok {
 			continue
 		}
 
-		matchpid, err := strconv.Atoi(match[1])
+		pid, err := utilstrings.ExtractNumber(RepoPrefix, codeRepo.Name)
 		if err != nil {
 			return err
 		}
 
-		if matchpid == pid {
-			continue
-		}
-
-		repository, err := c.codeRepo.GetCodeRepo(ctx, matchpid)
+		projectDeployKeys, err := GetAllDeployKeys(ctx, c.codeRepo, pid)
 		if err != nil {
-			if !commonv1.IsProjectNotFound(err) {
-				return err
-			}
-			if err := c.codeRepo.DeleteDeployKey(ctx, pid, projectDeployKey.ID); err != nil {
-				return err
-			}
+			return err
 		}
+		for _, projectDeployKey := range projectDeployKeys {
+			re := regexp.MustCompile(`repo-(\d+)-`)
+			match := re.FindStringSubmatch(projectDeployKey.Title)
+			if len(match) == 0 {
+				continue
+			}
 
-		if repository != nil {
-			_, err = c.codeRepo.GetDeployKey(ctx, int(repository.Id), projectDeployKey.ID)
+			matchpid, err := strconv.Atoi(match[1])
 			if err != nil {
-				if commonv1.IsDeploykeyNotFound(err) {
-					err := c.codeRepo.DeleteDeployKey(ctx, pid, projectDeployKey.ID)
-					if err != nil {
-						return err
-					}
-				} else {
+				return err
+			}
+
+			if matchpid == pid {
+				continue
+			}
+
+			repository, err := c.codeRepo.GetCodeRepo(ctx, matchpid)
+			if err != nil {
+				if !commonv1.IsProjectNotFound(err) {
+					return err
+				}
+				if err := c.codeRepo.DeleteDeployKey(ctx, pid, projectDeployKey.ID); err != nil {
 					return err
 				}
 			}
+
+			if repository != nil {
+				_, err = c.codeRepo.GetDeployKey(ctx, int(repository.Id), projectDeployKey.ID)
+				if err != nil {
+					if commonv1.IsDeploykeyNotFound(err) {
+						err := c.codeRepo.DeleteDeployKey(ctx, pid, projectDeployKey.ID)
+						if err != nil {
+							return err
+						}
+					} else {
+						return err
+					}
+				}
+			}
 		}
+
 	}
 
 	return nil
