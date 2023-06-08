@@ -1824,6 +1824,8 @@ github.com/nautes-labs/pkg v0.3.0-local.0.20230606061546-baf50a49e082 h1:13ajaQq
 github.com/nautes-labs/pkg v0.3.0-local.0.20230606061546-baf50a49e082/go.mod h1:qT3YxKHvrAzeELExmkryPf3HUe9W0hnKLjTJTWTY14U=
 github.com/nautes-labs/pkg v0.3.0-local.0.20230607082133-71b003549f8c h1:Fl6pQvTTpDy6UK+e+ziqzIGMHhaWem/06wjIJHtSkLY=
 github.com/nautes-labs/pkg v0.3.0-local.0.20230607082133-71b003549f8c/go.mod h1:qT3YxKHvrAzeELExmkryPf3HUe9W0hnKLjTJTWTY14U=
+github.com/nautes-labs/pkg v0.3.0-local.0.20230608071014-00005c86d93f h1:h1uoGlgccixg4oLDjbnFliUhPA+NYguEin/aPZ7zrNA=
+github.com/nautes-labs/pkg v0.3.0-local.0.20230608071014-00005c86d93f/go.mod h1:qT3YxKHvrAzeELExmkryPf3HUe9W0hnKLjTJTWTY14U=
 github.com/ncw/swift v1.0.47/go.mod h1:23YIA4yWVnGwv2dQlN4bB7egfYX6YLn0Yo/S6zZO/ZM=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
 github.com/nlopes/slack v0.5.0/go.mod h1:jVI4BBK3lSktibKahxBF74txcK2vyvkza1z/+rRnVAM=

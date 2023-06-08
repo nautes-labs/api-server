@@ -28,7 +28,7 @@ require (
 	github.com/google/gnostic v0.5.7-v3refs
 	github.com/hashicorp/vault/api v1.9.0
 	github.com/hashicorp/vault/api/auth/kubernetes v0.4.0
-	github.com/nautes-labs/pkg v0.3.0-local.0.20230607082133-71b003549f8c
+	github.com/nautes-labs/pkg v0.3.0-local.0.20230608071014-00005c86d93f
 	github.com/onsi/ginkgo/v2 v2.4.0
 	github.com/onsi/gomega v1.22.1
 	k8s.io/api v0.24.8
