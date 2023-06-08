@@ -286,8 +286,12 @@ func (p *ProjectPipelineRuntimeUsecase) CheckReference(options nodestree.Compare
 	}
 	if len(illegalEventSources) != 0 {
 		errMsg := ""
-		for _, source := range illegalEventSources {
-			errMsg += fmt.Sprintf("reason: %s", source.Reason)
+		for i, source := range illegalEventSources {
+			if i > 0 {
+				errMsg += fmt.Sprintf("; %s", source.Reason)
+			} else {
+				errMsg += source.Reason
+			}
 		}
 		return true, fmt.Errorf("verify project pipeline runtime failed, err: %s", errMsg)
 	}

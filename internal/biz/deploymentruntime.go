@@ -264,8 +264,12 @@ func (d *DeploymentRuntimeUsecase) CheckReference(options nodestree.CompareOptio
 	}
 	if len(illegalProjectRefs) != 0 {
 		errMsg := ""
-		for _, project := range illegalProjectRefs {
-			errMsg += fmt.Sprintf("reason: %s", project.Reason)
+		for i, project := range illegalProjectRefs {
+			if i > 0 {
+				errMsg += fmt.Sprintf("; %s", project.Reason)
+			} else {
+				errMsg += project.Reason
+			}
 		}
 		return true, fmt.Errorf("verify deployment runtime failed, err: %s", errMsg)
 	}
