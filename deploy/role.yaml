@@ -36,6 +36,9 @@ rules:
   - coderepoes
   - coderepoproviders
   - coderepobindings
+  - deploymentruntimes
+  - environments
+  - projectpipelineruntimes
   verbs:
   - create
   - get

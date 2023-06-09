@@ -15,11 +15,12 @@
 package nodestree
 
 const (
+	Product                = "Product"
 	Project                = "Project"
 	CodeRepo               = "CodeRepo"
 	CodeRepoBinding        = "CodeRepoBinding"
 	Cluster                = "Cluster"
-	Enviroment             = "Environment"
+	Environment            = "Environment"
 	DeploymentRuntime      = "DeploymentRuntime"
 	ProjectPipelineRuntime = "ProjectPipelineRuntime"
 	ArtifactRepo           = "ArtifactRepo"

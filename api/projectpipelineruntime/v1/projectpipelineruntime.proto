@@ -126,8 +126,10 @@ message GetReply {
 
 // Request message format for listing pipelines.
 message ListsRequest {
-  // Name of the product associated with the pipelines to be listed.
+  // To list the product name of the repository.
   string product_name = 1 [json_name = "product_name"];
+  // Filter the list by field.
+  string field_selector = 2 [json_name = "field_selector"];
 }
 
 // Response message format for listing pipelines.

@@ -23,9 +23,24 @@ import (
 	ClusterRegistration "github.com/nautes-labs/api-server/pkg/cluster"
 	registercluster "github.com/nautes-labs/api-server/pkg/cluster"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
+	"github.com/nautes-labs/api-server/pkg/selector"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+var (
+	clustrFilterFieldRules = map[string]map[string]selector.FieldSelector{
+		FieldClusterType: {
+			selector.EqualOperator: selector.NewStringSelector(_ClusterType, selector.Eq),
+		},
+		FieldUsage: {
+			selector.EqualOperator: selector.NewStringSelector(_Usage, selector.Eq),
+		},
+		FieldWorkType: {
+			selector.EqualOperator: selector.NewStringSelector(_WorkType, selector.Eq),
+		},
+	}
 )
 
 type ClusterService struct {
@@ -38,11 +53,44 @@ func NewClusterService(cluster *biz.ClusterUsecase, configs *nautesconfigs.Confi
 	return &ClusterService{cluster: cluster, configs: configs}
 }
 
+func (s *ClusterService) GetCluster(ctx context.Context, req *clusterv1.GetRequest) (*clusterv1.GetReply, error) {
+	cluster, err := s.cluster.GetCluster(ctx, req.ClusterName)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.convertClustertoReply(cluster), nil
+}
+
+func (s *ClusterService) ListClusters(ctx context.Context, req *clusterv1.ListsRequest) (*clusterv1.ListsReply, error) {
+	clusters, err := s.cluster.ListClusters(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	reply := &clusterv1.ListsReply{}
+	for _, cluster := range clusters {
+		passed, err := selector.Match(req.FieldSelector, cluster, clustrFilterFieldRules)
+		if err != nil {
+			return nil, err
+		}
+		if !passed {
+			continue
+		}
+
+		reply.Items = append(reply.Items, s.convertClustertoReply(cluster))
+	}
+
+	return reply, nil
+}
+
 func (s *ClusterService) SaveCluster(ctx context.Context, req *clusterv1.SaveRequest) (*clusterv1.SaveReply, error) {
 	err := s.Validate(req)
 	if err != nil {
 		return nil, err
 	}
+
+	ctx = biz.SetResourceContext(ctx, "", biz.SaveMethod, "", "", nodestree.Cluster, req.ClusterName)
 
 	cluster := &resourcev1alpha1.Cluster{
 		TypeMeta: metav1.TypeMeta{
@@ -73,9 +121,10 @@ func (s *ClusterService) SaveCluster(ctx context.Context, req *clusterv1.SaveReq
 		}
 	}
 
-	traefik := &ClusterRegistration.Traefik{
-		HttpNodePort:  req.Body.Traefik.HttpNodePort,
-		HttpsNodePort: req.Body.Traefik.HttpsNodePort,
+	traefik := &ClusterRegistration.Traefik{}
+	if req.Body.ClusterType == string(resourcev1alpha1.CLUSTER_TYPE_PHYSICAL) {
+		traefik.HttpNodePort = req.Body.Traefik.HttpNodePort
+		traefik.HttpsNodePort = req.Body.Traefik.HttpsNodePort
 	}
 
 	param := &ClusterRegistration.ClusterRegistrationParam{
@@ -96,6 +145,8 @@ func (s *ClusterService) SaveCluster(ctx context.Context, req *clusterv1.SaveReq
 }
 
 func (s *ClusterService) DeleteCluster(ctx context.Context, req *clusterv1.DeleteRequest) (*clusterv1.DeleteReply, error) {
+	ctx = biz.SetResourceContext(ctx, "", biz.DeleteMethod, "", "", nodestree.Cluster, req.ClusterName)
+
 	err := s.cluster.DeleteCluster(ctx, req.ClusterName)
 	if err != nil {
 		return nil, err
@@ -123,4 +174,22 @@ func (s *ClusterService) Validate(req *clusterv1.SaveRequest) error {
 	}
 
 	return nil
+}
+
+func (s *ClusterService) convertClustertoReply(cluster *resourcev1alpha1.Cluster) *clusterv1.GetReply {
+	reply := &clusterv1.GetReply{}
+	reply.Name = cluster.Name
+
+	spec := &cluster.Spec
+	if spec != nil {
+		reply.ApiServer = cluster.Spec.ApiServer
+		reply.ClusterKind = string(cluster.Spec.ClusterKind)
+		reply.ClusterType = string(cluster.Spec.ClusterType)
+		reply.HostCluster = cluster.Spec.HostCluster
+		reply.Usage = string(cluster.Spec.Usage)
+		reply.WorkerType = string(cluster.Spec.WorkerType)
+		reply.PrimaryDomain = cluster.Spec.PrimaryDomain
+	}
+
+	return reply
 }

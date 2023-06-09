@@ -27,6 +27,7 @@ import (
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
 	utilstrings "github.com/nautes-labs/api-server/util/string"
+	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 	sjson "github.com/tidwall/sjson"
 	kustomize "sigs.k8s.io/kustomize/api/types"
@@ -50,6 +51,7 @@ type ResourcesUsecase struct {
 	gitRepo    GitRepo
 	nodestree  nodestree.NodesTree
 	configs    *nautesconfigs.Config
+	validate   resourcev1alpha1.ValidateClient
 }
 
 func NewResourcesUsecase(log log.Logger, codeRepo CodeRepo, secretRepo Secretrepo, gitRepo GitRepo, nodestree nodestree.NodesTree, configs *nautesconfigs.Config) *ResourcesUsecase {
@@ -64,7 +66,7 @@ func NewResourcesUsecase(log log.Logger, codeRepo CodeRepo, secretRepo Secretrep
 }
 
 func (r *ResourcesUsecase) Get(ctx context.Context, resourceKind, productName string, operator nodestree.NodesOperator, getResourceName getResouceName) (*nodestree.Node, error) {
-	product, project, err := r.GetGroupAndProjectByGroupID(ctx, productName)
+	_, project, err := r.GetGroupAndProjectByGroupID(ctx, productName)
 	if err != nil {
 		return nil, err
 	}
@@ -82,16 +84,6 @@ func (r *ResourcesUsecase) Get(ctx context.Context, resourceKind, productName st
 	}
 
 	nodes, err := r.nodestree.Load(localPath)
-	if err != nil {
-		return nil, err
-	}
-
-	options := nodestree.CompareOptions{
-		Nodes:       nodes,
-		ProductName: fmt.Sprintf("%s%d", _ProductPrefix, int(product.Id)),
-	}
-
-	err = r.nodestree.Compare(options)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +102,7 @@ func (r *ResourcesUsecase) Get(ctx context.Context, resourceKind, productName st
 }
 
 func (r *ResourcesUsecase) List(ctx context.Context, gid interface{}, operator nodestree.NodesOperator) (*nodestree.Node, error) {
-	product, project, err := r.GetGroupAndProjectByGroupID(ctx, gid)
+	_, project, err := r.GetGroupAndProjectByGroupID(ctx, gid)
 	if err != nil {
 		return nil, err
 	}
@@ -128,16 +120,6 @@ func (r *ResourcesUsecase) List(ctx context.Context, gid interface{}, operator n
 	}
 
 	nodes, err := r.nodestree.Load(localPath)
-	if err != nil {
-		return nil, err
-	}
-
-	options := nodestree.CompareOptions{
-		Nodes:       nodes,
-		ProductName: fmt.Sprintf("%s%d", _ProductPrefix, int(product.Id)),
-	}
-
-	err = r.nodestree.Compare(options)
 	if err != nil {
 		return nil, err
 	}
@@ -533,7 +515,7 @@ func (r *ResourcesUsecase) SaveConfig(ctx context.Context, path string) error {
 	return nil
 }
 
-func (r *ResourcesUsecase) convertCodeRepoToRepoName(ctx context.Context, codeRepoName string) (string, error) {
+func (r *ResourcesUsecase) ConvertCodeRepoToRepoName(ctx context.Context, codeRepoName string) (string, error) {
 	id, err := utilstrings.ExtractNumber("repo-", codeRepoName)
 	if err != nil {
 		return "", err
@@ -547,7 +529,7 @@ func (r *ResourcesUsecase) convertCodeRepoToRepoName(ctx context.Context, codeRe
 	return project.Name, nil
 }
 
-func (r *ResourcesUsecase) convertRepoNameToCodeRepo(ctx context.Context, productName, codeRepoName string) (string, error) {
+func (r *ResourcesUsecase) ConvertRepoNameToCodeRepo(ctx context.Context, productName, codeRepoName string) (string, error) {
 	pid := fmt.Sprintf("%s/%s", productName, codeRepoName)
 	project, err := r.codeRepo.GetCodeRepo(ctx, pid)
 	if err != nil {
@@ -557,7 +539,7 @@ func (r *ResourcesUsecase) convertRepoNameToCodeRepo(ctx context.Context, produc
 	return fmt.Sprintf("%s%d", RepoPrefix, int(project.Id)), nil
 }
 
-func (r *ResourcesUsecase) convertProductToGroupName(ctx context.Context, productName string) (string, error) {
+func (r *ResourcesUsecase) ConvertProductToGroupName(ctx context.Context, productName string) (string, error) {
 	id, err := utilstrings.ExtractNumber("product-", productName)
 	if err != nil {
 		return "", err
@@ -571,7 +553,7 @@ func (r *ResourcesUsecase) convertProductToGroupName(ctx context.Context, produc
 	return group.Name, nil
 }
 
-func (r *ResourcesUsecase) convertGroupToProduct(ctx context.Context, productName string) (string, error) {
+func (r *ResourcesUsecase) ConvertGroupToProduct(ctx context.Context, productName string) (string, error) {
 	group, err := r.codeRepo.GetGroup(ctx, productName)
 	if err != nil {
 		return "", err
@@ -585,7 +567,7 @@ func (r *ResourcesUsecase) retryAutoMerge(ctx context.Context, path string) erro
 		return fmt.Errorf("when the save configuration cannot be fetch remote branch, err: %v", err)
 	}
 
-	err = r.gitRepo.Commit(path, "api: saved configuration")
+	err = r.gitRepo.Commit(ctx, path)
 	if err != nil {
 		return err
 	}

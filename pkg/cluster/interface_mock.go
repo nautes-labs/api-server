@@ -8,6 +8,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	v1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 )
 
 // MockClusterRegistrationOperator is a mock of ClusterRegistrationOperator interface.
@@ -46,6 +47,36 @@ func (m *MockClusterRegistrationOperator) GetArgocdURL() (string, error) {
 func (mr *MockClusterRegistrationOperatorMockRecorder) GetArgocdURL() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetArgocdURL", reflect.TypeOf((*MockClusterRegistrationOperator)(nil).GetArgocdURL))
+}
+
+// GetClsuter mocks base method.
+func (m *MockClusterRegistrationOperator) GetClsuter(tenantLocalPath, clusterName string) (*v1alpha1.Cluster, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetClsuter", tenantLocalPath, clusterName)
+	ret0, _ := ret[0].(*v1alpha1.Cluster)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetClsuter indicates an expected call of GetClsuter.
+func (mr *MockClusterRegistrationOperatorMockRecorder) GetClsuter(tenantLocalPath, clusterName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClsuter", reflect.TypeOf((*MockClusterRegistrationOperator)(nil).GetClsuter), tenantLocalPath, clusterName)
+}
+
+// GetClsuters mocks base method.
+func (m *MockClusterRegistrationOperator) GetClsuters(tenantLocalPath string) ([]*v1alpha1.Cluster, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetClsuters", tenantLocalPath)
+	ret0, _ := ret[0].([]*v1alpha1.Cluster)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetClsuters indicates an expected call of GetClsuters.
+func (mr *MockClusterRegistrationOperatorMockRecorder) GetClsuters(tenantLocalPath interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClsuters", reflect.TypeOf((*MockClusterRegistrationOperator)(nil).GetClsuters), tenantLocalPath)
 }
 
 // GetTektonOAuthURL mocks base method.

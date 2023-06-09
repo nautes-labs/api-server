@@ -20,7 +20,25 @@ import (
 
 	environmentv1 "github.com/nautes-labs/api-server/api/environment/v1"
 	"github.com/nautes-labs/api-server/internal/biz"
+	"github.com/nautes-labs/api-server/pkg/nodestree"
+	"github.com/nautes-labs/api-server/pkg/selector"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
+)
+
+const (
+	_Cluster = "Spec.Cluster"
+	_EnvType = "Spec.EnvType"
+)
+
+var (
+	environmentFilterFieldRules = map[string]map[string]selector.FieldSelector{
+		FieldCluster: {
+			selector.EqualOperator: selector.NewStringSelector(_Cluster, selector.In),
+		},
+		FieldEnvType: {
+			selector.EqualOperator: selector.NewStringSelector(_EnvType, selector.In),
+		},
+	}
 )
 
 type EnvironmentService struct {
@@ -51,13 +69,32 @@ func (s *EnvironmentService) GetEnvironment(ctx context.Context, req *environmen
 }
 
 func (s *EnvironmentService) ListEnvironments(ctx context.Context, req *environmentv1.ListsRequest) (*environmentv1.ListsReply, error) {
-	envs, err := s.environment.ListEnvironments(ctx, req.ProductName)
+	nodes, err := s.environment.ListEnvironments(ctx, req.ProductName)
 	if err != nil {
 		return nil, err
 	}
 
 	var items []*environmentv1.GetReply
-	for _, env := range envs {
+	for _, node := range nodes {
+		env, ok := node.Content.(*resourcev1alpha1.Environment)
+		if !ok {
+			continue
+		}
+
+		err := s.environment.ConvertProductToGroupName(ctx, env)
+		if err != nil {
+			return nil, err
+		}
+		node.Content = env
+
+		passed, err := selector.Match(req.FieldSelector, node.Content, environmentFilterFieldRules)
+		if err != nil {
+			return nil, err
+		}
+		if !passed {
+			continue
+		}
+
 		items = append(items, s.CovertCodeRepoValueToReply(env))
 	}
 
@@ -65,6 +102,8 @@ func (s *EnvironmentService) ListEnvironments(ctx context.Context, req *environm
 }
 
 func (s *EnvironmentService) SaveEnvironment(ctx context.Context, req *environmentv1.SaveRequest) (*environmentv1.SaveReply, error) {
+	ctx = biz.SetResourceContext(ctx, req.ProductName, biz.SaveMethod, "", "", nodestree.Environment, req.EnvironmentName)
+
 	options := &biz.BizOptions{
 		ResouceName:       req.EnvironmentName,
 		ProductName:       req.ProductName,
@@ -87,6 +126,8 @@ func (s *EnvironmentService) SaveEnvironment(ctx context.Context, req *environme
 }
 
 func (s *EnvironmentService) DeleteEnvironment(ctx context.Context, req *environmentv1.DeleteRequest) (*environmentv1.DeleteReply, error) {
+	ctx = biz.SetResourceContext(ctx, req.ProductName, biz.DeleteMethod, "", "", nodestree.Environment, req.EnvironmentName)
+
 	options := &biz.BizOptions{
 		ResouceName:       req.EnvironmentName,
 		ProductName:       req.ProductName,

@@ -33,7 +33,6 @@ import (
 )
 
 const (
-	_CodeRepoKind    = "CodeRepo"
 	_CodeReposSubDir = "code-repos"
 )
 
@@ -68,7 +67,7 @@ func NewCodeRepoUsecase(logger log.Logger, codeRepo CodeRepo, secretRepo Secretr
 	return codeRepoUsecase
 }
 
-func (c *CodeRepoUsecase) GetCodeRepo(ctx context.Context, codeRepoName, productName string) (*resourcev1alpha1.CodeRepo, *Project, error) {
+func (c *CodeRepoUsecase) GetProjectByCodeRepoName(ctx context.Context, codeRepoName, productName string) (*resourcev1alpha1.CodeRepo, *Project, error) {
 	pid := fmt.Sprintf("%s/%s", productName, codeRepoName)
 	project, err := c.codeRepo.GetCodeRepo(ctx, pid)
 	if err != nil {
@@ -110,40 +109,47 @@ func (c *CodeRepoUsecase) GetCodeRepo(ctx context.Context, codeRepoName, product
 	return codeRepo, project, nil
 }
 
-type CodeRepoWithProject struct {
-	CodeRepo *resourcev1alpha1.CodeRepo
-	Project  *Project
+func (c *CodeRepoUsecase) GetCodeRepo(ctx context.Context, codeRepoName, productName string) (*nodestree.Node, error) {
+	pid := fmt.Sprintf("%s/%s", productName, codeRepoName)
+	project, err := c.codeRepo.GetCodeRepo(ctx, pid)
+	if err != nil {
+		return nil, err
+	}
+
+	if project != nil {
+		resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
+		codeRepoName = resourceName
+	}
+
+	node, err := c.resourcesUsecase.Get(ctx, nodestree.CodeRepo, productName, c, func(nodes nodestree.Node) (string, error) {
+		if project != nil {
+			resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
+			return resourceName, nil
+		}
+
+		resourceName, err := c.getCodeRepoName(nodes, codeRepoName)
+		if err != nil {
+			return "", nil
+		}
+
+		return resourceName, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return node, nil
 }
 
-func (c *CodeRepoUsecase) ListCodeRepos(ctx context.Context, productName string) ([]*CodeRepoWithProject, error) {
+func (c *CodeRepoUsecase) ListCodeRepos(ctx context.Context, productName string) ([]*nodestree.Node, error) {
 	nodes, err := c.resourcesUsecase.List(ctx, productName, c)
 	if err != nil {
 		return nil, err
 	}
 
-	codeRepos, err := nodesToCodeRepoists(*nodes)
-	if err != nil {
-		return nil, err
-	}
+	codeRepoNodes := nodestree.ListsResourceNodes(*nodes, nodestree.CodeRepo)
 
-	var cps []*CodeRepoWithProject
-	for _, codeRepo := range codeRepos {
-		err = c.convertProductToGroupName(ctx, codeRepo)
-		if err != nil {
-			return nil, err
-		}
-		pid := fmt.Sprintf("%s/%s", productName, codeRepo.Spec.RepoName)
-		project, err := c.codeRepo.GetCodeRepo(ctx, pid)
-		if err != nil {
-			return nil, err
-		}
-		cps = append(cps, &CodeRepoWithProject{
-			CodeRepo: codeRepo,
-			Project:  project,
-		})
-	}
-
-	return cps, nil
+	return codeRepoNodes, nil
 }
 
 func (c *CodeRepoUsecase) SaveCodeRepo(ctx context.Context, options *BizOptions, data *CodeRepoData, gitOptions *GitCodeRepoOptions) error {
@@ -162,6 +168,7 @@ func (c *CodeRepoUsecase) SaveCodeRepo(ctx context.Context, options *BizOptions,
 	data.Name = codeRepoName
 
 	resourceOptions := &resourceOptions{
+		resourceName:      options.ResouceName,
 		resourceKind:      nodestree.CodeRepo,
 		productName:       options.ProductName,
 		insecureSkipCheck: options.InsecureSkipCheck,
@@ -374,7 +381,7 @@ func (c *CodeRepoUsecase) convertProductToGroupName(ctx context.Context, codeRep
 		return fmt.Errorf("the product field value of coderepo %s should not be empty", codeRepo.Spec.RepoName)
 	}
 
-	groupName, err := c.resourcesUsecase.convertProductToGroupName(ctx, codeRepo.Spec.Product)
+	groupName, err := c.resourcesUsecase.ConvertProductToGroupName(ctx, codeRepo.Spec.Product)
 	if err != nil {
 		return err
 	}
@@ -863,7 +870,7 @@ func (c *CodeRepoUsecase) CheckReference(options nodestree.CompareOptions, node 
 		ok = nodestree.IsResourceExist(options, codeRepo.Spec.Project, nodestree.Project)
 		if !ok {
 			return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, _ProjectKind,
-				codeRepo.Spec.Project, _CodeRepoKind, codeRepo.Spec.RepoName, _CodeReposSubDir+"/"+codeRepo.ObjectMeta.Name)
+				codeRepo.Spec.Project, nodestree.CodeRepo, codeRepo.Spec.RepoName, _CodeReposSubDir+"/"+codeRepo.ObjectMeta.Name)
 		}
 	}
 

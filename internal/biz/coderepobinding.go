@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"strconv"
 
+	errors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/log"
 	commonv1 "github.com/nautes-labs/api-server/api/common/v1"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
@@ -39,7 +40,6 @@ type CodeRepoBindingUsecase struct {
 	config           *nautesconfigs.Config
 	client           client.Client
 	groupName        string
-	repositoryName   string
 }
 
 type CodeRepoBindingData struct {
@@ -77,82 +77,46 @@ func (c *CodeRepoBindingUsecase) GetCodeRepoBinding(ctx context.Context, options
 		return nil, err
 	}
 
-	repoName, err := c.resourcesUsecase.convertCodeRepoToRepoName(ctx, resource.Spec.CodeRepo)
+	err = c.ConvertRuntime(ctx, resource)
 	if err != nil {
 		return nil, err
 	}
-	resource.Spec.CodeRepo = repoName
-
-	groupName, err := c.resourcesUsecase.convertProductToGroupName(ctx, resource.Spec.Product)
-	if err != nil {
-		return nil, err
-	}
-	resource.Spec.Product = groupName
 
 	return resource, nil
 }
 
-func (c *CodeRepoBindingUsecase) ListCodeRepoBindings(ctx context.Context, options *BizOptions) ([]*resourcev1alpha1.CodeRepoBinding, error) {
+func (c *CodeRepoBindingUsecase) ConvertRuntime(ctx context.Context, resource *resourcev1alpha1.CodeRepoBinding) error {
+	repoName, err := c.resourcesUsecase.ConvertCodeRepoToRepoName(ctx, resource.Spec.CodeRepo)
+	if err != nil {
+		return err
+	}
+	resource.Spec.CodeRepo = repoName
+
+	groupName, err := c.resourcesUsecase.ConvertProductToGroupName(ctx, resource.Spec.Product)
+	if err != nil {
+		return err
+	}
+	resource.Spec.Product = groupName
+
+	return nil
+}
+
+func (c *CodeRepoBindingUsecase) ListCodeRepoBindings(ctx context.Context, options *BizOptions) ([]*nodestree.Node, error) {
 	nodes, err := c.resourcesUsecase.List(ctx, options.ProductName, c)
 	if err != nil {
 		return nil, err
 	}
 
-	codeRepoBindings, err := c.nodesToLists(*nodes)
-	if err != nil {
-		return nil, err
-	}
+	codeRepoBindingNodes := nodestree.ListsResourceNodes(*nodes, nodestree.CodeRepoBinding)
 
-	for _, codecodeRepoBinding := range codeRepoBindings {
-		repoName, err := c.resourcesUsecase.convertCodeRepoToRepoName(ctx, codecodeRepoBinding.Spec.CodeRepo)
-		if err != nil {
-			return nil, err
-		}
-		codecodeRepoBinding.Spec.CodeRepo = repoName
-
-		groupName, err := c.resourcesUsecase.convertProductToGroupName(ctx, codecodeRepoBinding.Spec.Product)
-		if err != nil {
-			return nil, err
-		}
-		codecodeRepoBinding.Spec.Product = groupName
-	}
-
-	return codeRepoBindings, nil
+	return codeRepoBindingNodes, nil
 }
 
 func (c *CodeRepoBindingUsecase) SaveCodeRepoBinding(ctx context.Context, options *BizOptions, data *CodeRepoBindingData) error {
-	productName, err := c.resourcesUsecase.convertGroupToProduct(ctx, data.Spec.Product)
-	if err != nil {
-		return err
-	}
-	c.groupName = data.Spec.Product
-	data.Spec.Product = productName
-
-	codeRepoName, err := c.resourcesUsecase.convertRepoNameToCodeRepo(ctx, options.ProductName, data.Spec.CodeRepo)
-	if err != nil {
-		return err
-	}
-	c.repositoryName = data.Spec.CodeRepo
-	data.Spec.CodeRepo = codeRepoName
-
-	nodes, err := c.resourcesUsecase.loadDefaultProjectNodes(ctx, options.ProductName)
-	if err != nil {
-		return err
-	}
-
-	node := c.nodestree.GetNode(nodes, nodestree.CodeRepoBinding, options.ResouceName)
-	if node != nil {
-		lastCodeRepoBinding, ok := node.Content.(*resourcev1alpha1.CodeRepoBinding)
-		if !ok {
-			return fmt.Errorf("resource type is inconsistent, please check if this resource %s is legal", options.ResouceName)
-		}
-
-		if lastCodeRepoBinding.Spec.CodeRepo != data.Spec.CodeRepo {
-			return fmt.Errorf("It is not allowed to modify the authorized repository. If you want to change the authorized repository, please delete the authorization")
-		}
-	}
+	c.groupName = options.ProductName
 
 	resourceOptions := &resourceOptions{
+		resourceName:      options.ResouceName,
 		resourceKind:      nodestree.CodeRepoBinding,
 		productName:       options.ProductName,
 		insecureSkipCheck: options.InsecureSkipCheck,
@@ -296,7 +260,7 @@ func (c *CodeRepoBindingUsecase) applyDeploykey(ctx context.Context, pid interfa
 }
 
 func (c *CodeRepoBindingUsecase) refreshAuthorization(ctx context.Context, nodes nodestree.Node, codeRepoName string) error {
-	if err := c.clearInvalidDeployKey(ctx, codeRepoName); err != nil {
+	if err := c.clearInvalidDeployKey(ctx, nodes); err != nil {
 		return err
 	}
 
@@ -360,74 +324,85 @@ func (c *CodeRepoBindingUsecase) processAuthorization(ctx context.Context, nodes
 }
 
 func (c *CodeRepoBindingUsecase) AuthorizeForSameProjectRepository(ctx context.Context, nodes nodestree.Node, permissions, currentProject string) error {
-	codeRepos := nodestree.ListsResourceNodes(nodes, nodestree.CodeRepo)
-	repoCount := len(codeRepos)
-	for i := 0; i < repoCount-1; i++ {
-		for j := i + 1; j < repoCount; j++ {
-			repo1, ok := codeRepos[i].Content.(*resourcev1alpha1.CodeRepo)
-			if !ok {
-				return fmt.Errorf("failed to convert code repository")
+	codeRepoNodes := nodestree.ListsResourceNodes(nodes, nodestree.CodeRepo)
+	tmpCodeRepos := make([]*resourcev1alpha1.CodeRepo, 0)
+
+	for _, codeRepoNode := range codeRepoNodes {
+		codeRepo, ok := codeRepoNode.Content.(*resourcev1alpha1.CodeRepo)
+		if ok {
+			tmpCodeRepos = append(tmpCodeRepos, codeRepo)
+		}
+	}
+
+	for _, repo1 := range tmpCodeRepos {
+
+		if repo1.Spec.Project != currentProject {
+			continue
+		}
+
+		for _, repo2 := range tmpCodeRepos {
+			if repo1.Name == repo2.Name {
+				continue
 			}
-			repo2, ok := codeRepos[j].Content.(*resourcev1alpha1.CodeRepo)
-			if !ok {
-				return fmt.Errorf("failed to convert code repository")
+
+			if repo1.Spec.Project != repo2.Spec.Project {
+				continue
 			}
-			if repo1.Spec.Project == currentProject && repo1.Spec.Project == repo2.Spec.Project {
-				pid1, err := utilstrings.ExtractNumber(RepoPrefix, repo1.Name)
-				if err != nil {
-					return err
-				}
-				pid2, err := utilstrings.ExtractNumber(RepoPrefix, repo2.Name)
-				if err != nil {
-					return err
-				}
 
-				deployKey1, err := c.GetDeployKeyFromSecretRepo(ctx, repo1.Name, DefaultUser, permissions)
-				if err != nil {
-					if commonv1.IsDeploykeyNotFound(err) {
-						return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from secret repo, please check if the key under /%s/%s exists or is invalid", permissions, c.config.Git.GitType, repo1.Name)
-					}
-					return err
-				}
-				deployKey2, err := c.GetDeployKeyFromSecretRepo(ctx, repo2.Name, DefaultUser, permissions)
-				if err != nil {
-					if commonv1.IsDeploykeyNotFound(err) {
-						return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from secret repo, please check if the key under /%s/%s exists or is invalid", permissions, c.config.Git.GitType, repo2.Name)
-					}
-					return err
-				}
+			pid1, err := utilstrings.ExtractNumber(RepoPrefix, repo1.Name)
+			if err != nil {
+				return err
+			}
+			pid2, err := utilstrings.ExtractNumber(RepoPrefix, repo2.Name)
+			if err != nil {
+				return err
+			}
 
-				deployKey1Info, err := c.codeRepo.GetDeployKey(ctx, pid1, deployKey1.ID)
-				if err != nil {
-					return err
+			deployKey1, err := c.GetDeployKeyFromSecretRepo(ctx, repo1.Name, DefaultUser, permissions)
+			if err != nil {
+				if commonv1.IsDeploykeyNotFound(err) {
+					return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from secret repo, please check if the key under /%s/%s exists or is invalid", permissions, c.config.Git.GitType, repo1.Name)
 				}
-				deployKey2Info, err := c.codeRepo.GetDeployKey(ctx, pid2, deployKey2.ID)
-				if err != nil {
-					return err
+				return err
+			}
+			deployKey2, err := c.GetDeployKeyFromSecretRepo(ctx, repo2.Name, DefaultUser, permissions)
+			if err != nil {
+				if commonv1.IsDeploykeyNotFound(err) {
+					return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from secret repo, please check if the key under /%s/%s exists or is invalid", permissions, c.config.Git.GitType, repo2.Name)
 				}
+				return err
+			}
 
-				_, err = c.codeRepo.EnableProjectDeployKey(ctx, pid1, deployKey2Info.ID)
-				if err != nil {
-					return err
-				}
-				_, err = c.codeRepo.EnableProjectDeployKey(ctx, pid2, deployKey1Info.ID)
-				if err != nil {
-					return err
-				}
+			deployKey1Info, err := c.codeRepo.GetDeployKey(ctx, pid1, deployKey1.ID)
+			if err != nil {
+				return err
+			}
+			deployKey2Info, err := c.codeRepo.GetDeployKey(ctx, pid2, deployKey2.ID)
+			if err != nil {
+				return err
+			}
 
-				if permissions != string(ReadWrite) {
-					return nil
-				}
+			_, err = c.codeRepo.EnableProjectDeployKey(ctx, pid1, deployKey2Info.ID)
+			if err != nil {
+				return err
+			}
+			_, err = c.codeRepo.EnableProjectDeployKey(ctx, pid2, deployKey1Info.ID)
+			if err != nil {
+				return err
+			}
 
-				_, err = c.codeRepo.UpdateDeployKey(ctx, pid1, deployKey2Info.ID, deployKey2Info.Title, true)
-				if err != nil {
-					return err
-				}
+			if permissions == string(ReadOnly) {
+				continue
+			}
 
-				_, err = c.codeRepo.UpdateDeployKey(ctx, pid2, deployKey1Info.ID, deployKey1Info.Title, true)
-				if err != nil {
-					return err
-				}
+			_, err = c.codeRepo.UpdateDeployKey(ctx, pid1, deployKey2Info.ID, deployKey2Info.Title, true)
+			if err != nil {
+				return err
+			}
+
+			_, err = c.codeRepo.UpdateDeployKey(ctx, pid2, deployKey1Info.ID, deployKey1Info.Title, true)
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -613,55 +588,64 @@ func (c *CodeRepoBindingUsecase) recycleAuthorization(ctx context.Context, proje
 	return nil
 }
 
-func (c *CodeRepoBindingUsecase) clearInvalidDeployKey(ctx context.Context, authorizedRepository string) error {
-	pid, err := utilstrings.ExtractNumber(RepoPrefix, authorizedRepository)
-	if err != nil {
-		return err
-	}
-
-	projectDeployKeys, err := GetAllDeployKeys(ctx, c.codeRepo, pid)
-	if err != nil {
-		return err
-	}
-	for _, projectDeployKey := range projectDeployKeys {
-		re := regexp.MustCompile(`repo-(\d+)-`)
-		match := re.FindStringSubmatch(projectDeployKey.Title)
-		if len(match) == 0 {
+func (c *CodeRepoBindingUsecase) clearInvalidDeployKey(ctx context.Context, nodes nodestree.Node) error {
+	codeRepoNodes := nodestree.ListsResourceNodes(nodes, nodestree.CodeRepo)
+	for _, codeRepoNode := range codeRepoNodes {
+		codeRepo, ok := codeRepoNode.Content.(*resourcev1alpha1.CodeRepo)
+		if !ok {
 			continue
 		}
 
-		matchpid, err := strconv.Atoi(match[1])
+		pid, err := utilstrings.ExtractNumber(RepoPrefix, codeRepo.Name)
 		if err != nil {
 			return err
 		}
 
-		if matchpid == pid {
-			continue
-		}
-
-		repository, err := c.codeRepo.GetCodeRepo(ctx, matchpid)
+		projectDeployKeys, err := GetAllDeployKeys(ctx, c.codeRepo, pid)
 		if err != nil {
-			if !commonv1.IsProjectNotFound(err) {
-				return err
-			}
-			if err := c.codeRepo.DeleteDeployKey(ctx, pid, projectDeployKey.ID); err != nil {
-				return err
-			}
+			return err
 		}
+		for _, projectDeployKey := range projectDeployKeys {
+			re := regexp.MustCompile(`repo-(\d+)-`)
+			match := re.FindStringSubmatch(projectDeployKey.Title)
+			if len(match) == 0 {
+				continue
+			}
 
-		if repository != nil {
-			_, err = c.codeRepo.GetDeployKey(ctx, int(repository.Id), projectDeployKey.ID)
+			matchpid, err := strconv.Atoi(match[1])
 			if err != nil {
-				if commonv1.IsDeploykeyNotFound(err) {
-					err := c.codeRepo.DeleteDeployKey(ctx, pid, projectDeployKey.ID)
-					if err != nil {
-						return err
-					}
-				} else {
+				return err
+			}
+
+			if matchpid == pid {
+				continue
+			}
+
+			repository, err := c.codeRepo.GetCodeRepo(ctx, matchpid)
+			if err != nil {
+				if !commonv1.IsProjectNotFound(err) {
+					return err
+				}
+				if err := c.codeRepo.DeleteDeployKey(ctx, pid, projectDeployKey.ID); err != nil {
 					return err
 				}
 			}
+
+			if repository != nil {
+				_, err = c.codeRepo.GetDeployKey(ctx, int(repository.Id), projectDeployKey.ID)
+				if err != nil {
+					if commonv1.IsDeploykeyNotFound(err) {
+						err := c.codeRepo.DeleteDeployKey(ctx, pid, projectDeployKey.ID)
+						if err != nil {
+							return err
+						}
+					} else {
+						return err
+					}
+				}
+			}
 		}
+
 	}
 
 	return nil
@@ -729,19 +713,25 @@ func (c *CodeRepoBindingUsecase) RevokeDeployKey(ctx context.Context, concodeRep
 			return err
 		}
 
-		deploykey, err := c.codeRepo.GetDeployKey(ctx, pid, secretData.ID)
+		_, err = c.codeRepo.GetCodeRepo(ctx, pid)
 		if err != nil {
-			if commonv1.IsDeploykeyNotFound(err) {
-				return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from git, please check if the key exists or is invalid for the repository %s under organization %s", permissions, repository.Name, c.groupName)
+			if !commonv1.IsProjectNotFound(err) {
+				return err
 			}
-			return err
-		}
 
-		err = c.codeRepo.DeleteDeployKey(ctx, authpid, deploykey.ID)
-		if err != nil && !commonv1.IsDeploykeyNotFound(err) {
-			return err
-		}
+			deploykey, err := c.codeRepo.GetDeployKey(ctx, pid, secretData.ID)
+			if err != nil {
+				if commonv1.IsDeploykeyNotFound(err) {
+					return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from git, please check if the key exists or is invalid for the repository %s under organization %s", permissions, repository.Name, c.groupName)
+				}
+				return err
+			}
 
+			err = c.codeRepo.DeleteDeployKey(ctx, authpid, deploykey.ID)
+			if err != nil && !commonv1.IsDeploykeyNotFound(err) {
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -912,13 +902,17 @@ func (c *CodeRepoBindingUsecase) UpdateNode(resourceNode *nodestree.Node, data i
 		val.Spec.Projects = make([]string, 0)
 	}
 
-	codeRepo, ok := resourceNode.Content.(*resourcev1alpha1.CodeRepoBinding)
+	codeRepoBinding, ok := resourceNode.Content.(*resourcev1alpha1.CodeRepoBinding)
 	if !ok {
 		return nil, fmt.Errorf("failed to get coderepo %s when updating node", resourceNode.Name)
 	}
 
-	codeRepo.Spec = val.Spec
-	resourceNode.Content = codeRepo
+	if val.Spec.CodeRepo != codeRepoBinding.Spec.CodeRepo {
+		return nil, errors.New(500, "NOT_ALLOWED_MODIFY", "It is not allowed to modify the authorized repository. If you want to change the authorized repository, please delete the authorization")
+	}
+
+	codeRepoBinding.Spec = val.Spec
+	resourceNode.Content = codeRepoBinding
 
 	return resourceNode, nil
 }

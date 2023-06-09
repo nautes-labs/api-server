@@ -22,6 +22,7 @@ import (
 	"github.com/go-kratos/kratos/v2/log"
 	enviromentv1 "github.com/nautes-labs/api-server/api/environment/v1"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
+	"github.com/nautes-labs/api-server/pkg/validate"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,8 +30,7 @@ import (
 )
 
 const (
-	_EnvironmentKind = "Environment"
-	_EnvSubDir       = "envs"
+	_EnvSubDir = "envs"
 )
 
 type EnvironmentUsecase struct {
@@ -52,12 +52,12 @@ func NewEnviromentUsecase(logger log.Logger, config *nautesconfigs.Config, codeR
 	return env
 }
 
-func (c *EnvironmentUsecase) convertProductToGroupName(ctx context.Context, env *resourcev1alpha1.Environment) error {
+func (c *EnvironmentUsecase) ConvertProductToGroupName(ctx context.Context, env *resourcev1alpha1.Environment) error {
 	if env.Spec.Product == "" {
 		return fmt.Errorf("the product field value of enviroment %s should not be empty", env.Spec.Product)
 	}
 
-	groupName, err := c.resourcesUsecase.convertProductToGroupName(ctx, env.Spec.Product)
+	groupName, err := c.resourcesUsecase.ConvertProductToGroupName(ctx, env.Spec.Product)
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,7 @@ func (c *EnvironmentUsecase) convertProductToGroupName(ctx context.Context, env 
 }
 
 func (e *EnvironmentUsecase) GetEnvironment(ctx context.Context, enviromentName, productName string) (*resourcev1alpha1.Environment, error) {
-	node, err := e.resourcesUsecase.Get(ctx, nodestree.Enviroment, productName, e, func(nodes nodestree.Node) (string, error) {
+	node, err := e.resourcesUsecase.Get(ctx, nodestree.Environment, productName, e, func(nodes nodestree.Node) (string, error) {
 		return enviromentName, nil
 	})
 	if err != nil {
@@ -80,7 +80,7 @@ func (e *EnvironmentUsecase) GetEnvironment(ctx context.Context, enviromentName,
 		return nil, err
 	}
 
-	err = e.convertProductToGroupName(ctx, env)
+	err = e.ConvertProductToGroupName(ctx, env)
 	if err != nil {
 		return nil, err
 	}
@@ -88,25 +88,15 @@ func (e *EnvironmentUsecase) GetEnvironment(ctx context.Context, enviromentName,
 	return env, nil
 }
 
-func (e *EnvironmentUsecase) ListEnvironments(ctx context.Context, productName string) ([]*resourcev1alpha1.Environment, error) {
-	nodes, err := e.resourcesUsecase.List(ctx, productName, e)
+func (e *EnvironmentUsecase) ListEnvironments(ctx context.Context, productName string) ([]*nodestree.Node, error) {
+	resourceNodes, err := e.resourcesUsecase.List(ctx, productName, e)
 	if err != nil {
 		return nil, err
 	}
 
-	envs, err := e.nodesToLists(*nodes)
-	if err != nil {
-		return nil, err
-	}
+	nodes := nodestree.ListsResourceNodes(*resourceNodes, nodestree.Environment)
 
-	for _, env := range envs {
-		err = e.convertProductToGroupName(ctx, env)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return envs, nil
+	return nodes, nil
 }
 
 func (e *EnvironmentUsecase) nodesToLists(nodes nodestree.Node) ([]*resourcev1alpha1.Environment, error) {
@@ -153,7 +143,8 @@ func (e *EnvironmentUsecase) SaveEnvironment(ctx context.Context, options *BizOp
 
 	data.Spec.Product = fmt.Sprintf("%s%d", _ProductPrefix, int(group.Id))
 	resourceOptions := &resourceOptions{
-		resourceKind:      nodestree.Enviroment,
+		resourceName:      options.ResouceName,
+		resourceKind:      nodestree.Environment,
 		productName:       options.ProductName,
 		insecureSkipCheck: options.InsecureSkipCheck,
 		operator:          e,
@@ -175,7 +166,7 @@ func (e *EnvironmentUsecase) CreateNode(path string, data interface{}) (*nodestr
 	env := &resourcev1alpha1.Environment{
 		TypeMeta: v1.TypeMeta{
 			APIVersion: resourcev1alpha1.GroupVersion.String(),
-			Kind:       nodestree.Enviroment,
+			Kind:       nodestree.Environment,
 		},
 		ObjectMeta: v1.ObjectMeta{
 			Name: val.Name,
@@ -190,7 +181,7 @@ func (e *EnvironmentUsecase) CreateNode(path string, data interface{}) (*nodestr
 		Name:    val.Name,
 		Path:    resourceFile,
 		Content: env,
-		Kind:    nodestree.Enviroment,
+		Kind:    nodestree.Environment,
 		Level:   3,
 	}, nil
 }
@@ -218,7 +209,7 @@ func (e *EnvironmentUsecase) UpdateNode(resourceNode *nodestree.Node, data inter
 }
 
 func (e *EnvironmentUsecase) CheckReference(options nodestree.CompareOptions, node *nodestree.Node, k8sClient client.Client) (bool, error) {
-	if node.Kind != nodestree.Enviroment {
+	if node.Kind != nodestree.Environment {
 		return false, nil
 	}
 
@@ -245,7 +236,7 @@ func (e *EnvironmentUsecase) CheckReference(options nodestree.CompareOptions, no
 	err := k8sClient.Get(context.TODO(), objKey, &resourcev1alpha1.Cluster{})
 	if err != nil {
 		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable+"err: "+err.Error(), nodestree.Cluster, env.Spec.Cluster,
-			_EnvironmentKind, env.Name, _EnvSubDir)
+			nodestree.Environment, env.Name, _EnvSubDir)
 	}
 
 	ok, err = e.compare(options.Nodes)
@@ -257,7 +248,7 @@ func (e *EnvironmentUsecase) CheckReference(options nodestree.CompareOptions, no
 }
 
 func (e *EnvironmentUsecase) CreateResource(kind string) interface{} {
-	if kind != nodestree.Enviroment {
+	if kind != nodestree.Environment {
 		return nil
 	}
 
@@ -266,13 +257,27 @@ func (e *EnvironmentUsecase) CreateResource(kind string) interface{} {
 
 func (e *EnvironmentUsecase) DeleteEnvironment(ctx context.Context, options *BizOptions) error {
 	resourceOptions := &resourceOptions{
-		resourceKind:      nodestree.Enviroment,
+		resourceKind:      nodestree.Environment,
 		productName:       options.ProductName,
 		insecureSkipCheck: options.InsecureSkipCheck,
 		operator:          e,
 	}
+
 	err := e.resourcesUsecase.Delete(ctx, resourceOptions, func(nodes nodestree.Node) (string, error) {
-		return options.ResouceName, nil
+		node := e.nodestree.GetNode(&nodes, nodestree.Environment, options.ResouceName)
+		env, ok := node.Content.(*resourcev1alpha1.Environment)
+		if !ok {
+			return "", fmt.Errorf("the resource %s content type is incorrect", node.Name)
+		}
+
+		validateClient := validate.NewValidateClient(nil, e.nodestree, &nodes, e.config.Nautes.Namespace)
+		env.Namespace = options.ProductName
+		err := env.IsDeletable(context.TODO(), validateClient)
+		if err != nil {
+			return "", err
+		}
+
+		return env.Name, nil
 	})
 	if err != nil {
 		return err
@@ -282,7 +287,7 @@ func (e *EnvironmentUsecase) DeleteEnvironment(ctx context.Context, options *Biz
 }
 
 func (e *EnvironmentUsecase) compare(nodes nodestree.Node) (bool, error) {
-	resourceNodes := nodestree.ListsResourceNodes(nodes, nodestree.Enviroment)
+	resourceNodes := nodestree.ListsResourceNodes(nodes, nodestree.Environment)
 	for i := 0; i < len(resourceNodes); i++ {
 		for j := i + 1; j < len(resourceNodes); j++ {
 			if v1, ok := resourceNodes[i].Content.(*resourcev1alpha1.Environment); ok {

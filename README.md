@@ -2,7 +2,8 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![golang](https://img.shields.io/badge/golang-v1.17.13-brightgreen)](https://go.dev/doc/install)
-[![version](https://img.shields.io/badge/version-v0.3.0-green)]()
+[![version](https://img.shields.io/badge/version-v0.3.1-green)]()
+
 
 Nautes 的设计是遵循了 GitOps 的最佳实践，将用户应用环境以及 Nautes 自身环境的声明均存储在版本库中。声明数据分为两类：密钥数据是存储在 Vault 中，其他数据是存储在 Git（目前只支持 GitLab）仓库中，API Server 项目则是提供了一组用于操作这些声明数据的 REST API。
 
@@ -50,13 +51,13 @@ https://$api-server:$port/q/swagger-ui
 kubectl create cm nautes-configs -n nautes
 ```
 
-2、访问组件的证书
+2、访问其他组件的证书
 
-当[环境安装]([安装 | Nautes](https://nautes.io/guide/user-guide/installation.html#%E5%87%86%E5%A4%87%E7%8E%AF%E5%A2%83))完成后，将`/opt/nautes/out/pki`路径下的证书赋值到` /usr/local/share/ca-certificates`，用于存在访问其他组件的证书和签发证书的CA
+默认情况下，[安装环境](https://nautes.io/guide/user-guide/installation.html#%E5%87%86%E5%A4%87%E7%8E%AF%E5%A2%83)完成后，在`/opt/nautes/out/pki`目录下会生成用于存在访问其他组件的证书和签发证书的CA，请检查该目录下是否包含`api-server.key`，`ca.crt`等证书文件
 
-3、设置资源布局的配置
+3、设置环境变量
 
-该文件位于当前项目下的 `pkg/nodestree/sample/resources.yaml`，通过设置环境变量的方式，项目启动会自动加载该文件
+api-server会根据一份资源布局配置文件来校验和生成资源。本地开发时，可以通过设置环境变量的方式启动项目，该文件位于当前项目下的 `pkg/nodestree/sample/resources.yaml`
 
 ```
 export RESOURCES_LAYOUT = ${workspaceFolder}/pkg/nodestree/sample/resources.yaml

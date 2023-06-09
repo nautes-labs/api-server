@@ -64,94 +64,48 @@ func NewClusterUsecase(logger log.Logger, codeRepo CodeRepo, secretRepo Secretre
 	return &ClusterUsecase{log: log.NewHelper(log.With(logger)), codeRepo: codeRepo, secretRepo: secretRepo, resourcesUsecase: resourcesUsecase, configs: configs, client: client, cluster: cluster, dex: dex}
 }
 
-func (c *ClusterUsecase) CloneRepository(ctx context.Context, url string) (string, error) {
-	path, err := c.resourcesUsecase.CloneCodeRepo(ctx, url)
-	if err != nil {
-		return "", err
-	}
-
-	return path, nil
-}
-
-func (c *ClusterUsecase) SaveKubeconfig(ctx context.Context, id, server, config string) error {
-	if config == "" {
-		return fmt.Errorf("register physical cluster, kubeconfig is not empty")
-	}
-
-	config, err := c.ConvertKubeconfig(config, server)
-	if err != nil {
-		return err
-	}
-	err = c.secretRepo.SaveClusterConfig(ctx, id, config)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *ClusterUsecase) ConvertKubeconfig(config, server string) (string, error) {
-	kubeconfig := &kubeconfig.KubectlConfig{}
-	jsonData, err := yaml.YAMLToJSONStrict([]byte(config))
-	if err != nil {
-		return "", err
-	}
-
-	err = json.Unmarshal([]byte(jsonData), kubeconfig)
-	if err != nil {
-		return "", err
-	}
-
-	if len(kubeconfig.Clusters) < 1 {
-		return "", fmt.Errorf("invalid kubeconfig file: must have at least one cluster")
-	}
-
-	if len(kubeconfig.Users) < 1 {
-		return "", fmt.Errorf("invalid kubeconfig file: must have at least one user")
-	}
-
-	kubeconfig.Clusters[0].Cluster.Server = server
-
-	bytes, err := yaml.Marshal(kubeconfig)
-	if err != nil {
-		return "", err
-	}
-
-	return string(bytes), nil
-}
-
-func (c *ClusterUsecase) GetCacert(ctx context.Context) (string, error) {
-	secretOptions := &SecretOptions{
-		SecretPath:   SecretPath,
-		SecretEngine: SecretEngine,
-		SecretKey:    "cacert",
-	}
-	cacert, err := c.secretRepo.GetSecret(ctx, secretOptions)
-	if err != nil {
-		return "", err
-	}
-
-	return cacert, nil
-}
-
-func (c *ClusterUsecase) GetTenantRepository(ctx context.Context) (*Project, error) {
-	codeRepos := &resourcev1alpha1.CodeRepoList{}
-	labelSelector := labels.SelectorFromSet(map[string]string{_TenantLabel: c.configs.Nautes.TenantName})
-	err := c.client.List(context.Background(), codeRepos, &client.ListOptions{LabelSelector: labelSelector})
-	if err != nil {
-		return nil, err
-	}
-	if len(codeRepos.Items) == 0 {
-		return nil, fmt.Errorf("tenant repository is not found")
-	}
-
-	pid, _ := utilstrings.ExtractNumber("repo-", codeRepos.Items[0].Name)
-	repository, err := c.codeRepo.GetCodeRepo(ctx, pid)
+func (c *ClusterUsecase) GetCluster(ctx context.Context, clusterName string) (*resourcev1alpha1.Cluster, error) {
+	repository, err := c.GetTenantRepository(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return repository, nil
+	tenantRepositoryLocalPath, err := c.CloneRepository(ctx, repository.HttpUrlToRepo)
+	if err != nil {
+		c.log.Errorf("failed to clone tenant repository, the url %s may be invalid or does not exist", repository.HttpUrlToRepo)
+		return nil, err
+	}
+
+	defer cleanCodeRepo(tenantRepositoryLocalPath)
+
+	cluster, err := c.cluster.GetClsuter(tenantRepositoryLocalPath, clusterName)
+	if err != nil {
+		return nil, err
+	}
+
+	return cluster, nil
+}
+
+func (c *ClusterUsecase) ListClusters(ctx context.Context) ([]*resourcev1alpha1.Cluster, error) {
+	repository, err := c.GetTenantRepository(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	tenantRepositoryLocalPath, err := c.CloneRepository(ctx, repository.HttpUrlToRepo)
+	if err != nil {
+		c.log.Errorf("failed to clone tenant repository, the url %s may be invalid or does not exist", repository.HttpUrlToRepo)
+		return nil, err
+	}
+
+	defer cleanCodeRepo(tenantRepositoryLocalPath)
+
+	clusters, err := c.cluster.GetClsuters(tenantRepositoryLocalPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return clusters, nil
 }
 
 func (c *ClusterUsecase) SaveCluster(ctx context.Context, param *cluster.ClusterRegistrationParam, kubeconfig string) error {
@@ -247,6 +201,11 @@ func (c *ClusterUsecase) DeleteCluster(ctx context.Context, clusterName string) 
 		return fmt.Errorf("cluster %s does not exist or is invalid", clusterName)
 	}
 
+	err = resourceCluster.ValidateCluster(context.TODO(), resourceCluster, c.client, true)
+	if err != nil {
+		return err
+	}
+
 	param := &cluster.ClusterRegistrationParam{
 		Cluster:                      resourceCluster,
 		RepoURL:                      project.SshUrlToRepo,
@@ -279,6 +238,96 @@ func (c *ClusterUsecase) DeleteCluster(ctx context.Context, clusterName string) 
 	c.log.Infof("successfully remove cluster, cluster name: %s", clusterName)
 
 	return nil
+}
+
+func (c *ClusterUsecase) CloneRepository(ctx context.Context, url string) (string, error) {
+	path, err := c.resourcesUsecase.CloneCodeRepo(ctx, url)
+	if err != nil {
+		return "", err
+	}
+
+	return path, nil
+}
+
+func (c *ClusterUsecase) SaveKubeconfig(ctx context.Context, id, server, config string) error {
+	if config == "" {
+		return fmt.Errorf("register physical cluster, kubeconfig is not empty")
+	}
+
+	config, err := c.ConvertKubeconfig(config, server)
+	if err != nil {
+		return err
+	}
+	err = c.secretRepo.SaveClusterConfig(ctx, id, config)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *ClusterUsecase) ConvertKubeconfig(config, server string) (string, error) {
+	kubeconfig := &kubeconfig.KubectlConfig{}
+	jsonData, err := yaml.YAMLToJSONStrict([]byte(config))
+	if err != nil {
+		return "", err
+	}
+
+	err = json.Unmarshal([]byte(jsonData), kubeconfig)
+	if err != nil {
+		return "", err
+	}
+
+	if len(kubeconfig.Clusters) < 1 {
+		return "", fmt.Errorf("invalid kubeconfig file: must have at least one cluster")
+	}
+
+	if len(kubeconfig.Users) < 1 {
+		return "", fmt.Errorf("invalid kubeconfig file: must have at least one user")
+	}
+
+	kubeconfig.Clusters[0].Cluster.Server = server
+
+	bytes, err := yaml.Marshal(kubeconfig)
+	if err != nil {
+		return "", err
+	}
+
+	return string(bytes), nil
+}
+
+func (c *ClusterUsecase) GetCacert(ctx context.Context) (string, error) {
+	secretOptions := &SecretOptions{
+		SecretPath:   SecretPath,
+		SecretEngine: SecretEngine,
+		SecretKey:    "cacert",
+	}
+	cacert, err := c.secretRepo.GetSecret(ctx, secretOptions)
+	if err != nil {
+		return "", err
+	}
+
+	return cacert, nil
+}
+
+func (c *ClusterUsecase) GetTenantRepository(ctx context.Context) (*Project, error) {
+	codeRepos := &resourcev1alpha1.CodeRepoList{}
+	labelSelector := labels.SelectorFromSet(map[string]string{_TenantLabel: c.configs.Nautes.TenantName})
+	err := c.client.List(context.Background(), codeRepos, &client.ListOptions{LabelSelector: labelSelector})
+	if err != nil {
+		return nil, err
+	}
+	if len(codeRepos.Items) == 0 {
+		return nil, fmt.Errorf("tenant repository is not found")
+	}
+
+	pid, _ := utilstrings.ExtractNumber("repo-", codeRepos.Items[0].Name)
+	repository, err := c.codeRepo.GetCodeRepo(ctx, pid)
+	if err != nil {
+		return nil, err
+	}
+
+	return repository, nil
 }
 
 func (c *ClusterUsecase) SaveDexConfig(param *cluster.ClusterRegistrationParam, teantLocalPath string) error {

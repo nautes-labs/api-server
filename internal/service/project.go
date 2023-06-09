@@ -20,6 +20,7 @@ import (
 
 	projectv1 "github.com/nautes-labs/api-server/api/project/v1"
 	"github.com/nautes-labs/api-server/internal/biz"
+	"github.com/nautes-labs/api-server/pkg/nodestree"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 )
 
@@ -66,6 +67,8 @@ func (s *ProjectService) ListProjects(ctx context.Context, req *projectv1.ListsR
 }
 
 func (s *ProjectService) SaveProject(ctx context.Context, req *projectv1.SaveRequest) (*projectv1.SaveReply, error) {
+	ctx = biz.SetResourceContext(ctx, req.ProductName, biz.SaveMethod, "", "", nodestree.Project, req.ProjectName)
+
 	project := &biz.ProjectData{
 		ProjectName: req.ProjectName,
 		Language:    req.Body.Language,
@@ -86,6 +89,8 @@ func (s *ProjectService) SaveProject(ctx context.Context, req *projectv1.SaveReq
 }
 
 func (s *ProjectService) DeleteProject(ctx context.Context, req *projectv1.DeleteRequest) (*projectv1.DeleteReply, error) {
+	ctx = biz.SetResourceContext(ctx, req.ProductName, biz.DeleteMethod, "", "", nodestree.Project, req.ProjectName)
+
 	options := &biz.BizOptions{
 		ResouceName:       req.ProjectName,
 		ProductName:       req.ProductName,
@@ -95,7 +100,6 @@ func (s *ProjectService) DeleteProject(ctx context.Context, req *projectv1.Delet
 	if err != nil {
 		return nil, err
 	}
-
 	return &projectv1.DeleteReply{
 		Msg: fmt.Sprintf("Successfully deleted %v configuration", req.ProjectName),
 	}, nil

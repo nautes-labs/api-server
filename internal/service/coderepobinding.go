@@ -20,16 +20,33 @@ import (
 
 	coderepobindingv1 "github.com/nautes-labs/api-server/api/coderepobinding/v1"
 	"github.com/nautes-labs/api-server/internal/biz"
+	"github.com/nautes-labs/api-server/pkg/nodestree"
+	"github.com/nautes-labs/api-server/pkg/selector"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
+)
+
+var (
+	codeRepoBindingFilterFieldRules = map[string]map[string]selector.FieldSelector{
+		FieldCodeRepo: {
+			selector.EqualOperator: selector.NewStringSelector(_CodeRepo, selector.In),
+		},
+		FieldProduct: {
+			selector.EqualOperator: selector.NewStringSelector(_Product, selector.In),
+		},
+		FiledProjectsInProject: {
+			selector.EqualOperator: selector.NewStringSelector(_ProjectsInProject, selector.In),
+		},
+	}
 )
 
 type CodeRepoBindingService struct {
 	coderepobindingv1.UnimplementedCodeRepoBindingServer
 	codeRepoBindingUsecase *biz.CodeRepoBindingUsecase
+	resourcesUsecase       *biz.ResourcesUsecase
 }
 
-func NewCodeRepoBindingService(codeRepoBindingUsecase *biz.CodeRepoBindingUsecase) *CodeRepoBindingService {
-	return &CodeRepoBindingService{codeRepoBindingUsecase: codeRepoBindingUsecase}
+func NewCodeRepoBindingService(codeRepoBindingUsecase *biz.CodeRepoBindingUsecase, resourcesUsecase *biz.ResourcesUsecase) *CodeRepoBindingService {
+	return &CodeRepoBindingService{codeRepoBindingUsecase: codeRepoBindingUsecase, resourcesUsecase: resourcesUsecase}
 }
 
 func (s *CodeRepoBindingService) CovertCodeRepoBindingValueToReply(codeRepoBinding *resourcev1alpha1.CodeRepoBinding) *coderepobindingv1.GetReply {
@@ -60,20 +77,57 @@ func (s *CodeRepoBindingService) ListCodeRepoBindings(ctx context.Context, req *
 		ProductName: req.ProductName,
 	}
 
-	codeRepoBindings, err := s.codeRepoBindingUsecase.ListCodeRepoBindings(ctx, options)
+	nodes, err := s.codeRepoBindingUsecase.ListCodeRepoBindings(ctx, options)
 	if err != nil {
 		return nil, err
 	}
 
 	var items []*coderepobindingv1.GetReply
-	for _, codeRepoBinding := range codeRepoBindings {
-		items = append(items, s.CovertCodeRepoBindingValueToReply(codeRepoBinding))
+
+	for _, node := range nodes {
+		codeRepoBinding, ok := node.Content.(*resourcev1alpha1.CodeRepoBinding)
+		if !ok {
+			continue
+		}
+
+		err = s.codeRepoBindingUsecase.ConvertRuntime(ctx, codeRepoBinding)
+		if err != nil {
+			return nil, err
+		}
+		node.Content = codeRepoBinding
+
+		passed, err := selector.Match(req.FieldSelector, node.Content, codeRepoBindingFilterFieldRules)
+		if err != nil {
+			return nil, err
+		}
+		if !passed {
+			continue
+		}
+
+		item := s.CovertCodeRepoBindingValueToReply(codeRepoBinding)
+		if err != nil {
+			return nil, err
+		}
+
+		items = append(items, item)
 	}
 
 	return &coderepobindingv1.ListsReply{Items: items}, nil
 }
 
 func (s *CodeRepoBindingService) SaveCodeRepoBinding(ctx context.Context, req *coderepobindingv1.SaveRequest) (*coderepobindingv1.SaveReply, error) {
+	productResourceName, err := s.resourcesUsecase.ConvertGroupToProduct(ctx, req.ProductName)
+	if err != nil {
+		return nil, err
+	}
+
+	codeRepoResourceName, err := s.resourcesUsecase.ConvertRepoNameToCodeRepo(ctx, req.ProductName, req.Body.Coderepo)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx = biz.SetResourceContext(ctx, req.ProductName, biz.SaveMethod, nodestree.CodeRepo, codeRepoResourceName, nodestree.CodeRepoBinding, req.CoderepoBindingName)
+
 	options := &biz.BizOptions{
 		ProductName:       req.ProductName,
 		ResouceName:       req.CoderepoBindingName,
@@ -83,12 +137,13 @@ func (s *CodeRepoBindingService) SaveCodeRepoBinding(ctx context.Context, req *c
 	data := &biz.CodeRepoBindingData{
 		Name: req.CoderepoBindingName,
 		Spec: resourcev1alpha1.CodeRepoBindingSpec{
-			CodeRepo:    req.Body.Coderepo,
-			Product:     req.Body.Product,
+			CodeRepo:    codeRepoResourceName,
+			Product:     productResourceName,
 			Projects:    req.Body.Projects,
 			Permissions: req.Body.Permissions,
 		},
 	}
+
 	if err := s.codeRepoBindingUsecase.SaveCodeRepoBinding(ctx, options, data); err != nil {
 		return nil, err
 	}
@@ -99,6 +154,8 @@ func (s *CodeRepoBindingService) SaveCodeRepoBinding(ctx context.Context, req *c
 }
 
 func (s *CodeRepoBindingService) DeleteCodeRepoBinding(ctx context.Context, req *coderepobindingv1.DeleteRequest) (*coderepobindingv1.DeleteReply, error) {
+	ctx = biz.SetResourceContext(ctx, req.ProductName, biz.DeleteMethod, "", "", nodestree.CodeRepoBinding, req.CoderepoBindingName)
+
 	options := &biz.BizOptions{
 		ProductName:       req.ProductName,
 		ResouceName:       req.CoderepoBindingName,

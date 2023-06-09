@@ -21,7 +21,9 @@ import (
 
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
+	"github.com/nautes-labs/api-server/pkg/validate"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
+	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -35,6 +37,8 @@ type DeploymentRuntimeUsecase struct {
 	codeRepo         CodeRepo
 	nodestree        nodestree.NodesTree
 	resourcesUsecase *ResourcesUsecase
+	client           client.Client
+	config           *nautesconfigs.Config
 }
 
 type DeploymentRuntimeData struct {
@@ -42,18 +46,25 @@ type DeploymentRuntimeData struct {
 	Spec resourcev1alpha1.DeploymentRuntimeSpec
 }
 
-func NewDeploymentRuntimeUsecase(logger log.Logger, codeRepo CodeRepo, nodestree nodestree.NodesTree, resourcesUsecase *ResourcesUsecase) *DeploymentRuntimeUsecase {
-	runtime := &DeploymentRuntimeUsecase{log: log.NewHelper(log.With(logger)), codeRepo: codeRepo, nodestree: nodestree, resourcesUsecase: resourcesUsecase}
+func NewDeploymentRuntimeUsecase(logger log.Logger, codeRepo CodeRepo, nodestree nodestree.NodesTree, resourcesUsecase *ResourcesUsecase, client client.Client, config *nautesconfigs.Config) *DeploymentRuntimeUsecase {
+	runtime := &DeploymentRuntimeUsecase{
+		log:              log.NewHelper(log.With(logger)),
+		codeRepo:         codeRepo,
+		nodestree:        nodestree,
+		resourcesUsecase: resourcesUsecase,
+		client:           client,
+		config:           config,
+	}
 	nodestree.AppendOperators(runtime)
 	return runtime
 }
 
-func (p *DeploymentRuntimeUsecase) convertCodeRepoToRepoName(ctx context.Context, runtime *resourcev1alpha1.DeploymentRuntime) error {
+func (p *DeploymentRuntimeUsecase) ConvertCodeRepoToRepoName(ctx context.Context, runtime *resourcev1alpha1.DeploymentRuntime) error {
 	if runtime.Spec.ManifestSource.CodeRepo == "" {
 		return fmt.Errorf("the codeRepo field value of deploymentruntime %s should not be empty", runtime.Name)
 	}
 
-	repoName, err := p.resourcesUsecase.convertCodeRepoToRepoName(ctx, runtime.Spec.ManifestSource.CodeRepo)
+	repoName, err := p.resourcesUsecase.ConvertCodeRepoToRepoName(ctx, runtime.Spec.ManifestSource.CodeRepo)
 	if err != nil {
 		return err
 	}
@@ -62,12 +73,12 @@ func (p *DeploymentRuntimeUsecase) convertCodeRepoToRepoName(ctx context.Context
 	return nil
 }
 
-func (c *DeploymentRuntimeUsecase) convertProductToGroupName(ctx context.Context, runtime *resourcev1alpha1.DeploymentRuntime) error {
+func (c *DeploymentRuntimeUsecase) ConvertProductToGroupName(ctx context.Context, runtime *resourcev1alpha1.DeploymentRuntime) error {
 	if runtime.Spec.Product == "" {
 		return fmt.Errorf("the product field value of deploymentruntime %s should not be empty", runtime.Name)
 	}
 
-	groupName, err := c.resourcesUsecase.convertProductToGroupName(ctx, runtime.Spec.Product)
+	groupName, err := c.resourcesUsecase.ConvertProductToGroupName(ctx, runtime.Spec.Product)
 	if err != nil {
 		return err
 	}
@@ -90,12 +101,7 @@ func (d *DeploymentRuntimeUsecase) GetDeploymentRuntime(ctx context.Context, dep
 		return nil, fmt.Errorf("the resource type of %s is inconsistent", deploymentRuntimeName)
 	}
 
-	err = d.convertCodeRepoToRepoName(ctx, runtime)
-	if err != nil {
-		return nil, err
-	}
-
-	err = d.convertProductToGroupName(ctx, runtime)
+	err = d.ConvertRuntime(ctx, runtime)
 	if err != nil {
 		return nil, err
 	}
@@ -103,36 +109,29 @@ func (d *DeploymentRuntimeUsecase) GetDeploymentRuntime(ctx context.Context, dep
 	return runtime, nil
 }
 
-func (d *DeploymentRuntimeUsecase) ListDeploymentRuntimes(ctx context.Context, productName string) ([]*resourcev1alpha1.DeploymentRuntime, error) {
-	var runtimes []*resourcev1alpha1.DeploymentRuntime
+func (d *DeploymentRuntimeUsecase) ConvertRuntime(ctx context.Context, runtime *resourcev1alpha1.DeploymentRuntime) error {
+	err := d.ConvertCodeRepoToRepoName(ctx, runtime)
+	if err != nil {
+		return err
+	}
 
+	err = d.ConvertProductToGroupName(ctx, runtime)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *DeploymentRuntimeUsecase) ListDeploymentRuntimes(ctx context.Context, productName string) ([]*nodestree.Node, error) {
 	resourceNodes, err := d.resourcesUsecase.List(ctx, productName, d)
 	if err != nil {
 		return nil, err
 	}
 
 	nodes := nodestree.ListsResourceNodes(*resourceNodes, nodestree.DeploymentRuntime)
-	for _, node := range nodes {
-		if node.Kind == nodestree.DeploymentRuntime && !node.IsDir {
-			runtime, ok := node.Content.(*resourcev1alpha1.DeploymentRuntime)
-			if ok {
 
-				err = d.convertCodeRepoToRepoName(ctx, runtime)
-				if err != nil {
-					return nil, err
-				}
-
-				err = d.convertProductToGroupName(ctx, runtime)
-				if err != nil {
-					return nil, err
-				}
-
-				runtimes = append(runtimes, runtime)
-			}
-		}
-	}
-
-	return runtimes, nil
+	return nodes, nil
 }
 
 func (d *DeploymentRuntimeUsecase) SaveDeploymentRuntime(ctx context.Context, options *BizOptions, data *DeploymentRuntimeData) error {
@@ -150,6 +149,7 @@ func (d *DeploymentRuntimeUsecase) SaveDeploymentRuntime(ctx context.Context, op
 	data.Spec.ManifestSource.CodeRepo = fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
 	data.Spec.Product = fmt.Sprintf("%s%d", _ProductPrefix, int(group.Id))
 	resourceOptions := &resourceOptions{
+		resourceName:      options.ResouceName,
 		resourceKind:      nodestree.DeploymentRuntime,
 		productName:       options.ProductName,
 		insecureSkipCheck: options.InsecureSkipCheck,
@@ -237,20 +237,41 @@ func (d *DeploymentRuntimeUsecase) CheckReference(options nodestree.CompareOptio
 		}
 	}
 
-	ok = nodestree.IsResourceExist(options, deploymentRuntime.Spec.Destination, nodestree.Enviroment)
+	envName := deploymentRuntime.Spec.Destination
+	ok = nodestree.IsResourceExist(options, envName, nodestree.Environment)
 	if !ok {
-		return true, fmt.Errorf("the referenced environment %s by the deployment runtime %s does not exist while verifying the validity of the global template", deploymentRuntime.Spec.Destination, deploymentRuntime.Name)
+		err := fmt.Errorf("failed to get environment %s", envName)
+		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable+"err: "+err.Error(), nodestree.Environment, fmt.Sprintf("%s/%s", _RuntimesDir, deploymentRuntime.Name))
 	}
 
 	codeRepoName := deploymentRuntime.Spec.ManifestSource.CodeRepo
 	ok = nodestree.IsResourceExist(options, codeRepoName, nodestree.CodeRepo)
 	if !ok {
-		return true, fmt.Errorf("the referenced repository %s by the deployment runtime %s does not exist while verifying the validity of the global template", codeRepoName, deploymentRuntime.Name)
+		err := fmt.Errorf("failed to get codeRepo %s", codeRepoName)
+		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable+"err: "+err.Error(), nodestree.CodeRepo, fmt.Sprintf("%s/%s", _CodeReposSubDir, deploymentRuntime.Name))
 	}
 
 	ok, err := d.compare(options.Nodes)
 	if ok {
 		return true, err
+	}
+
+	validateClient := validate.NewValidateClient(d.client, d.nodestree, &options.Nodes, d.config.Nautes.Namespace)
+	deploymentRuntime.Namespace = options.ProductName
+	illegalProjectRefs, err := deploymentRuntime.Validate(context.TODO(), validateClient)
+	if err != nil {
+		return true, fmt.Errorf("verify deployment runtime failed, err: %w", err)
+	}
+	if len(illegalProjectRefs) != 0 {
+		errMsg := ""
+		for i, project := range illegalProjectRefs {
+			if i > 0 {
+				errMsg += fmt.Sprintf("; %s", project.Reason)
+			} else {
+				errMsg += project.Reason
+			}
+		}
+		return true, fmt.Errorf("verify deployment runtime failed, err: %s", errMsg)
 	}
 
 	return true, nil

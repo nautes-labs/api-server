@@ -41,17 +41,23 @@ spec:
           postStart:
             exec:
               command:
-                ['/bin/sh', "-c", 'update-ca-certificates']
+                - /bin/sh
+                - -c
+                - |
+                  cp /opt/nautes/out/pki/ca.crt /usr/local/share/ca-certificates/
+                  update-ca-certificates
         ports:
         - containerPort: 8000
         volumeMounts:
         - name: api-server-secret
-          mountPath: /usr/local/share/ca-certificates
+          mountPath: /opt/nautes/out/pki
         - name: resources-layout
           mountPath: /usr/local/share/
           readOnly: true
         - name: api-server-log
           mountPath: /log
+        - name: ca-certs
+          mountPath: /usr/local/share/ca-certificates/
       volumes:
       - name: resources-layout
         configMap:
@@ -69,3 +75,5 @@ spec:
       - name: api-server-log
         persistentVolumeClaim:
           claimName: api-server-log
+      - name: ca-certs
+        emptyDir: {}

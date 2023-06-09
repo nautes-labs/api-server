@@ -6,7 +6,43 @@ info:
     title: ""
     version: 0.0.1
 paths:
+    /api/v1/clusters:
+        get:
+            tags:
+                - Cluster
+            operationId: Cluster_ListClusters
+            parameters:
+                - name: field_selector
+                  in: query
+                  description: Filter the list by field.
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/api.cluster.v1.ListsReply'
     /api/v1/clusters/{cluster_name}:
+        get:
+            tags:
+                - Cluster
+            operationId: Cluster_GetCluster
+            parameters:
+                - name: cluster_name
+                  in: path
+                  description: cluster_name is the name of the cluster.
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/api.cluster.v1.GetReply'
         post:
             tags:
                 - Cluster
@@ -14,7 +50,7 @@ paths:
             parameters:
                 - name: cluster_name
                   in: path
-                  description: clusterName specifies the name of the cluster.
+                  description: cluster_name specifies the name of the cluster.
                   required: true
                   schema:
                     type: string
@@ -45,11 +81,6 @@ paths:
                   in: path
                   description: ClusterName is the name of the cluster.
                   required: true
-                  schema:
-                    type: string
-                - name: product_name
-                  in: query
-                  description: ProductName is the name of the product.
                   schema:
                     type: string
                 - name: insecure_skip_check
@@ -145,8 +176,13 @@ paths:
             parameters:
                 - name: product_name
                   in: path
-                  description: The name of the product to list repositories for
+                  description: To list the product name of the repository.
                   required: true
+                  schema:
+                    type: string
+                - name: field_selector
+                  in: query
+                  description: Filter the list by field.
                   schema:
                     type: string
             responses:
@@ -248,8 +284,13 @@ paths:
             parameters:
                 - name: product_name
                   in: path
-                  description: The name of the product to list repositories for
+                  description: To list the product name of the repository.
                   required: true
+                  schema:
+                    type: string
+                - name: field_selector
+                  in: query
+                  description: Filter the list by field.
                   schema:
                     type: string
             responses:
@@ -348,8 +389,13 @@ paths:
             parameters:
                 - name: product_name
                   in: path
-                  description: ProductName is the name of the product.
+                  description: To list the product name of the repository.
                   required: true
+                  schema:
+                    type: string
+                - name: field_selector
+                  in: query
+                  description: Filter the list by field.
                   schema:
                     type: string
             responses:
@@ -456,8 +502,13 @@ paths:
             parameters:
                 - name: product_name
                   in: path
-                  description: The name of the product
+                  description: To list the product name of the repository.
                   required: true
+                  schema:
+                    type: string
+                - name: field_selector
+                  in: query
+                  description: Filter the list by field.
                   schema:
                     type: string
             responses:
@@ -565,8 +616,13 @@ paths:
             parameters:
                 - name: product_name
                   in: path
-                  description: Name of the product associated with the pipelines to be listed.
+                  description: To list the product name of the repository.
                   required: true
+                  schema:
+                    type: string
+                - name: field_selector
+                  in: query
+                  description: Filter the list by field.
                   schema:
                     type: string
             responses:
@@ -673,8 +729,13 @@ paths:
             parameters:
                 - name: product_name
                   in: path
-                  description: The name of the product the projects belong to.
+                  description: To list the product name of the repository.
                   required: true
+                  schema:
+                    type: string
+                - name: field_selector
+                  in: query
+                  description: Filter the list by field.
                   schema:
                     type: string
             responses:
@@ -781,7 +842,43 @@ components:
                 message:
                     type: string
                     description: msg specifies the message of the delete response.
-            description: Represents a response to a DeleteRequest message.
+            description: DeleteReply represents a response to a delete request.
+        api.cluster.v1.GetReply:
+            type: object
+            properties:
+                name:
+                    type: string
+                    description: name is the name of the cluster.
+                cluster_kind:
+                    type: string
+                    description: cluster_kind is the kind of the cluster.
+                cluster_type:
+                    type: string
+                    description: cluster_type is the type of the cluster.
+                usage:
+                    type: string
+                    description: usage is the usage of the cluster.
+                host_cluster:
+                    type: string
+                    description: host_cluster specifies the host cluster name if the cluster is a virtual cluster.
+                primary_domain:
+                    type: string
+                    description: primary_domain is used to build the domain of components within the cluster.
+                worker_type:
+                    type: string
+                    description: worker_type maybe pipeline or deployment, when the cluster usage is 'worker', the WorkType is required.
+                api_server:
+                    type: string
+                    description: api_server specifies the API server address of the cluster.
+            description: GetReply represents a response to a get request.
+        api.cluster.v1.ListsReply:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/api.cluster.v1.GetReply'
+            description: ListsReply represents a response to a list request.
         api.cluster.v1.SaveReply:
             type: object
             properties:
@@ -794,22 +891,22 @@ components:
             properties:
                 api_server:
                     type: string
-                    description: apiServer specifies the API server address of the cluster.
+                    description: api_server specifies the API server address of the cluster.
                 cluster_kind:
                     type: string
-                    description: clusterKind specifies the kind of the cluster.
+                    description: cluster_kind specifies the kind of the cluster.
                 cluster_type:
                     type: string
-                    description: clusterType specifies the type of the cluster. It can be "physical" or "virtual".
+                    description: cluster_type specifies the type of the cluster. It can be "physical" or "virtual".
                 usage:
                     type: string
                     description: usage specifies the usage of the cluster. It can be "host" or "worker".
                 host_cluster:
                     type: string
-                    description: hostCluster specifies the host cluster name if the cluster is a virtual cluster.
+                    description: host_cluster specifies the host cluster name if the cluster is a virtual cluster.
                 argocd_host:
                     type: string
-                    description: argocdHost specifies the ArgoCD host name.
+                    description: argocd_host specifies the ArgoCD host name.
                 vcluster:
                     $ref: '#/components/schemas/api.cluster.v1.Vcluster'
                 traefik:
@@ -819,13 +916,13 @@ components:
                     description: kubeconfig specifies the Kubeconfig file of the cluster.
                 worker_type:
                     type: string
-                    description: pipeline or deployment, when the cluster usage is 'worker', the WorkType is required.
+                    description: worker_type maybe pipeline or deployment, when the cluster usage is 'worker', the WorkType is required.
                 primary_domain:
                     type: string
-                    description: PrimaryDomain is used to build the domain of components within the cluster.
+                    description: primary_domain is used to build the domain of components within the cluster.
                 tekton_host:
                     type: string
-                    description: TektonHost is the domain for the tekton dashboard, and it must be a subdomain of the PrimaryDomain
+                    description: tekton_host is the domain for the tekton dashboard, and it must be a subdomain of the PrimaryDomain
             description: Body represents the body of the save request.
         api.cluster.v1.Traefik:
             type: object

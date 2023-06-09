@@ -424,7 +424,7 @@ var _ = Describe("Delete cluster", func() {
 		defer deleteFileIfExists(clusterFilePath)
 
 		client := kubernetes.NewMockClient(ctl)
-		client.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		client.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 		codeRepo := NewMockCodeRepo(ctl)
 		codeRepo.EXPECT().GetCurrentUser(gomock.Any()).Return(_GitUser, _GitEmail, nil).AnyTimes()
@@ -458,7 +458,7 @@ var _ = Describe("Delete cluster", func() {
 		createFileIfNotExist(clusterFilePath)
 		defer deleteFileIfExists(clusterFilePath)
 		client := kubernetes.NewMockClient(ctl)
-		client.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		client.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 		codeRepo := NewMockCodeRepo(ctl)
 		codeRepo.EXPECT().GetCurrentUser(gomock.Any()).Return(_GitUser, _GitEmail, nil).AnyTimes()

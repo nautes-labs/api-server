@@ -25,23 +25,23 @@ import "validate/validate.proto";
 service CodeRepo {
   rpc GetCodeRepo (GetRequest) returns (GetReply) {
     option (google.api.http) = {
-      get: "/api/v1/products/{productName}/coderepos/{coderepoName}"
+      get: "/api/v1/products/{product_name}/coderepos/{coderepoName}"
     };
   }
   rpc ListCodeRepos (ListsRequest) returns (ListsReply) {
     option (google.api.http) = {
-      get: "/api/v1/products/{productName}/coderepos"
+      get: "/api/v1/products/{product_name}/coderepos"
     };
   }
   rpc SaveCodeRepo (SaveRequest) returns (SaveReply) {
     option (google.api.http) = {
-      post: "/api/v1/products/{productName}/coderepos/{coderepoName}"
+      post: "/api/v1/products/{product_name}/coderepos/{coderepoName}"
       body: "body"
     };
   }
   rpc DeleteCodeRepo (DeleteRequest) returns (DeleteReply) {
     option (google.api.http) = {
-      delete: "/api/v1/products/{productName}/coderepos/{coderepoName}"
+      delete: "/api/v1/products/{product_name}/coderepos/{coderepoName}"
     };
   }
 }
@@ -49,8 +49,10 @@ service CodeRepo {
 
 // Request message for listing items
 message ListsRequest {
-  // The name of the product to list repositories for
-  string productName = 1 [json_name = "product_name"];
+  // To list the product name of the repository.
+  string product_name = 1 [json_name = "product_name"];
+  // Filter the list by field.
+  string field_selector = 2 [json_name = "field_selector"];
 }
 
 // Message representing a webhook
@@ -127,9 +129,9 @@ message Git {
   Github github = 2 [json_name = "github"]; // The Github field.
 }
 
-// Define the GetRequest message, which includes the productName and coderepoName fields.
+// Define the GetRequest message, which includes the product_name and coderepoName fields.
 message GetRequest {
-  string productName = 1 [json_name = "product_name"]; // The productName field.
+  string product_name = 1 [json_name = "product_name"]; // The product_name field.
   string coderepoName = 2 [json_name = "coderepo_name"]; // The coderepoName field.
 }
 
@@ -149,7 +151,7 @@ message ListsReply {
   repeated GetReply items = 1; 
 }
 
-// Define the SaveRequest message, which includes the productName, coderepoName, insecureSkipCheck, and Body fields.
+// Define the SaveRequest message, which includes the product_name, coderepoName, insecureSkipCheck, and Body fields.
 message SaveRequest { 
   message Body {
     string project = 1 [json_name = "project"]; 
@@ -159,7 +161,7 @@ message SaveRequest {
     // You must fill in the parameters related to gitlab or github
     Git git = 5 [json_name = "git", (validate.rules).message.required = true]; 
   }
-  string productName = 1 [json_name = "product_name"]; 
+  string product_name = 1 [json_name = "product_name"]; 
   string coderepoName = 2 [json_name = "coderepo_name"]; 
   bool insecureSkipCheck = 3 [json_name = "insecure_skip_check"]; 
   Body body = 4; 
@@ -173,7 +175,7 @@ message SaveReply {
 
 // Represents a request to delete a codeRepo manifest.
 message DeleteRequest {
-  string productName = 1 [json_name = "product_name"];
+  string product_name = 1 [json_name = "product_name"];
   string coderepoName = 2 [json_name = "coderepo_name"];
   bool insecureSkipCheck = 3 [json_name = "insecure_skip_check"];  
 }

@@ -22,6 +22,12 @@ import (
 	"github.com/nautes-labs/api-server/pkg/nodestree"
 )
 
+const (
+	_TestProject            = "project1"
+	_TestEnvenvironmentName = "env1"
+	_TestCodeRepoName       = "repo-1222"
+)
+
 type BizFunc func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient)
 type CompareFunc func(options nodestree.CompareOptions, nodestree *nodestree.MockNodesTree)
 
@@ -33,7 +39,6 @@ type GetRequestTestCases interface {
 
 type ListRequestTestCases interface {
 	ListResourceSuccess(nodes nodestree.Node, fn BizFunc) interface{}
-	ListResourceNotMatch(nodes nodestree.Node, fn BizFunc) interface{}
 }
 
 type SaveRequestTestCases interface {
@@ -94,7 +99,6 @@ func (t *testBiz) GetResourceSuccess(nodes nodestree.Node, node *nodestree.Node,
 
 		secretRepo := NewMockSecretrepo(ctl)
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, nil, gitRepo, nodestree, nautesConfigs)
-		nodestree.EXPECT().Compare(gomock.Any()).Return(nil)
 
 		fn(codeRepo, secretRepo, resourcesUsecase, nodestree, gitRepo, nil)
 	}
@@ -115,7 +119,6 @@ func (t *testBiz) GetResourceFail(fn BizFunc) interface{} {
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, nil, gitRepo, nodestree, nautesConfigs)
 
 		nodestree.EXPECT().Load(gomock.Eq(localRepositoryPath)).Return(emptyNodes, nil)
-		nodestree.EXPECT().Compare(gomock.Any()).Return(nil)
 		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		nodestree.EXPECT().FilterIgnoreByLayout(localRepositoryPath).Return(nil)
 
@@ -136,7 +139,6 @@ func (t *testBiz) GetResourceNoMatch(fn BizFunc) interface{} {
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any()).AnyTimes()
 		nodestree.EXPECT().Load(gomock.Eq(localRepositoryPath)).Return(emptyNodes, nil)
-		nodestree.EXPECT().Compare(gomock.Any()).Return(nil)
 		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		nodestree.EXPECT().FilterIgnoreByLayout(localRepositoryPath).Return(nil)
 
@@ -159,7 +161,6 @@ func (t *testBiz) ListResourceSuccess(nodes nodestree.Node, fn BizFunc) interfac
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any()).AnyTimes()
 		nodestree.EXPECT().Load(gomock.Eq(localRepositoryPath)).Return(nodes, nil).AnyTimes()
-		nodestree.EXPECT().Compare(gomock.Any()).Return(nil)
 		nodestree.EXPECT().FilterIgnoreByLayout(localRepositoryPath).Return(nil)
 
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, nil, gitRepo, nodestree, nautesConfigs)
@@ -181,7 +182,6 @@ func (t *testBiz) ListResourceNotMatch(nodes nodestree.Node, fn BizFunc) interfa
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any()).AnyTimes()
 		nodestree.EXPECT().Load(gomock.Eq(localRepositoryPath)).Return(nodes, nil).AnyTimes()
-		nodestree.EXPECT().Compare(gomock.Any()).Return(ErrorResourceNoMatch)
 		nodestree.EXPECT().FilterIgnoreByLayout(localRepositoryPath).Return(nil)
 
 		resourcesUsecase := NewResourcesUsecase(logger, codeRepo, nil, gitRepo, nodestree, nautesConfigs)
@@ -292,7 +292,7 @@ func (t *testBiz) UpdateResourceAndAutoMerge(nodes nodestree.Node, node *nodestr
 		gitRepo.EXPECT().Fetch(gomock.Any(), gomock.Any()).Return("any", nil).After(fetchRemoteOrigin)
 		gitRepo.EXPECT().Diff(gomock.Any(), gomock.Any(), "main", "remotes/origin/main").Return("any", nil)
 		gitRepo.EXPECT().Merge(gomock.Any(), localRepositoryPath).Return("any", nil)
-		gitRepo.EXPECT().Commit(localRepositoryPath, gomock.Any())
+		gitRepo.EXPECT().Commit(gomock.Any(), localRepositoryPath)
 		gitRepo.EXPECT().Push(gomock.Any(), localRepositoryPath).Return(nil)
 
 		nodestree := nodestree.NewMockNodesTree(ctl)
@@ -324,7 +324,7 @@ func (t *testBiz) MergeConflictFail(nodes nodestree.Node, node *nodestree.Node, 
 		gitRepo.EXPECT().Fetch(gomock.Any(), gomock.Any()).Return("any", nil).After(fetchRemoteOrigin)
 		gitRepo.EXPECT().Diff(gomock.Any(), gomock.Any(), "main", "remotes/origin/main").Return("any", nil)
 		gitRepo.EXPECT().Merge(gomock.Any(), localRepositoryPath).Return("", fmt.Errorf("unabled to auto merge"))
-		gitRepo.EXPECT().Commit(localRepositoryPath, gomock.Any())
+		gitRepo.EXPECT().Commit(gomock.Any(), localRepositoryPath)
 
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any()).AnyTimes()
@@ -401,7 +401,7 @@ func (t *testBiz) CreateResourceAndAutoRetry(nodes nodestree.Node, fn BizFunc) i
 		gitRepo.EXPECT().Diff(gomock.Any(), gomock.Any(), "main", "remotes/origin/main").Return("any", nil).AnyTimes()
 		gitRepo.EXPECT().Merge(gomock.Any(), localRepositoryPath).Return("successfully auto merge", nil).AnyTimes()
 		gitRepo.EXPECT().Push(gomock.Any(), gomock.Any()).Return(fmt.Errorf("unable to push code")).AnyTimes()
-		gitRepo.EXPECT().Commit(localRepositoryPath, gomock.Any()).AnyTimes()
+		gitRepo.EXPECT().Commit(gomock.Any(), localRepositoryPath).AnyTimes()
 
 		nodestree := nodestree.NewMockNodesTree(ctl)
 		nodestree.EXPECT().AppendOperators(gomock.Any()).AnyTimes()
@@ -488,7 +488,7 @@ func (t *testBiz) DeleteResourceSuccess(nodes nodestree.Node, node *nodestree.No
 
 		nodestree.EXPECT().Load(gomock.Eq(localRepositoryPath)).Return(nodes, nil).AnyTimes()
 		nodestree.EXPECT().Compare(gomock.Any()).Return(nil).AnyTimes()
-		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Any(), gomock.Any()).Return(node)
+		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Any(), gomock.Any()).Return(node).AnyTimes()
 		nodestree.EXPECT().RemoveNode(gomock.Any(), node).Return(&emptyNodes, nil)
 		nodestree.EXPECT().FilterIgnoreByLayout(localRepositoryPath).Return(nil).AnyTimes()
 
@@ -538,7 +538,7 @@ func (t *testBiz) DeleteResourceErrorLayout(nodes nodestree.Node, node *nodestre
 		nodestree.EXPECT().AppendOperators(gomock.Any()).AnyTimes()
 		nodestree.EXPECT().Load(gomock.Eq(localRepositoryPath)).Return(nodes, nil).AnyTimes()
 		nodestree.EXPECT().Compare(gomock.Any()).Return(ErrorResourceNoMatch)
-		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Any(), gomock.Any()).Return(node)
+		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Any(), gomock.Any()).Return(node).AnyTimes()
 		nodestree.EXPECT().RemoveNode(gomock.Any(), node).Return(&emptyNodes, nil)
 		nodestree.EXPECT().FilterIgnoreByLayout(localRepositoryPath).Return(nil)
 

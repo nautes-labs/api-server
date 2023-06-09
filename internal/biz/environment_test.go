@@ -31,23 +31,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var (
-	clusterName = "deployment-test"
-	envType     = "host"
+const (
+	_TestDeploymentClusterName = "deployment-test"
+	_TestPipelineClusterName   = "pipeline-test"
+	_TestClusterHostEnvType    = "host"
+	_TestClusterWorkerEnvType  = "worker"
 )
 
-func createEnvironmentResource(name string) *resourcev1alpha1.Environment {
+func createEnvironmentResource(name, _TestClusterHostEnvType, _TestDeploymentClusterName string) *resourcev1alpha1.Environment {
 	return &resourcev1alpha1.Environment{
 		TypeMeta: v1.TypeMeta{
-			Kind: nodestree.Enviroment,
+			Kind: nodestree.Environment,
 		},
 		ObjectMeta: v1.ObjectMeta{
 			Name: name,
 		},
 		Spec: resourcev1alpha1.EnvironmentSpec{
 			Product: defaultProductId,
-			Cluster: clusterName,
-			EnvType: envType,
+			Cluster: _TestDeploymentClusterName,
+			EnvType: _TestClusterHostEnvType,
 		},
 	}
 }
@@ -55,7 +57,7 @@ func createEnvironmentResource(name string) *resourcev1alpha1.Environment {
 func createEnvironmentNode(resource *resourcev1alpha1.Environment) *nodestree.Node {
 	return &nodestree.Node{
 		Name:    resource.Name,
-		Kind:    nodestree.Enviroment,
+		Kind:    nodestree.Environment,
 		Path:    fmt.Sprintf("%s/%s/%s.yaml", localRepositoryPath, _EnvSubDir, resource.Name),
 		Level:   3,
 		Content: resource,
@@ -85,7 +87,7 @@ func createContainEnvironmentNodes(node *nodestree.Node) nodestree.Node {
 var _ = Describe("Get environment", func() {
 	var (
 		resourceName = "env1"
-		fakeResource = createEnvironmentResource(resourceName)
+		fakeResource = createEnvironmentResource(resourceName, _TestClusterHostEnvType, _TestDeploymentClusterName)
 		fakeNode     = createEnvironmentNode(fakeResource)
 		fakeNodes    = createContainEnvironmentNodes(fakeNode)
 	)
@@ -109,33 +111,25 @@ var _ = Describe("Get environment", func() {
 var _ = Describe("List enviroments", func() {
 	var (
 		resourceName = "env1"
-		fakeResource = createEnvironmentResource(resourceName)
+		fakeResource = createEnvironmentResource(resourceName, _TestClusterHostEnvType, _TestDeploymentClusterName)
 		fakeNode     = createEnvironmentNode(fakeResource)
 		fakeNodes    = createContainEnvironmentNodes(fakeNode)
 	)
 	It("will list successfully", testUseCase.ListResourceSuccess(fakeNodes, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		id, _ := utilstrings.ExtractNumber("product-", fakeResource.Spec.Product)
-		codeRepo.EXPECT().GetGroup(gomock.Any(), id).Return(defaultProductGroup, nil)
 
 		biz := NewEnviromentUsecase(logger, nautesConfigs, codeRepo, nodestree, resourceUseCase)
 		results, err := biz.ListEnvironments(ctx, defaultGroupName)
 		Expect(err).ShouldNot(HaveOccurred())
 		for _, result := range results {
-			Expect(result).Should(Equal(fakeResource))
+			Expect(result).Should(Equal(fakeNode))
 		}
-	}))
-
-	It("does not conform to the template layout", testUseCase.ListResourceNotMatch(fakeNodes, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		biz := NewEnviromentUsecase(logger, nautesConfigs, codeRepo, nodestree, resourceUseCase)
-		_, err := biz.ListEnvironments(ctx, defaultGroupName)
-		Expect(err).Should(HaveOccurred())
 	}))
 })
 
 var _ = Describe("Save environment", func() {
 	var (
 		resourceName   = "env1"
-		fakeResource   = createEnvironmentResource(resourceName)
+		fakeResource   = createEnvironmentResource(resourceName, _TestClusterHostEnvType, _TestDeploymentClusterName)
 		fakeNode       = createEnvironmentNode(fakeResource)
 		fakeNodes      = createContainEnvironmentNodes(fakeNode)
 		enviromentData = &EnviromentData{
@@ -143,7 +137,7 @@ var _ = Describe("Save environment", func() {
 			Spec: resourcev1alpha1.EnvironmentSpec{
 				Product: defaultGroupName,
 				Cluster: "test-cluster",
-				EnvType: envType,
+				EnvType: _TestClusterHostEnvType,
 			},
 		}
 		bizOptions = &BizOptions{
@@ -239,7 +233,7 @@ var _ = Describe("Save environment", func() {
 var _ = Describe("Delete environment", func() {
 	var (
 		resourceName = "env1"
-		fakeResource = createEnvironmentResource(resourceName)
+		fakeResource = createEnvironmentResource(resourceName, _TestClusterHostEnvType, _TestDeploymentClusterName)
 		fakeNode     = createEnvironmentNode(fakeResource)
 		fakeNodes    = createContainEnvironmentNodes(fakeNode)
 		bizOptions   = &BizOptions{

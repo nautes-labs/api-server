@@ -20,8 +20,24 @@ import (
 
 	deploymentruntimev1 "github.com/nautes-labs/api-server/api/deploymentruntime/v1"
 	"github.com/nautes-labs/api-server/internal/biz"
+	"github.com/nautes-labs/api-server/pkg/nodestree"
+	"github.com/nautes-labs/api-server/pkg/selector"
 	"github.com/nautes-labs/pkg/api/v1alpha1"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
+)
+
+var (
+	deploymentRuntimeFilterFieldRules = map[string]map[string]selector.FieldSelector{
+		FieldProjectsRef: {
+			selector.EqualOperator: selector.NewStringSelector(_ProjectsRef, selector.In),
+		},
+		FeldManifestSourceCodeRepo: {
+			selector.EqualOperator: selector.NewStringSelector(_ManifestSource, selector.In),
+		},
+		FieldDestination: {
+			selector.EqualOperator: selector.NewStringSelector(_Destination, selector.In),
+		},
+	}
 )
 
 type DeploymentruntimeService struct {
@@ -33,7 +49,7 @@ func NewDeploymentruntimeService(deploymentRuntime *biz.DeploymentRuntimeUsecase
 	return &DeploymentruntimeService{deploymentRuntime: deploymentRuntime}
 }
 
-func (s *DeploymentruntimeService) CovertCodeRepoValueToReply(runtime *resourcev1alpha1.DeploymentRuntime) *deploymentruntimev1.GetReply {
+func (s *DeploymentruntimeService) CovertDeploymentRuntimeValueToReply(runtime *resourcev1alpha1.DeploymentRuntime) *deploymentruntimev1.GetReply {
 	return &deploymentruntimev1.GetReply{
 		Product:     runtime.Spec.Product,
 		Name:        runtime.Name,
@@ -53,18 +69,37 @@ func (s *DeploymentruntimeService) GetDeploymentRuntime(ctx context.Context, req
 		return nil, err
 	}
 
-	return s.CovertCodeRepoValueToReply(runtime), nil
+	return s.CovertDeploymentRuntimeValueToReply(runtime), nil
 }
 
 func (s *DeploymentruntimeService) ListDeploymentRuntimes(ctx context.Context, req *deploymentruntimev1.ListsRequest) (*deploymentruntimev1.ListsReply, error) {
-	runtimes, err := s.deploymentRuntime.ListDeploymentRuntimes(ctx, req.ProductName)
+	nodes, err := s.deploymentRuntime.ListDeploymentRuntimes(ctx, req.ProductName)
 	if err != nil {
 		return nil, err
 	}
 
 	var items []*deploymentruntimev1.GetReply
-	for _, runtime := range runtimes {
-		items = append(items, s.CovertCodeRepoValueToReply(runtime))
+	for _, node := range nodes {
+		runtime, ok := node.Content.(*resourcev1alpha1.DeploymentRuntime)
+		if !ok {
+			continue
+		}
+
+		err := s.deploymentRuntime.ConvertRuntime(ctx, runtime)
+		if err != nil {
+			return nil, err
+		}
+		node.Content = runtime
+
+		passed, err := selector.Match(req.FieldSelector, node.Content, deploymentRuntimeFilterFieldRules)
+		if err != nil {
+			return nil, err
+		}
+		if !passed {
+			continue
+		}
+
+		items = append(items, s.CovertDeploymentRuntimeValueToReply(runtime))
 	}
 
 	return &deploymentruntimev1.ListsReply{
@@ -73,6 +108,8 @@ func (s *DeploymentruntimeService) ListDeploymentRuntimes(ctx context.Context, r
 }
 
 func (s *DeploymentruntimeService) SaveDeploymentRuntime(ctx context.Context, req *deploymentruntimev1.SaveRequest) (*deploymentruntimev1.SaveReply, error) {
+	ctx = biz.SetResourceContext(ctx, req.ProductName, biz.SaveMethod, "", "", nodestree.DeploymentRuntime, req.DeploymentruntimeName)
+
 	data := &biz.DeploymentRuntimeData{
 		Name: req.DeploymentruntimeName,
 		Spec: v1alpha1.DeploymentRuntimeSpec{
@@ -102,6 +139,8 @@ func (s *DeploymentruntimeService) SaveDeploymentRuntime(ctx context.Context, re
 }
 
 func (s *DeploymentruntimeService) DeleteDeploymentRuntime(ctx context.Context, req *deploymentruntimev1.DeleteRequest) (*deploymentruntimev1.DeleteReply, error) {
+	ctx = biz.SetResourceContext(ctx, req.ProductName, biz.DeleteMethod, "", "", nodestree.DeploymentRuntime, req.DeploymentruntimeName)
+
 	options := &biz.BizOptions{
 		ResouceName:       req.DeploymentruntimeName,
 		ProductName:       req.ProductName,

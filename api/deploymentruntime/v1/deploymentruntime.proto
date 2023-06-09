@@ -80,8 +80,10 @@ message GetReply {
 
 // ListsRequest is a message for retrieving a list of Deployment Runtimes.
 message ListsRequest {
-    // ProductName is the name of the product.
-    string productName = 1 [json_name = "product_name"];
+  // To list the product name of the repository.
+  string productName = 1 [json_name = "product_name"];
+  // Filter the list by field.
+  string field_selector = 2 [json_name = "field_selector"];
 }
 
 // ListsReply is a message that returns a list of Deployment Runtimes.

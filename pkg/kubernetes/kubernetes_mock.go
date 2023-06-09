@@ -428,6 +428,22 @@ func (mr *MockClientMockRecorder) DeleteAllOf(ctx, obj interface{}, opts ...inte
 // Get mocks base method.
 func (m *MockClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 	m.ctrl.T.Helper()
+
+	// test cases mock data for deployemnt runtime
+	if key.Name == "deployment-test" {
+		cluster, _ := obj.(*resourcev1alpha1.Cluster)
+		cluster.Spec.Usage = resourcev1alpha1.CLUSTER_USAGE_WORKER
+		cluster.Spec.WorkerType = resourcev1alpha1.ClusterWorkTypeDeployment
+		obj = cluster
+	}
+
+	if key.Name == "pipeline-test" {
+		cluster, _ := obj.(*resourcev1alpha1.Cluster)
+		cluster.Spec.Usage = resourcev1alpha1.CLUSTER_USAGE_WORKER
+		cluster.Spec.WorkerType = resourcev1alpha1.ClusterWorkTypePipeline
+		obj = cluster
+	}
+
 	ret := m.ctrl.Call(m, "Get", ctx, key, obj)
 	ret0, _ := ret[0].(error)
 	return ret0
