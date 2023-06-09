@@ -116,7 +116,7 @@ func main() {
 
 	clusteroperator := cluster.NewClusterRegistration()
 
-	app, cleanup, err := wireApp(bc.Server, bc.Data, logger, nodesTree, globalconfigs, client, clusteroperator)
+	app, cleanup, err := wireApp(bc.Server, logger, nodesTree, globalconfigs, client, clusteroperator)
 	if err != nil {
 		panic(err)
 	}
