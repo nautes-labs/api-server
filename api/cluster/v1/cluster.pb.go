@@ -311,6 +311,11 @@ type ListsRequest struct {
 	unknownFields protoimpl.UnknownFields
 
 	// Filter the list by field.
+	// eg: field_selector=cluster_type=physical,usage=worker,worker_type=pipeline
+	// Field Support:
+	// cluster_type: exact match
+	// usage: exact match
+	// worker_type: exact match
 	FieldSelector string `protobuf:"bytes,1,opt,name=field_selector,proto3" json:"field_selector,omitempty"`
 }
 

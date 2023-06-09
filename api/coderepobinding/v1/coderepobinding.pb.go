@@ -45,6 +45,11 @@ type ListsRequest struct {
 	// To list the product name of the repository.
 	ProductName string `protobuf:"bytes,1,opt,name=product_name,proto3" json:"product_name,omitempty"`
 	// Filter the list by field.
+	// eg: field_selector=projects.in=project1,product=product1,coderepo=coderepo1
+	// Field Support:
+	// coderepo: fuzzy match
+	// product fuzzy match
+	// projects: fuzzy match
 	FieldSelector string `protobuf:"bytes,2,opt,name=field_selector,proto3" json:"field_selector,omitempty"`
 }
 

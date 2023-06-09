@@ -83,6 +83,11 @@ message ListsRequest {
   // To list the product name of the repository.
   string productName = 1 [json_name = "product_name"];
   // Filter the list by field.
+  // eg: field_selector=projects_ref.in=project1,manifestSource.codeRepo=codeRepo1,destination=env1
+  // Field Support:
+  // projects_ref: fuzzy match 
+  // manifestSource.codeRepo: fuzzy match
+  // destination: fuzzy match 
   string field_selector = 2 [json_name = "field_selector"];
 }
 

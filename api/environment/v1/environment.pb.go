@@ -179,6 +179,10 @@ type ListsRequest struct {
 	// To list the product name of the repository.
 	ProductName string `protobuf:"bytes,1,opt,name=product_name,proto3" json:"product_name,omitempty"`
 	// Filter the list by field.
+	// eg: field_selector=cluster=cluster1,env_type=host
+	// Field Support:
+	// cluster: fuzzy match
+	// env_type: fuzzy match
 	FieldSelector string `protobuf:"bytes,2,opt,name=field_selector,proto3" json:"field_selector,omitempty"`
 }
 
