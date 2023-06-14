@@ -24,6 +24,7 @@ import (
 	registercluster "github.com/nautes-labs/api-server/pkg/cluster"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
 	"github.com/nautes-labs/api-server/pkg/selector"
+	utilstring "github.com/nautes-labs/api-server/util/string"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -157,6 +158,11 @@ func (s *ClusterService) DeleteCluster(ctx context.Context, req *clusterv1.Delet
 }
 
 func (s *ClusterService) Validate(req *clusterv1.SaveRequest) error {
+	ok := utilstring.CheckURL(req.Body.GetApiServer())
+	if !ok {
+		return fmt.Errorf("the apiserver %s is not an https URL", req.Body.GetApiServer())
+	}
+
 	if req.Body.Usage == string(resourcev1alpha1.CLUSTER_USAGE_WORKER) &&
 		req.Body.ClusterType == string(resourcev1alpha1.CLUSTER_TYPE_VIRTUAL) &&
 		req.Body.HostCluster == "" {
@@ -165,7 +171,7 @@ func (s *ClusterService) Validate(req *clusterv1.SaveRequest) error {
 
 	if req.Body.Usage == string(resourcev1alpha1.CLUSTER_USAGE_WORKER) &&
 		req.Body.WorkerType == "" {
-		return fmt.Errorf("when the cluster usage is 'worker', the 'WorkerType' is required")
+		return fmt.Errorf("when the cluster usage is 'worker', the 'WorkerType' field is required")
 	}
 
 	if req.Body.ClusterType == string(resourcev1alpha1.CLUSTER_TYPE_PHYSICAL) &&
