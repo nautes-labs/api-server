@@ -19,7 +19,7 @@ import (
 	"path/filepath"
 
 	utilstring "github.com/nautes-labs/api-server/util/string"
-	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
+	// nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 )
 
 const (
@@ -33,15 +33,7 @@ var (
 	github               = "github"
 )
 
-func init() {
-	configs, err := nautesconfigs.NewConfigInstanceForK8s("nautes", "nautes-configs", "")
-	if err == nil {
-		tenantAdminNamespace = configs.Nautes.Namespace
-		gitType = string(configs.Git.GitType)
-	}
-}
-
-//CheckResouceReference Detect resource references
+// CheckResouceReference Detect resource references
 func CheckResouceReference(options CompareOptions, in *nodesTree) error {
 	mapping := make(map[string]*Node)
 	NodesToMapping(&options.Nodes, mapping)
