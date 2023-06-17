@@ -179,17 +179,13 @@ func (c *CodeRepoUsecase) SaveCodeRepo(ctx context.Context, options *BizOptions,
 		return err
 	}
 
-	projectReadWriteDeployKey, err := c.saveDeployKey(ctx, pid, true)
+	_, err = c.saveDeployKey(ctx, pid, true)
 	if err != nil {
 		return err
 	}
 
-	projectReadOnlyDeployKey, err := c.saveDeployKey(ctx, pid, false)
+	_, err = c.saveDeployKey(ctx, pid, false)
 	if err != nil {
-		return err
-	}
-
-	if err := c.removeInvalidDeploykey(ctx, pid, projectReadWriteDeployKey, projectReadOnlyDeployKey); err != nil {
 		return err
 	}
 
