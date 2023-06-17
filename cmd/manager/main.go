@@ -38,6 +38,8 @@ import (
 	cluster "github.com/nautes-labs/api-server/pkg/cluster"
 	"github.com/nautes-labs/pkg/pkg/log/zap"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // go build -ldflags "-X main.Version=x.y.z"
@@ -48,12 +50,18 @@ var (
 	Version string
 	// flagconf is the config flag.
 	flagconf string
+	// global config
+	globalConfigNamespace string
+	globalConfigName      string
 
 	id, _ = os.Hostname()
 )
 
 func init() {
 	flag.StringVar(&flagconf, "conf", "../../configs", "config path, eg: -conf config.yaml")
+	flag.StringVar(&globalConfigName, "global-config-name", "nautes-configs", "The resources name of global config.")
+	flag.StringVar(&globalConfigNamespace, "global-config-namespace", "nautes", "The namespace of global config in.")
+
 }
 
 func newApp(logger log.Logger, gs *grpc.Server, hs *http.Server) *kratos.App {
@@ -125,7 +133,7 @@ func main() {
 
 	nodesTree := nodestree.NewNodestree(fileOptions, resources_layout, client)
 
-	globalconfigs, err := nautesconfigs.NewConfigInstanceForK8s("nautes", "nautes-configs", "")
+	globalconfigs, err := GetNautesConfigs(client, globalConfigNamespace, globalConfigName)
 	if err != nil {
 		panic(err)
 	}
@@ -143,4 +151,16 @@ func main() {
 	if err := app.Run(); err != nil {
 		panic(err)
 	}
+}
+
+func GetNautesConfigs(c client.Client, namespace, name string) (nautesConfigs *nautesconfigs.Config, err error) {
+	config := nautesconfigs.NautesConfigs{
+		Namespace: namespace,
+		Name:      name,
+	}
+	nautesConfigs, err = config.GetConfigByClient(c)
+	if err != nil {
+		return
+	}
+	return
 }
