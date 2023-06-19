@@ -16,6 +16,7 @@ package service
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 
 	clusterv1 "github.com/nautes-labs/api-server/api/cluster/v1"
@@ -136,7 +137,12 @@ func (s *ClusterService) SaveCluster(ctx context.Context, req *clusterv1.SaveReq
 		Vcluster:   vcluster,
 	}
 
-	if err := s.cluster.SaveCluster(ctx, param, req.Body.Kubeconfig); err != nil {
+	kubeconfig, err := convertKubeconfig(req.Body.Kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.cluster.SaveCluster(ctx, param, kubeconfig); err != nil {
 		return nil, err
 	}
 
@@ -155,6 +161,33 @@ func (s *ClusterService) DeleteCluster(ctx context.Context, req *clusterv1.Delet
 	return &clusterv1.DeleteReply{
 		Msg: fmt.Sprintf("Successfully deleted %s cluster", req.ClusterName),
 	}, nil
+}
+
+func convertKubeconfig(kubeconfig string) (string, error) {
+	if needsBase64Decoding(kubeconfig) {
+		decoded, err := base64.StdEncoding.DecodeString(kubeconfig)
+		if err != nil {
+			return "", fmt.Errorf("failed to decode kubeconfig: %v", err)
+		}
+
+		return string(decoded), nil
+	}
+
+	return kubeconfig, nil
+}
+
+func needsBase64Decoding(str string) bool {
+	if len(str)%4 != 0 {
+		return false
+	}
+
+	for _, ch := range str {
+		if !((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '+' || ch == '/' || ch == '=') {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (s *ClusterService) Validate(req *clusterv1.SaveRequest) error {
