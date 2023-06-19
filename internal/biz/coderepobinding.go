@@ -328,7 +328,6 @@ func (c *CodeRepoBindingUsecase) AuthorizeForSameProjectRepo(ctx context.Context
 	tmpSecretDeploykeyMap := make(map[string]*DeployKeySecretData, 0)
 	codeRepoNodes := nodestree.ListsResourceNodes(nodes, nodestree.CodeRepo)
 	tmpCodeRepos := make([]*resourcev1alpha1.CodeRepo, 0)
-	key := ""
 
 	for _, codeRepoNode := range codeRepoNodes {
 		codeRepo, ok := codeRepoNode.Content.(*resourcev1alpha1.CodeRepo)
@@ -347,6 +346,26 @@ func (c *CodeRepoBindingUsecase) AuthorizeForSameProjectRepo(ctx context.Context
 				continue
 			}
 
+			roDeployKey1Info, err := c.getDeployKey(ctx, repo1, projectDeploykeysMap, tmpSecretDeploykeyMap, ReadOnly)
+			if err != nil {
+				return err
+			}
+
+			rwDeployKey1Info, err := c.getDeployKey(ctx, repo1, projectDeploykeysMap, tmpSecretDeploykeyMap, ReadWrite)
+			if err != nil {
+				return err
+			}
+
+			roDeployKey2Info, err := c.getDeployKey(ctx, repo2, projectDeploykeysMap, tmpSecretDeploykeyMap, ReadOnly)
+			if err != nil {
+				return err
+			}
+
+			rwDeployKey2Info, err := c.getDeployKey(ctx, repo2, projectDeploykeysMap, tmpSecretDeploykeyMap, ReadWrite)
+			if err != nil {
+				return err
+			}
+
 			pid1, err := utilstrings.ExtractNumber(RepoPrefix, repo1.Name)
 			if err != nil {
 				return err
@@ -356,136 +375,78 @@ func (c *CodeRepoBindingUsecase) AuthorizeForSameProjectRepo(ctx context.Context
 				return err
 			}
 
-			key = fmt.Sprintf("%s-%s", repo1.Name, ReadOnly)
-			roDeployKey1, ok := tmpSecretDeploykeyMap[key]
-			if !ok {
-				roDeployKey1, err = c.GetDeployKeyFromSecretRepo(ctx, repo1.Name, DefaultUser, string(ReadOnly))
-				if err != nil {
-					if commonv1.IsDeploykeyNotFound(err) {
-						return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from secret repo, please check if the key under /%s/%s exists or is invalid", string(ReadOnly), c.config.Git.GitType, repo1.Name)
-					}
-					return err
-				}
-				tmpSecretDeploykeyMap[key] = roDeployKey1
+			err = c.enableProjectDeployKey(ctx, pid1, projectDeploykeysMap, roDeployKey2Info, rwDeployKey2Info)
+			if err != nil {
+				return err
 			}
 
-			key = fmt.Sprintf("%s-%s", repo2.Name, ReadWrite)
-			rwDeployKey1, ok := tmpSecretDeploykeyMap[key]
-			if !ok {
-				rwDeployKey1, err = c.GetDeployKeyFromSecretRepo(ctx, repo1.Name, DefaultUser, string(ReadWrite))
-				if err != nil {
-					if commonv1.IsDeploykeyNotFound(err) {
-						return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from secret repo, please check if the key under /%s/%s exists or is invalid", string(ReadWrite), c.config.Git.GitType, repo1.Name)
-					}
-					return err
-				}
-				tmpSecretDeploykeyMap[key] = rwDeployKey1
-			}
-
-			key = fmt.Sprintf("%s-%s", repo2.Name, ReadOnly)
-			roDeployKey2, ok := tmpSecretDeploykeyMap[key]
-			if !ok {
-				roDeployKey2, err = c.GetDeployKeyFromSecretRepo(ctx, repo2.Name, DefaultUser, string(ReadOnly))
-				if err != nil {
-					if commonv1.IsDeploykeyNotFound(err) {
-						return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from secret repo, please check if the key under /%s/%s exists or is invalid", ReadOnly, c.config.Git.GitType, repo2.Name)
-					}
-					return err
-				}
-				tmpSecretDeploykeyMap[key] = roDeployKey2
-			}
-
-			key = fmt.Sprintf("%s-%s", repo2.Name, ReadWrite)
-			rwDeployKey2, ok := tmpSecretDeploykeyMap[key]
-			if !ok {
-				rwDeployKey2, err = c.GetDeployKeyFromSecretRepo(ctx, repo2.Name, DefaultUser, string(ReadWrite))
-				if err != nil {
-					if commonv1.IsDeploykeyNotFound(err) {
-						return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from secret repo, please check if the key under /%s/%s exists or is invalid", ReadWrite, c.config.Git.GitType, repo2.Name)
-					}
-					return err
-				}
-				tmpSecretDeploykeyMap[key] = rwDeployKey2
-			}
-
-			repo1Map, ok := projectDeploykeysMap[pid1]
-			roDeployKey1Info, ok := repo1Map[roDeployKey1.ID]
-			if !ok {
-				roDeployKey1Info, err = c.codeRepo.GetDeployKey(ctx, pid1, roDeployKey1.ID)
-				if err != nil {
-					return err
-				}
-			}
-
-			rwDeployKey1Info, ok := repo1Map[rwDeployKey1.ID]
-			if !ok {
-				rwDeployKey1Info, err = c.codeRepo.GetDeployKey(ctx, pid1, rwDeployKey1.ID)
-				if err != nil {
-					return err
-				}
-			}
-
-			repo2Map, ok := projectDeploykeysMap[pid2]
-			roDeployKey2Info, ok := repo2Map[roDeployKey2.ID]
-			if !ok {
-				roDeployKey2Info, err = c.codeRepo.GetDeployKey(ctx, pid2, roDeployKey2.ID)
-				if err != nil {
-					return err
-				}
-			}
-
-			rwDeployKey2Info, ok := repo2Map[roDeployKey2.ID]
-			if !ok {
-				rwDeployKey2Info, err = c.codeRepo.GetDeployKey(ctx, pid2, roDeployKey2.ID)
-				if err != nil {
-					return err
-				}
-			}
-
-			_, ok = repo1Map[roDeployKey2Info.ID]
-			if !ok {
-				_, err = c.codeRepo.EnableProjectDeployKey(ctx, pid1, roDeployKey2Info.ID)
-				if err != nil {
-					return err
-				}
-			}
-
-			_, ok = repo1Map[rwDeployKey2Info.ID]
-			if !ok {
-				_, err = c.codeRepo.EnableProjectDeployKey(ctx, pid1, rwDeployKey2Info.ID)
-				if err != nil {
-					return err
-				}
-
-				_, err = c.codeRepo.UpdateDeployKey(ctx, pid1, rwDeployKey2Info.ID, rwDeployKey2Info.Title, true)
-				if err != nil {
-					return err
-				}
-			}
-
-			_, ok = repo2Map[roDeployKey1Info.ID]
-			if !ok {
-				_, err = c.codeRepo.EnableProjectDeployKey(ctx, pid2, roDeployKey1Info.ID)
-				if err != nil {
-					return err
-				}
-			}
-
-			_, ok = repo2Map[rwDeployKey1Info.ID]
-			if !ok {
-				_, err = c.codeRepo.EnableProjectDeployKey(ctx, pid2, rwDeployKey1Info.ID)
-				if err != nil {
-					return err
-				}
-
-				_, err = c.codeRepo.UpdateDeployKey(ctx, pid2, rwDeployKey1Info.ID, rwDeployKey1Info.Title, true)
-				if err != nil {
-					return err
-				}
+			err = c.enableProjectDeployKey(ctx, pid2, projectDeploykeysMap, roDeployKey1Info, rwDeployKey1Info)
+			if err != nil {
+				return err
 			}
 		}
 	}
 
+	return nil
+}
+
+func (c *CodeRepoBindingUsecase) getDeployKey(ctx context.Context, repo *resourcev1alpha1.CodeRepo, projectDeploykeysMap map[int]map[int]*ProjectDeployKey, tmpSecretDeploykeyMap map[string]*DeployKeySecretData, permission DeployKeyType) (*ProjectDeployKey, error) {
+	var err error
+
+	pid, err := utilstrings.ExtractNumber(RepoPrefix, repo.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	key := fmt.Sprintf("%s-%s", repo.Name, ReadOnly)
+	roDeployKey1, ok := tmpSecretDeploykeyMap[key]
+	if !ok {
+		roDeployKey1, err = c.GetDeployKeyFromSecretRepo(ctx, repo.Name, DefaultUser, string(permission))
+		if err != nil {
+			if commonv1.IsDeploykeyNotFound(err) {
+				return nil, commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from secret repo, please check if the key under /%s/%s exists or is invalid", string(ReadOnly), c.config.Git.GitType, repo.Name)
+			}
+			return nil, err
+		}
+		tmpSecretDeploykeyMap[key] = roDeployKey1
+	}
+
+	repo1Map, ok := projectDeploykeysMap[pid]
+	roDeployKeyInfo, ok := repo1Map[roDeployKey1.ID]
+	if !ok {
+		roDeployKeyInfo, err = c.codeRepo.GetDeployKey(ctx, pid, roDeployKey1.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get respoitory %s %s deploy key", repo.Name, permission)
+		}
+	}
+	return roDeployKeyInfo, nil
+}
+
+func (c *CodeRepoBindingUsecase) enableProjectDeployKey(ctx context.Context, pid int, projectDeploykeysMap map[int]map[int]*ProjectDeployKey, roDeployKey2Info *ProjectDeployKey, rwDeployKey2Info *ProjectDeployKey) error {
+	var err error
+
+	repoMap := projectDeploykeysMap[pid]
+
+	_, ok := repoMap[roDeployKey2Info.ID]
+	if !ok {
+		_, err = c.codeRepo.EnableProjectDeployKey(ctx, pid, roDeployKey2Info.ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, ok = repoMap[rwDeployKey2Info.ID]
+	if !ok {
+		_, err = c.codeRepo.EnableProjectDeployKey(ctx, pid, rwDeployKey2Info.ID)
+		if err != nil {
+			return err
+		}
+
+		_, err = c.codeRepo.UpdateDeployKey(ctx, pid, rwDeployKey2Info.ID, rwDeployKey2Info.Title, true)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
