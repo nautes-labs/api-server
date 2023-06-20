@@ -398,13 +398,13 @@ func (c *CodeRepoBindingUsecase) getDeployKey(ctx context.Context, repo *resourc
 		return nil, err
 	}
 
-	key := fmt.Sprintf("%s-%s", repo.Name, ReadOnly)
+	key := fmt.Sprintf("%s-%s", repo.Name, permission)
 	roDeployKey1, ok := tmpSecretDeploykeyMap[key]
 	if !ok {
 		roDeployKey1, err = c.GetDeployKeyFromSecretRepo(ctx, repo.Name, DefaultUser, string(permission))
 		if err != nil {
 			if commonv1.IsDeploykeyNotFound(err) {
-				return nil, commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from secret repo, please check if the key under /%s/%s exists or is invalid", string(ReadOnly), c.config.Git.GitType, repo.Name)
+				return nil, commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from secret repo, please check if the key under /%s/%s exists or is invalid", string(permission), c.config.Git.GitType, repo.Name)
 			}
 			return nil, err
 		}
