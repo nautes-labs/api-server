@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: resources-layout
-  namespace: nautes
+  namespace: system
 data:
   resources_layout.yaml: |
     level: 1
