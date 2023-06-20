@@ -60,7 +60,7 @@ var (
 func init() {
 	flag.StringVar(&flagconf, "conf", "../../configs", "config path, eg: -conf config.yaml")
 	flag.StringVar(&globalConfigName, "global-config-name", "nautes-configs", "The resources name of global config.")
-	flag.StringVar(&globalConfigNamespace, "global-config-namespace", "dr-qa", "The namespace of global config in.")
+	flag.StringVar(&globalConfigNamespace, "global-config-namespace", "nautes", "The namespace of global config in.")
 
 }
 
