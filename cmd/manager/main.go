@@ -100,6 +100,8 @@ func main() {
 		"span.id", tracing.SpanID(),
 	)
 
+	logger.Log(-1, "global-config-namespace", globalConfigNamespace, "global-config-name", globalConfigName)
+
 	c := config.New(
 		config.WithSource(
 			file.NewSource(flagconf),

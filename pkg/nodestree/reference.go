@@ -27,10 +27,9 @@ const (
 )
 
 var (
-	tenantAdminNamespace = "nautes"
-	gitType              = "gitlab"
-	gitlab               = "gitlab"
-	github               = "github"
+	gitType = "gitlab"
+	gitlab  = "gitlab"
+	github  = "github"
 )
 
 // CheckResouceReference Detect resource references
