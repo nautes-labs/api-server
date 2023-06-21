@@ -16,11 +16,17 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
 	"github.com/nautes-labs/api-server/internal/conf"
 	"github.com/nautes-labs/api-server/pkg/kubernetes"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
+
+	"net/http/pprof"
+	_ "net/http/pprof"
+
+	nethppt "net/http"
 
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/config"
@@ -32,6 +38,8 @@ import (
 	cluster "github.com/nautes-labs/api-server/pkg/cluster"
 	"github.com/nautes-labs/pkg/pkg/log/zap"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // go build -ldflags "-X main.Version=x.y.z"
@@ -42,15 +50,31 @@ var (
 	Version string
 	// flagconf is the config flag.
 	flagconf string
+	// global config
+	globalConfigNamespace string
+	globalConfigName      string
 
 	id, _ = os.Hostname()
 )
 
 func init() {
 	flag.StringVar(&flagconf, "conf", "../../configs", "config path, eg: -conf config.yaml")
+	flag.StringVar(&globalConfigName, "global-config-name", "nautes-configs", "The resources name of global config.")
+	flag.StringVar(&globalConfigNamespace, "global-config-namespace", "nautes", "The namespace of global config in.")
+
 }
 
 func newApp(logger log.Logger, gs *grpc.Server, hs *http.Server) *kratos.App {
+
+	pprofMux := nethppt.NewServeMux()
+	pprofMux.HandleFunc("/debug/pprof/", pprof.Index)
+	pprofMux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	pprofMux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	pprofMux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	pprofMux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	server := &nethppt.Server{Addr: fmt.Sprintf(":%d", 6060), Handler: pprofMux}
+	go server.ListenAndServe()
+
 	return kratos.New(
 		kratos.ID(id),
 		kratos.Name(Name),
@@ -75,6 +99,8 @@ func main() {
 		"trace.id", tracing.TraceID(),
 		"span.id", tracing.SpanID(),
 	)
+
+	logger.Log(-1, "global-config-namespace", globalConfigNamespace, "global-config-name", globalConfigName)
 
 	c := config.New(
 		config.WithSource(
@@ -109,14 +135,14 @@ func main() {
 
 	nodesTree := nodestree.NewNodestree(fileOptions, resources_layout, client)
 
-	globalconfigs, err := nautesconfigs.NewConfigInstanceForK8s("nautes", "nautes-configs", "")
+	globalconfigs, err := GetNautesConfigs(client, globalConfigNamespace, globalConfigName)
 	if err != nil {
 		panic(err)
 	}
 
 	clusteroperator := cluster.NewClusterRegistration()
 
-	app, cleanup, err := wireApp(bc.Server, bc.Data, logger, nodesTree, globalconfigs, client, clusteroperator)
+	app, cleanup, err := wireApp(bc.Server, logger, nodesTree, globalconfigs, client, clusteroperator)
 	if err != nil {
 		panic(err)
 	}
@@ -127,4 +153,16 @@ func main() {
 	if err := app.Run(); err != nil {
 		panic(err)
 	}
+}
+
+func GetNautesConfigs(c client.Client, namespace, name string) (nautesConfigs *nautesconfigs.Config, err error) {
+	config := nautesconfigs.NautesConfigs{
+		Namespace: namespace,
+		Name:      name,
+	}
+	nautesConfigs, err = config.GetConfigByClient(c)
+	if err != nil {
+		return
+	}
+	return
 }

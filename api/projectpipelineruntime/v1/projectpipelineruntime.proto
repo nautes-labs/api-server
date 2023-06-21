@@ -129,6 +129,11 @@ message ListsRequest {
   // To list the product name of the repository.
   string product_name = 1 [json_name = "product_name"];
   // Filter the list by field.
+  // eg: field_selector=project=project1,pipeline_source=pipeline_repository,destination=env1
+  // Field Support:
+  // project: fuzzy match 
+  // pipeline_source: fuzzy match
+  // destination: fuzzy match 
   string field_selector = 2 [json_name = "field_selector"];
 }
 

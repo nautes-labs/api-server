@@ -481,7 +481,7 @@ var _ = Describe("Save codeRepo", func() {
 
 var _ = Describe("Delete codeRepo", func() {
 	var (
-		resourceName   = "toDeleteCodeRepo"
+		resourceName   = "repo-1222"
 		fakeResource   = createFakeCodeRepoResource(resourceName)
 		fakeNode       = createFakeCodeRepoNode(fakeResource)
 		fakeNodes      = createFakeCcontainingCodeRepoNodes(fakeNode)
@@ -511,7 +511,7 @@ var _ = Describe("Delete codeRepo", func() {
 	})
 
 	It("will deleted successfully", testUseCase.DeleteResourceSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		codeRepo.EXPECT().ListDeployKeys(gomock.Any(), int(deletedProject.Id), gomock.Any()).Return(listDeployKeys, nil)
+		codeRepo.EXPECT().ListDeployKeys(gomock.Any(), int(deletedProject.Id), gomock.Any()).Return(listDeployKeys, nil).AnyTimes()
 		codeRepo.EXPECT().DeleteDeployKey(gomock.Any(), int(deletedProject.Id), gomock.Any()).Return(nil).AnyTimes()
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Any()).Return(deletedProject, nil).AnyTimes()
 		codeRepo.EXPECT().DeleteCodeRepo(gomock.Any(), gomock.Eq(int(deletedProject.Id))).Return(nil)

@@ -14,7 +14,7 @@ paths:
             parameters:
                 - name: field_selector
                   in: query
-                  description: Filter the list by field.
+                  description: 'Filter the list by field.  eg: field_selector=cluster_type=physical,usage=worker,worker_type=pipeline Field Support: cluster_type: exact match usage: exact match worker_type: exact match'
                   schema:
                     type: string
             responses:
@@ -182,7 +182,7 @@ paths:
                     type: string
                 - name: field_selector
                   in: query
-                  description: Filter the list by field.
+                  description: 'Filter the list by field. eg: field_selector=projects.in=project1,product=product1,coderepo=coderepo1 Field Support: coderepo: fuzzy match product fuzzy match projects: fuzzy match'
                   schema:
                     type: string
             responses:
@@ -290,7 +290,7 @@ paths:
                     type: string
                 - name: field_selector
                   in: query
-                  description: Filter the list by field.
+                  description: 'Filter the list by field. eg: field_selector=project=project1,pipeline_runtime=true,deployment_runtime=false Field Support: project: fuzzy match pipeline_runtime: exact match deployment_runtime: exact match'
                   schema:
                     type: string
             responses:
@@ -395,7 +395,7 @@ paths:
                     type: string
                 - name: field_selector
                   in: query
-                  description: Filter the list by field.
+                  description: 'Filter the list by field. eg: field_selector=projects_ref.in=project1,manifestSource.codeRepo=codeRepo1,destination=env1 Field Support: projects_ref: fuzzy match  manifestSource.codeRepo: fuzzy match destination: fuzzy match'
                   schema:
                     type: string
             responses:
@@ -508,7 +508,7 @@ paths:
                     type: string
                 - name: field_selector
                   in: query
-                  description: Filter the list by field.
+                  description: 'Filter the list by field. eg: field_selector=cluster=cluster1,env_type=host Field Support: cluster: fuzzy match env_type: fuzzy match'
                   schema:
                     type: string
             responses:
@@ -622,7 +622,7 @@ paths:
                     type: string
                 - name: field_selector
                   in: query
-                  description: Filter the list by field.
+                  description: 'Filter the list by field. eg: field_selector=project=project1,pipeline_source=pipeline_repository,destination=env1 Field Support: project: fuzzy match  pipeline_source: fuzzy match destination: fuzzy match'
                   schema:
                     type: string
             responses:

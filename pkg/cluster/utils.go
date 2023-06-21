@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	argocdapplicationv1alpha1 "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
-	argocdapplicationsetv1alpha1 "github.com/argoproj/argo-cd/v2/pkg/apis/applicationset/v1alpha1"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	gopkgyaml "gopkg.in/yaml.v2"
 	yaml "sigs.k8s.io/yaml"
@@ -76,7 +75,7 @@ func GetHostClusterNames(filePath string) (hostClusterNames []string, err error)
 }
 
 func GetApplicationSetElements(data []byte) ([]string, error) {
-	var as argocdapplicationsetv1alpha1.ApplicationSet
+	var as argocdapplicationv1alpha1.ApplicationSet
 	var elements []string
 	err := yaml.Unmarshal(data, &as)
 	if err != nil {

@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"regexp"
+	"strings"
 )
 
 func ExtractPortFromURL(rawurl string) (string, error) {
@@ -62,6 +64,23 @@ func ParseUrl(urlString string) (string, error) {
 	return ip.String(), nil
 }
 
+func GetDomain(u string) string {
+	parsedURL, err := url.Parse(u)
+	if err != nil {
+		return ""
+	}
+	address := ""
+
+	host := parsedURL.Host
+	if ip := net.ParseIP(host); ip != nil {
+		address = ip.String()
+	} else {
+		address = strings.Split(host, ":")[0]
+	}
+
+	return address
+}
+
 func IsIPPortURL(urlString string) bool {
 	u, err := url.Parse(urlString)
 	if err != nil {
@@ -79,4 +98,9 @@ func IsIPPortURL(urlString string) bool {
 	}
 
 	return true
+}
+
+func CheckURL(url string) bool {
+	regex := regexp.MustCompile(`^(https?://)`)
+	return regex.MatchString(url)
 }

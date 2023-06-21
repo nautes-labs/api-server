@@ -16,6 +16,7 @@ package service
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 
 	clusterv1 "github.com/nautes-labs/api-server/api/cluster/v1"
@@ -24,6 +25,7 @@ import (
 	registercluster "github.com/nautes-labs/api-server/pkg/cluster"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
 	"github.com/nautes-labs/api-server/pkg/selector"
+	utilstring "github.com/nautes-labs/api-server/util/string"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -135,7 +137,12 @@ func (s *ClusterService) SaveCluster(ctx context.Context, req *clusterv1.SaveReq
 		Vcluster:   vcluster,
 	}
 
-	if err := s.cluster.SaveCluster(ctx, param, req.Body.Kubeconfig); err != nil {
+	kubeconfig, err := convertKubeconfig(req.Body.Kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.cluster.SaveCluster(ctx, param, kubeconfig); err != nil {
 		return nil, err
 	}
 
@@ -156,7 +163,39 @@ func (s *ClusterService) DeleteCluster(ctx context.Context, req *clusterv1.Delet
 	}, nil
 }
 
+func convertKubeconfig(kubeconfig string) (string, error) {
+	if needsBase64Decoding(kubeconfig) {
+		decoded, err := base64.StdEncoding.DecodeString(kubeconfig)
+		if err != nil {
+			return "", fmt.Errorf("failed to decode kubeconfig: %v", err)
+		}
+
+		return string(decoded), nil
+	}
+
+	return kubeconfig, nil
+}
+
+func needsBase64Decoding(str string) bool {
+	if len(str)%4 != 0 {
+		return false
+	}
+
+	for _, ch := range str {
+		if !((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '+' || ch == '/' || ch == '=') {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (s *ClusterService) Validate(req *clusterv1.SaveRequest) error {
+	ok := utilstring.CheckURL(req.Body.GetApiServer())
+	if !ok {
+		return fmt.Errorf("the apiserver %s is not an https URL", req.Body.GetApiServer())
+	}
+
 	if req.Body.Usage == string(resourcev1alpha1.CLUSTER_USAGE_WORKER) &&
 		req.Body.ClusterType == string(resourcev1alpha1.CLUSTER_TYPE_VIRTUAL) &&
 		req.Body.HostCluster == "" {
@@ -165,7 +204,7 @@ func (s *ClusterService) Validate(req *clusterv1.SaveRequest) error {
 
 	if req.Body.Usage == string(resourcev1alpha1.CLUSTER_USAGE_WORKER) &&
 		req.Body.WorkerType == "" {
-		return fmt.Errorf("when the cluster usage is 'worker', the 'WorkerType' is required")
+		return fmt.Errorf("when the cluster usage is 'worker', the 'WorkerType' field is required")
 	}
 
 	if req.Body.ClusterType == string(resourcev1alpha1.CLUSTER_TYPE_PHYSICAL) &&

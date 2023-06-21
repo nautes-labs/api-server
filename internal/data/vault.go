@@ -33,7 +33,7 @@ import (
 	auth "github.com/hashicorp/vault/api/auth/kubernetes"
 	commonv1 "github.com/nautes-labs/api-server/api/common/v1"
 	"github.com/nautes-labs/api-server/internal/biz"
-	kubernetes "github.com/nautes-labs/api-server/pkg/kubernetes"
+	"github.com/nautes-labs/api-server/pkg/kubernetes"
 	vaultproxyv1 "github.com/nautes-labs/api-server/pkg/vaultproxy/v1"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 	corev1 "k8s.io/api/core/v1"
@@ -83,29 +83,6 @@ func NewHttpClient(ca string) (*http.Client, error) {
 	}, nil
 }
 
-func NewKubernetesAuth(mountPath, token string, roles map[string]string) (*auth.KubernetesAuth, error) {
-	if mountPath == "" {
-		return nil, fmt.Errorf("failed to get vault mount path")
-	}
-
-	role, ok := roles["Api"]
-	if !ok {
-		return nil, fmt.Errorf("failed to get argo-operator role in nautes config")
-	}
-
-	k8sAuth, err := auth.NewKubernetesAuth(
-		role,
-		auth.WithServiceAccountToken(token),
-		auth.WithMountPath(mountPath),
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("unable to initialize Kubernetes auth method: %w", err)
-	}
-
-	return k8sAuth, nil
-}
-
 func GetToken(namespace string) (string, error) {
 	sa := &corev1.ServiceAccount{}
 	saNamespaceName := types.NamespacedName{
@@ -137,18 +114,41 @@ func GetToken(namespace string) (string, error) {
 	return string(secret.Data[_VAULTTOKENKEY]), nil
 }
 
+func NewKubernetesAuth(mountPath string, roles map[string]string, namespace string) (*auth.KubernetesAuth, error) {
+	if mountPath == "" {
+		return nil, fmt.Errorf("failed to get vault mount path")
+	}
+
+	role, ok := roles["Api"]
+	if !ok {
+		return nil, fmt.Errorf("failed to get argo-operator role in nautes config")
+	}
+
+	token := ""
+	if os.Getenv("DEBUG") != "" {
+		token, _ = GetToken(namespace)
+	}
+
+	k8sAuth, err := auth.NewKubernetesAuth(
+		role,
+		auth.WithServiceAccountToken(token),
+		auth.WithMountPath(mountPath),
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("unable to initialize Kubernetes auth method: %w", err)
+	}
+
+	return k8sAuth, nil
+}
+
 func (v *vaultRepo) NewVaultClient(ctx context.Context) (*vault.Client, error) {
 	httpClient, err := NewHttpClient(v.config.Secret.Vault.CABundle)
 	if err != nil {
 		return nil, err
 	}
 
-	token, err := GetToken(v.config.Nautes.Namespace)
-	if err != nil {
-		return nil, err
-	}
-
-	kubernetesAuth, err := NewKubernetesAuth(v.config.Secret.Vault.MountPath, token, v.config.Secret.OperatorName)
+	kubernetesAuth, err := NewKubernetesAuth(v.config.Secret.Vault.MountPath, v.config.Secret.OperatorName, v.config.Nautes.Namespace)
 	if err != nil {
 		return nil, err
 	}
