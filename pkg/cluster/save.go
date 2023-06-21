@@ -367,6 +367,7 @@ func (cr *ClusterRegistration) Execute(nodes *nodestree.Node) error {
 			t, err := template.New(node.Name).Funcs(template.FuncMap{
 				"split":        strings.Split,
 				"randomString": utilstring.RandStr,
+				"getDomain":    utilstring.GetDomain,
 			}).Parse(content)
 			if err != nil {
 				return err
