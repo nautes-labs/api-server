@@ -27,7 +27,6 @@ require (
 )
 
 require (
-	github.com/google/gnostic v0.5.7-v3refs
 	github.com/hashicorp/vault/api v1.9.0
 	github.com/hashicorp/vault/api/auth/kubernetes v0.4.0
 	github.com/nautes-labs/pkg v0.3.3
@@ -142,7 +141,6 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
 	github.com/natefinch/lumberjack v0.0.0-20230119042236-215739b3bcdc // indirect
-	github.com/nautes-labs/pkg v0.2.2-0.20230522125153-8ad90b12e3fd // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc2 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
