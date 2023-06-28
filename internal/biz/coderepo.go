@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	errors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/log"
@@ -204,12 +203,10 @@ func (c *CodeRepoUsecase) SaveCodeRepo(ctx context.Context, options *BizOptions,
 		return err
 	}
 
-	c.log.Debug("refreshAuthorization start time: ", time.Now().Format("2006-01-02 15:04:05"))
 	err = c.refreshAuthorization(ctx, options.ProductName, codeRepo.Spec.Project)
 	if err != nil {
 		return err
 	}
-	c.log.Debug("refreshAuthorization end time: ", time.Now().Format("2006-01-02 15:04:05"))
 
 	return nil
 }
@@ -772,7 +769,7 @@ func (c *CodeRepoUsecase) CreateNode(path string, data interface{}) (*nodestree.
 		return nil, fmt.Errorf("failed to creating specify node, the path: %s", path)
 	}
 
-	if len(val.Spec.Webhook.Events) == 0 {
+	if val.Spec.Webhook != nil && val.Spec.Webhook.Events == nil {
 		val.Spec.Webhook.Events = make([]string, 0)
 	}
 
