@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	errors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/log"
@@ -203,10 +204,12 @@ func (c *CodeRepoUsecase) SaveCodeRepo(ctx context.Context, options *BizOptions,
 		return err
 	}
 
+	c.log.Debug("refreshAuthorization start time: ", time.Now().Format("2006-01-02 15:04:05"))
 	err = c.refreshAuthorization(ctx, options.ProductName, codeRepo.Spec.Project)
 	if err != nil {
 		return err
 	}
+	c.log.Debug("refreshAuthorization end time: ", time.Now().Format("2006-01-02 15:04:05"))
 
 	return nil
 }
@@ -290,6 +293,10 @@ func (c *CodeRepoUsecase) getCodeRepo(ctx context.Context, productName, codeRepo
 	}
 
 	node := c.nodestree.GetNode(nodes, nodestree.CodeRepo, codeRepoName)
+	if node == nil {
+		return nil, commonv1.ErrorNodeNotFound("failed to get coderepo of repository %s", codeRepoName)
+	}
+
 	codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
 	if !ok {
 		return nil, fmt.Errorf(" type found for %s node", node.Name)
@@ -308,12 +315,12 @@ func (c *CodeRepoUsecase) refreshAuthorization(ctx context.Context, productName,
 		return err
 	}
 
-	projectsDeploykeyMap, err := c.codeRepoBindingUsecase.clearInvalidDeployKey(ctx, *nodes)
+	err = c.codeRepoBindingUsecase.clearInvalidDeployKey(ctx, *nodes)
 	if err != nil {
 		return err
 	}
 
-	err = c.codeRepoBindingUsecase.AuthorizeForSameProjectRepo(ctx, *nodes, projectsDeploykeyMap)
+	err = c.codeRepoBindingUsecase.authorizeForSameProjectRepo(ctx, *nodes)
 	if err != nil {
 		return err
 	}

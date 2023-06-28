@@ -285,8 +285,8 @@ func explorerRecursive(node *Node, fileOptions *FileOptions, operators []NodesOp
 	}
 
 	for _, f := range sub {
-		var tmp = path.Join(node.Path, f.Name())
-		var child = &Node{
+		tmp := path.Join(node.Path, f.Name())
+		child := &Node{
 			Name:  f.Name(),
 			Path:  tmp,
 			IsDir: f.IsDir(),
@@ -297,6 +297,7 @@ func explorerRecursive(node *Node, fileOptions *FileOptions, operators []NodesOp
 			continue
 		}
 
+		//
 		if f.IsDir() {
 			node.Children = append(node.Children, child)
 			err = explorerRecursive(child, fileOptions, operators)
@@ -307,13 +308,19 @@ func explorerRecursive(node *Node, fileOptions *FileOptions, operators []NodesOp
 			fileType := path.Ext(f.Name())
 			child.Name = strings.TrimSuffix(f.Name(), fileType)
 
+			// Processing file content type as string.
 			if fileOptions.ContentType == StringContentType {
-				buffer, err := ioutil.ReadFile(child.Path)
-				if err != nil {
-					return err
+				if !InContainsDir(child.Path, fileOptions.IgnorePath) {
+					buffer, err := ioutil.ReadFile(child.Path)
+					if err != nil {
+						return err
+					}
+					child.Content = string(buffer)
 				}
-				child.Content = string(buffer)
-			} else {
+			}
+
+			// Processing file content type as crd resource.
+			if fileOptions.ContentType == CRDContentType {
 				cr, err := convertResource(child, operators)
 				if err != nil {
 					return err
@@ -380,10 +387,6 @@ func fileFiltering(option *FileOptions, name, pathstr string) bool {
 	}
 
 	if ok := IsInSlice(option.IgnorePath, name); ok {
-		return true
-	}
-
-	if ok := InContainsDir(pathstr, option.IgnorePath); ok {
 		return true
 	}
 

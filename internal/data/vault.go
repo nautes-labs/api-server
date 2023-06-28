@@ -200,10 +200,10 @@ func (v *vaultRepo) GetDeployKey(ctx context.Context, secretOptions *biz.SecretO
 	if err != nil {
 		err = errors.Unwrap(err)
 		if err == vault.ErrSecretNotFound {
-			return nil, commonv1.ErrorSecretNotFound("unable to read secret, err: %s", err)
+			return nil, commonv1.ErrorSecretNotFound("unable to read secret path: %s, err: %s", secretOptions.SecretPath, err)
 		}
 
-		return nil, fmt.Errorf("unable to read secret: %w", err)
+		return nil, fmt.Errorf("unable to read secret path: %s, err: %w", secretOptions.SecretPath, err)
 	}
 
 	val, ok := secret.Data[biz.Fingerprint]
