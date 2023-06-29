@@ -358,6 +358,8 @@ func (c *CodeRepoBindingUsecase) authorizeForSameProjectRepo(ctx context.Context
 	codeRepos := c.getCodeRepos(nodes)
 
 	errChan := make(chan error)
+	semaphore := make(chan struct{}, 10)
+
 	wg := sync.WaitGroup{}
 	for i := 0; i < len(codeRepos); i++ {
 		for j := i + 1; j < len(codeRepos); j++ {
@@ -371,8 +373,6 @@ func (c *CodeRepoBindingUsecase) authorizeForSameProjectRepo(ctx context.Context
 			if repo1.Spec.Project != repo2.Spec.Project {
 				continue
 			}
-
-			semaphore := make(chan struct{}, 10)
 
 			wg.Add(1)
 			go func(repo1, repo2 *resourcev1alpha1.CodeRepo) {
@@ -391,6 +391,7 @@ func (c *CodeRepoBindingUsecase) authorizeForSameProjectRepo(ctx context.Context
 	go func() {
 		wg.Wait()
 		close(errChan)
+		close(semaphore)
 	}()
 
 	for err := range errChan {
