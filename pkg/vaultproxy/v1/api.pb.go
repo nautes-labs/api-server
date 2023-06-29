@@ -216,7 +216,7 @@ type GitMeta struct {
 	// Git Provider Type, gitlab or github
 	ProviderType string `protobuf:"bytes,1,opt,name=provider_type,proto3" json:"provider_type,omitempty"`
 	// Git repo ID or product ID in nautes
-	Id         string `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	ID         string `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
 	Username   string `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
 	Permission string `protobuf:"bytes,4,opt,name=permission,proto3" json:"permission,omitempty"`
 }
@@ -262,7 +262,7 @@ func (x *GitMeta) GetProviderType() string {
 
 func (x *GitMeta) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.ID
 	}
 	return ""
 }
@@ -661,7 +661,7 @@ type RepoMeta struct {
 	ProviderId string `protobuf:"bytes,1,opt,name=provider_id,proto3" json:"provider_id,omitempty"`
 	// Witch kind of repo it is, such as pip, docker images.
 	Type       string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	Id         string `protobuf:"bytes,3,opt,name=id,proto3" json:"id,omitempty"`
+	ID         string `protobuf:"bytes,3,opt,name=id,proto3" json:"id,omitempty"`
 	Username   string `protobuf:"bytes,4,opt,name=username,proto3" json:"username,omitempty"`
 	Permission string `protobuf:"bytes,5,opt,name=permission,proto3" json:"permission,omitempty"`
 }
@@ -714,7 +714,7 @@ func (x *RepoMeta) GetType() string {
 
 func (x *RepoMeta) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.ID
 	}
 	return ""
 }
@@ -888,7 +888,7 @@ type TenantGitMeta struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id         string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ID         string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Permission string `protobuf:"bytes,2,opt,name=permission,proto3" json:"permission,omitempty"`
 }
 
@@ -926,7 +926,7 @@ func (*TenantGitMeta) Descriptor() ([]byte, []int) {
 
 func (x *TenantGitMeta) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.ID
 	}
 	return ""
 }
@@ -1093,7 +1093,7 @@ type TenantRepoMeta struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id         string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ID         string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Permission string `protobuf:"bytes,2,opt,name=permission,proto3" json:"permission,omitempty"`
 }
 
@@ -1131,7 +1131,7 @@ func (*TenantRepoMeta) Descriptor() ([]byte, []int) {
 
 func (x *TenantRepoMeta) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.ID
 	}
 	return ""
 }
@@ -1348,7 +1348,7 @@ type ClusterMeta struct {
 
 	// Type of cluster, such as k8s, aws, virtual machine, only support "kubernetes"
 	Type       string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
-	Id         string `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	ID         string `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
 	Username   string `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
 	Permission string `protobuf:"bytes,4,opt,name=permission,proto3" json:"permission,omitempty"`
 }
@@ -1394,7 +1394,7 @@ func (x *ClusterMeta) GetType() string {
 
 func (x *ClusterMeta) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.ID
 	}
 	return ""
 }
