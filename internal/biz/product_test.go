@@ -103,13 +103,9 @@ var _ = Describe("List products", func() {
 	)
 
 	It("will list products success", func() {
-		gid := defaultProductGroup.Path
-		pid := fmt.Sprintf("%s/%s", defaultProductGroup.Path, nautesConfigs.Git.DefaultProductName)
-
 		codeRepo := NewMockCodeRepo(ctl)
-		codeRepo.EXPECT().ListAllGroups(gomock.Any()).Return([]*Group{defaultProductGroup}, nil)
-		codeRepo.EXPECT().GetGroup(gomock.Any(), gid).Return(defaultProductGroup, nil)
-		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), pid).Return(defautlProject, nil)
+		codeRepo.EXPECT().ListCodeRepos(gomock.Any(), DefaultProject).Return([]*Project{defautlProject}, nil)
+		codeRepo.EXPECT().GetGroup(gomock.Any(), defautlProject.Namespace.ID).Return(defaultProductGroup, nil).AnyTimes()
 
 		secretRepo := NewMockSecretrepo(ctl)
 		gitRepo := NewMockGitRepo(ctl)
@@ -127,7 +123,7 @@ var _ = Describe("List products", func() {
 
 	It("project is empty under the product", func() {
 		codeRepo := NewMockCodeRepo(ctl)
-		codeRepo.EXPECT().ListAllGroups(gomock.Any()).Return([]*Group{}, nil)
+		codeRepo.EXPECT().ListCodeRepos(gomock.Any(), DefaultProject).Return([]*Project{}, nil)
 
 		secretRepo := NewMockSecretrepo(ctl)
 		gitRepo := NewMockGitRepo(ctl)

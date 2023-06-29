@@ -98,6 +98,11 @@ var (
 		SshUrlToRepo:      fmt.Sprintf("ssh://git@github.com:2222/test-2/%s.git", defaultProjectName),
 		HttpUrlToRepo:     fmt.Sprintf("https://github.com:2222/test-2/%s.git", defaultProjectName),
 		PathWithNamespace: fmt.Sprintf("%s/%s", defaultProductGroup.Path, defaultProjectName),
+		Namespace: &ProjectNamespace{
+			ID:   3123,
+			Name: defaultGroupName,
+			Path: defaultGroupName,
+		},
 	}
 	defaultProjectPath = fmt.Sprintf("%v/%v", defaultProductGroup.Path, defaultProjectName)
 	defaultProductId   = fmt.Sprintf("%s%d", _ProductPrefix, int(defaultProductGroup.ID))

@@ -133,10 +133,11 @@ func (p *ProductUsecase) ListProducts(ctx context.Context) ([]*GroupAndProjectIt
 		return nil, err
 	}
 
+	errChan := make(chan error)
+	semaphore := make(chan struct{}, 10)
+
 	for _, project := range projects {
 		gid := project.Namespace.ID
-
-		semaphore := make(chan struct{}, 10)
 
 		p.wg.Add(1)
 
@@ -150,6 +151,10 @@ func (p *ProductUsecase) ListProducts(ctx context.Context) ([]*GroupAndProjectIt
 
 			group, err := GetGroup(ctx, p.codeRepo, gid)
 			if err != nil {
+				if commonv1.IsGroupNotFound(err) {
+					return
+				}
+				errChan <- err
 				return
 			}
 
@@ -165,7 +170,17 @@ func (p *ProductUsecase) ListProducts(ctx context.Context) ([]*GroupAndProjectIt
 		}(gid, project)
 	}
 
-	p.wg.Wait()
+	go func() {
+		p.wg.Wait()
+
+		close(semaphore)
+
+		close(errChan)
+	}()
+
+	for err := range errChan {
+		return nil, err
+	}
 
 	return products, nil
 }
