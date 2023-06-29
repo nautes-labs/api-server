@@ -983,7 +983,7 @@ func (c *CodeRepoBindingUsecase) RevokeDeployKey(ctx context.Context, concodeRep
 			return err
 		}
 
-		if authpid == int(repository.Id) {
+		if authpid == int(repository.ID) {
 			continue
 		}
 

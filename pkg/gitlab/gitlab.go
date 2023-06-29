@@ -223,6 +223,17 @@ func (g *GitlabClient) UpdateProjectDeployKey(pid interface{}, deployKey int, op
 	return
 }
 
+func (g *GitlabClient) ListProjects(search string) (projects []*gitlab.Project, res *gitlab.Response, err error) {
+	projects, res, err = g.client.Projects.ListProjects(&gitlab.ListProjectsOptions{
+		Search: gitlab.String(search),
+	})
+	if err != nil {
+		return
+	}
+
+	return
+}
+
 func (g *GitlabClient) EnableProjectDeployKey(pid interface{}, deployKey int, options ...gitlab.RequestOptionFunc) (key *gitlab.ProjectDeployKey, res *gitlab.Response, err error) {
 	key, res, err = g.client.DeployKeys.EnableDeployKey(pid, deployKey, options...)
 	if err != nil {

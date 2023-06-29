@@ -166,7 +166,7 @@ func (r *ResourcesUsecase) Save(ctx context.Context, resourceOptions *resourceOp
 
 	options := nodestree.CompareOptions{
 		Nodes:       nodes,
-		ProductName: fmt.Sprintf("%s%d", _ProductPrefix, int(product.Id)),
+		ProductName: fmt.Sprintf("%s%d", _ProductPrefix, int(product.ID)),
 	}
 
 	resourceNode = r.GetNode(&nodes, resourceOptions.resourceKind, resourceOptions.resourceName)
@@ -245,7 +245,7 @@ func (r *ResourcesUsecase) Delete(ctx context.Context, resourceOptions *resource
 
 	options := nodestree.CompareOptions{
 		Nodes:       nodes,
-		ProductName: fmt.Sprintf("%s%d", _ProductPrefix, int(product.Id)),
+		ProductName: fmt.Sprintf("%s%d", _ProductPrefix, int(product.ID)),
 	}
 
 	resourceName, err := getResourceName(nodes)
@@ -536,7 +536,7 @@ func (r *ResourcesUsecase) ConvertRepoNameToCodeRepo(ctx context.Context, produc
 		return "", fmt.Errorf("invalid authorization code repository specified, err: %v", err)
 	}
 
-	return fmt.Sprintf("%s%d", RepoPrefix, int(project.Id)), nil
+	return fmt.Sprintf("%s%d", RepoPrefix, int(project.ID)), nil
 }
 
 func (r *ResourcesUsecase) ConvertProductToGroupName(ctx context.Context, productName string) (string, error) {
@@ -558,7 +558,7 @@ func (r *ResourcesUsecase) ConvertGroupToProduct(ctx context.Context, productNam
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%s%d", _ProductPrefix, int(group.Id)), nil
+	return fmt.Sprintf("%s%d", _ProductPrefix, int(group.ID)), nil
 }
 
 func (r *ResourcesUsecase) retryAutoMerge(ctx context.Context, path string) error {

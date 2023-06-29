@@ -25,6 +25,7 @@ type GitlabOperator interface {
 	UpdateProject(pid interface{}, opt *gitlab.EditProjectOptions) (project *gitlab.Project, res *gitlab.Response, err error)
 	GetProject(pid interface{}, opt *gitlab.GetProjectOptions, options ...gitlab.RequestOptionFunc) (*gitlab.Project, *gitlab.Response, error)
 	ListGroupProjects(gid interface{}, opt *gitlab.ListGroupProjectsOptions, options ...gitlab.RequestOptionFunc) (projects []*gitlab.Project, res *gitlab.Response, err error)
+	ListProjects(search string) (projects []*gitlab.Project, res *gitlab.Response, err error)
 
 	CreateGroup(opt *gitlab.CreateGroupOptions, options ...gitlab.RequestOptionFunc) (group *gitlab.Group, res *gitlab.Response, err error)
 	DeleteGroup(gid interface{}, options ...gitlab.RequestOptionFunc) (res *gitlab.Response, err error)

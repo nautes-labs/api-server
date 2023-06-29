@@ -108,7 +108,7 @@ var _ = Describe("Save cluster", func() {
 			ArgocdHost: "https://argocd.com",
 		}
 		tenant = &Project{
-			Id:                int32(22),
+			ID:                int32(22),
 			Name:              "repo-22",
 			Path:              "repo-22",
 			SshUrlToRepo:      tenantRepositoryHttpsURL,
@@ -409,7 +409,7 @@ var _ = Describe("Delete cluster", func() {
 			Email: _GitEmail,
 		}
 		tenant = &Project{
-			Id:                int32(22),
+			ID:                int32(22),
 			Name:              "repo-22",
 			Path:              "repo-22",
 			SshUrlToRepo:      tenantRepositoryHttpsURL,

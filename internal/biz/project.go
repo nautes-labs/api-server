@@ -138,7 +138,7 @@ func (p *ProjectUsecase) SaveProject(ctx context.Context, options *BizOptions, d
 		return err
 	}
 
-	data.ProductName = fmt.Sprintf("%s%d", _ProductPrefix, int(group.Id))
+	data.ProductName = fmt.Sprintf("%s%d", _ProductPrefix, int(group.ID))
 	resourceOptions := &resourceOptions{
 		resourceKind:      nodestree.Project,
 		resourceName:      options.ResouceName,

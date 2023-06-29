@@ -75,13 +75,13 @@ func (c *CodeRepoUsecase) GetProjectByCodeRepoName(ctx context.Context, codeRepo
 	}
 
 	if project != nil {
-		resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
+		resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.ID))
 		codeRepoName = resourceName
 	}
 
 	node, err := c.resourcesUsecase.Get(ctx, nodestree.CodeRepo, productName, c, func(nodes nodestree.Node) (string, error) {
 		if project != nil {
-			resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
+			resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.ID))
 			return resourceName, nil
 		}
 
@@ -117,13 +117,13 @@ func (c *CodeRepoUsecase) GetCodeRepo(ctx context.Context, codeRepoName, product
 	}
 
 	if project != nil {
-		resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
+		resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.ID))
 		codeRepoName = resourceName
 	}
 
 	node, err := c.resourcesUsecase.Get(ctx, nodestree.CodeRepo, productName, c, func(nodes nodestree.Node) (string, error) {
 		if project != nil {
-			resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
+			resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.ID))
 			return resourceName, nil
 		}
 
@@ -157,14 +157,14 @@ func (c *CodeRepoUsecase) SaveCodeRepo(ctx context.Context, options *BizOptions,
 	if err != nil {
 		return err
 	}
-	data.Spec.Product = fmt.Sprintf("%s%d", _ProductPrefix, int(group.Id))
+	data.Spec.Product = fmt.Sprintf("%s%d", _ProductPrefix, int(group.ID))
 
 	project, err := c.saveRepository(ctx, group, options.ResouceName, gitOptions)
 	if err != nil {
 		return err
 	}
-	pid := int(project.Id)
-	codeRepoName := fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
+	pid := int(project.ID)
+	codeRepoName := fmt.Sprintf("%s%d", RepoPrefix, int(project.ID))
 	data.Name = codeRepoName
 
 	resourceOptions := &resourceOptions{
@@ -225,8 +225,8 @@ func (c *CodeRepoUsecase) DeleteCodeRepo(ctx context.Context, options *BizOption
 		}
 		return err
 	}
-	pid := int(project.Id)
-	codeRepoName := fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
+	pid := int(project.ID)
+	codeRepoName := fmt.Sprintf("%s%d", RepoPrefix, int(project.ID))
 
 	resourceOptions := &resourceOptions{
 		resourceKind:      nodestree.CodeRepo,
@@ -407,12 +407,12 @@ func (c *CodeRepoUsecase) saveRepository(ctx context.Context, group *Group, reso
 	}
 
 	if err != nil && e.Code == 404 {
-		project, err = c.codeRepo.CreateCodeRepo(ctx, int(group.Id), gitOptions)
+		project, err = c.codeRepo.CreateCodeRepo(ctx, int(group.ID), gitOptions)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		project, err = c.codeRepo.UpdateCodeRepo(ctx, int(project.Id), gitOptions)
+		project, err = c.codeRepo.UpdateCodeRepo(ctx, int(project.ID), gitOptions)
 		if err != nil {
 			return nil, err
 		}
