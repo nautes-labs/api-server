@@ -681,7 +681,8 @@ func findExistingScope(scopes []*ProductAuthorization, productName string) *Prod
 	return nil
 }
 
-func (c *CodeRepoBindingUsecase) updateAllAuthorization(ctx context.Context, nodes nodestree.Node, pid interface{}, permissions, product string) error {
+// updateAllAuthorization Authorize all Codebase under the specified product.
+func (c *CodeRepoBindingUsecase) updateAllAuthorization(ctx context.Context, nodes nodestree.Node, pid interface{}, permissions, productName string) error {
 	codeRepos, err := nodesToCodeRepoists(nodes)
 	if err != nil {
 		return err
