@@ -333,7 +333,7 @@ func (c *CodeRepoBindingUsecase) processAuthorization(ctx context.Context, nodes
 	scopes := c.calculateAuthorizationScopes(ctx, codeRepoBindings, permissions)
 	for _, scope := range scopes {
 		if scope.isProductPermission {
-			err = c.recyclePermissionAuthorization(ctx, nodes, pid, permissions, scope.ProductName)
+			err = c.recycleAuthorizationByPermissions(ctx, nodes, pid, permissions, scope.ProductName)
 			if err != nil {
 				return err
 			}
@@ -343,7 +343,12 @@ func (c *CodeRepoBindingUsecase) processAuthorization(ctx context.Context, nodes
 				return err
 			}
 		} else {
-			err = c.recycleAuthorization(ctx, scope.ProjectScopes, nodes, pid, permissions, scope.ProductName)
+			err = c.recycleAuthorizationByPermissions(ctx, nodes, pid, permissions, scope.ProductName)
+			if err != nil {
+				return err
+			}
+
+			err = c.recycleAuthorizationByProjectScopes(ctx, scope.ProjectScopes, nodes, pid, permissions, scope.ProductName)
 			if err != nil {
 				return err
 			}
@@ -356,7 +361,7 @@ func (c *CodeRepoBindingUsecase) processAuthorization(ctx context.Context, nodes
 	}
 
 	if len(codeRepoBindings) == 0 {
-		err := c.recycleAuthorization(ctx, nil, nodes, pid, permissions, "")
+		err := c.recycleAuthorizationByProjectScopes(ctx, nil, nodes, pid, permissions, "")
 		if err != nil {
 			return err
 		}
@@ -718,7 +723,7 @@ func (c *CodeRepoBindingUsecase) updateAuthorization(ctx context.Context, projec
 }
 
 // recycleAuthorization Recycle according to the authorization scope of the project.
-func (c *CodeRepoBindingUsecase) recycleAuthorization(ctx context.Context, projectScopes map[string]bool, nodes nodestree.Node, authorizationpid interface{}, permissions, productName string) error {
+func (c *CodeRepoBindingUsecase) recycleAuthorizationByProjectScopes(ctx context.Context, projectScopes map[string]bool, nodes nodestree.Node, authorizationpid interface{}, permissions, productName string) error {
 	if len(projectScopes) == 0 {
 		return nil
 	}
@@ -761,7 +766,7 @@ func (c *CodeRepoBindingUsecase) recycleAuthorization(ctx context.Context, proje
 	return nil
 }
 
-func (c *CodeRepoBindingUsecase) recyclePermissionAuthorization(ctx context.Context, nodes nodestree.Node, authorizationpid interface{}, permissions, productName string) error {
+func (c *CodeRepoBindingUsecase) recycleAuthorizationByPermissions(ctx context.Context, nodes nodestree.Node, authorizationpid interface{}, permissions, productName string) error {
 	codeRepoNodes := nodestree.ListsResourceNodes(nodes, nodestree.CodeRepo)
 	for _, node := range codeRepoNodes {
 		codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
