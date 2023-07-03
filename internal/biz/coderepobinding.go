@@ -993,6 +993,10 @@ func (c *CodeRepoBindingUsecase) checkDeployKeyExistence(ctx context.Context, pi
 
 func (c *CodeRepoBindingUsecase) checkProjectConsistency(ctx context.Context, nodes nodestree.Node, codeRepos []*resourcev1alpha1.CodeRepo, authorizationpid int, deployKeyID int) error {
 	authorizationCodeRepoNode := c.nodestree.GetNode(&nodes, nodestree.CodeRepo, fmt.Sprintf("%s%d", RepoPrefix, authorizationpid))
+	if authorizationCodeRepoNode == nil {
+		return nil
+	}
+
 	authorizationCodeRepo, ok := authorizationCodeRepoNode.Content.(*resourcev1alpha1.CodeRepo)
 	if !ok {
 		return fmt.Errorf("failed to check project consistency, illegal codeRepo: %s", authorizationCodeRepoNode.Name)
