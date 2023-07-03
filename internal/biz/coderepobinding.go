@@ -222,10 +222,6 @@ func (c *CodeRepoBindingUsecase) authorizeDeployKey(ctx context.Context, codeRep
 	if err := c.applyDeploykey(ctx, authorizationpid, permissions, repoIDs, func(ctx context.Context, authorizationpid interface{}, deployKeyID int) error {
 		value, _ := authorizationpid.(int)
 
-		if _, ok := c.cacheStore.projectDeployKeyMap[value][deployKeyID]; ok {
-			return nil
-		}
-
 		projectDeployKey, err := c.codeRepo.EnableProjectDeployKey(ctx, value, deployKeyID)
 		if err != nil {
 			return err
@@ -250,21 +246,21 @@ func (c *CodeRepoBindingUsecase) authorizeDeployKey(ctx context.Context, codeRep
 
 func (c *CodeRepoBindingUsecase) applyDeploykey(ctx context.Context, authorizationpid interface{}, permissions string, repoIDs []int, fn applyDeploykeyFunc) error {
 	for _, repoID := range repoIDs {
+		//Revoke in-product authorization, not revoke the deploykey of the authorization repository.
+		pid, ok := authorizationpid.(int)
+		if !ok {
+			return fmt.Errorf("the ID of the authorized repository is not of type int during applyDeploykey: %v", authorizationpid)
+		}
+		if pid == repoID {
+			continue
+		}
+
 		secretData, err := c.GetDeployKeyFromSecretRepo(ctx, fmt.Sprintf("%s%d", RepoPrefix, repoID), DefaultUser, permissions)
 		if err != nil {
 			if commonv1.IsDeploykeyNotFound(err) {
 				return nil
 			}
 			return err
-		}
-
-		//Revoke in-product authorization, not revoke the deploykey of the authorization repository.
-		value, ok := authorizationpid.(int)
-		if !ok {
-			return fmt.Errorf("the ID of the authorized repository is not of type int during applyDeploykey: %v", authorizationpid)
-		}
-		if value == repoID {
-			continue
 		}
 
 		deploykey, ok := c.cacheStore.projectDeployKeyMap[repoID][secretData.ID]
@@ -543,34 +539,6 @@ func (c *CodeRepoBindingUsecase) enableProjectDeployKey(ctx context.Context, rep
 	return nil
 }
 
-func (c *CodeRepoBindingUsecase) enableProjectDeployKey1(ctx context.Context, repo *resourcev1alpha1.CodeRepo, projectDeploykey *ProjectDeployKey) error {
-	pid, err := utilstrings.ExtractNumber(RepoPrefix, repo.Name)
-	if err != nil {
-		return err
-	}
-
-	re := regexp.MustCompile(`^repo-(\d+)-(readonly|readwrite)$`)
-	match := re.FindStringSubmatch(repo.Name)
-
-	if len(match) == 0 {
-		return nil
-	}
-
-	err = c.enableDeployKey(ctx, pid, projectDeploykey.ID)
-	if err != nil {
-		return err
-	}
-
-	if projectDeploykey.CanPush {
-		err = c.updateDeployKey(ctx, pid, projectDeploykey.ID, projectDeploykey.Title, true)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (c *CodeRepoBindingUsecase) enableDeployKey(ctx context.Context, pid int, deployKeyID int) error {
 	_, err := c.codeRepo.EnableProjectDeployKey(ctx, pid, deployKeyID)
 	if err != nil {
@@ -715,22 +683,19 @@ func (c *CodeRepoBindingUsecase) updateAuthorization(ctx context.Context, projec
 }
 
 // recycleAuthorization Recycle according to the authorization scope of the project.
-func (c *CodeRepoBindingUsecase) recycleAuthorization(ctx context.Context, projectScopes map[string]bool, nodes nodestree.Node, pid interface{}, permissions, product string) error {
+func (c *CodeRepoBindingUsecase) recycleAuthorization(ctx context.Context, projectScopes map[string]bool, nodes nodestree.Node, pid interface{}, permissions, productName string) error {
 	if len(projectScopes) == 0 {
 		return nil
 	}
-
-	var codeRepos []*resourcev1alpha1.CodeRepo
 
 	repository, err := c.codeRepo.GetCodeRepo(ctx, pid)
 	if err != nil {
 		return err
 	}
 
+	codeRepos := []*resourcev1alpha1.CodeRepo{}
 	currentProductName := fmt.Sprintf("%s%d", _ProductPrefix, repository.Namespace.ID)
-	if product != "" && product != currentProductName {
-		// TODO: Increase cross-product processing
-	} else {
+	if productName == currentProductName {
 		codeRepos, err = nodesToCodeRepoists(nodes, func(codeRepo *resourcev1alpha1.CodeRepo) bool {
 			if codeRepo.Spec.Project == "" {
 				return false
@@ -739,6 +704,11 @@ func (c *CodeRepoBindingUsecase) recycleAuthorization(ctx context.Context, proje
 			_, ok := projectScopes[codeRepo.Spec.Project]
 			return !ok
 		})
+		if err != nil {
+			return err
+		}
+	} else {
+		// TODO: Increase cross-product processing
 	}
 
 	if err := c.RevokeDeployKey(ctx, codeRepos, pid, permissions); err != nil {
@@ -979,74 +949,6 @@ func (c *CodeRepoBindingUsecase) RevokeDeployKey(ctx context.Context, codeRepos 
 	}
 
 	return nil
-}
-
-func (c *CodeRepoBindingUsecase) GetAuthorizedRepositories(ctx context.Context, spec resourcev1alpha1.CodeRepoBindingSpec) ([]*Project, error) {
-	gid, err := utilstrings.ExtractNumber(_ProductPrefix, spec.Product)
-	if err != nil {
-		return nil, err
-	}
-	nodes, err := c.resourcesUsecase.List(ctx, gid, c)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get all CodeRepoBindings for the same authorized repository.
-	codeRepoBindingNodes := nodestree.ListsResourceNodes(*nodes, nodestree.CodeRepoBinding, func(node *nodestree.Node) bool {
-		val, ok := node.Content.(*resourcev1alpha1.CodeRepoBinding)
-		if !ok {
-			return false
-		}
-
-		if val.Spec.CodeRepo == spec.CodeRepo {
-			return true
-		}
-
-		return false
-	})
-
-	// if product-level authorization is found, all repository are directly authorized, otherwise it will try to merge project authorization scope.
-	tmpProjects := make([]string, 0)
-	for _, node := range codeRepoBindingNodes {
-		val, ok := node.Content.(*resourcev1alpha1.CodeRepoBinding)
-		if !ok {
-			return nil, fmt.Errorf("resource type is inconsistent, please check if this resource %s is legal", node.Name)
-		}
-		if len(val.Spec.Projects) == 0 {
-			tmpProjects = make([]string, 0)
-			break
-		}
-		tmpProjects = append(tmpProjects, val.Spec.Projects...)
-	}
-
-	// Get CodeRepos within the specified authorization scope.
-	codeRepos, err := nodesToCodeRepoists(*nodes, func(codeRepo *resourcev1alpha1.CodeRepo) bool {
-		for _, project := range tmpProjects {
-			if codeRepo.Spec.Project == project {
-				return true
-			}
-		}
-
-		return false
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	var repositories []*Project
-	for _, repo := range codeRepos {
-		pid, err := utilstrings.ExtractNumber(RepoPrefix, repo.Name)
-		if err != nil {
-			return nil, err
-		}
-		project, err := c.codeRepo.GetCodeRepo(ctx, pid)
-		if err != nil {
-			return nil, err
-		}
-		repositories = append(repositories, project)
-	}
-
-	return repositories, nil
 }
 
 func (c *CodeRepoBindingUsecase) GetDeployKeyFromSecretRepo(ctx context.Context, repoName, user, permissions string) (*DeployKeySecretData, error) {
