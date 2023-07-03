@@ -36,6 +36,7 @@ spec:
         args:
           - /app/manager
           - -conf=/data/conf
+          - -global-config-namespace=nautes
         image: harbor.bluzin.io/luojinxu/api-server:c5dc2d1d8c291f95349bca50aeb3ce76a41438df-60fe187f-f68f-43f0-bc61-0d819dfdee2c
         env:
         - name: RESOURCES_LAYOUT
