@@ -344,11 +344,6 @@ func CreateGroup(ctx context.Context, codeRepo CodeRepo, gitOptions *GitGroupOpt
 }
 
 func UpdateGroup(ctx context.Context, codeRepo CodeRepo, configClient *nautesconfigs.Config, gid int, git *GitGroupOptions) (group *Group, err error) {
-	_, err = codeRepo.ListGroupCodeRepos(ctx, gid)
-	if err != nil {
-		return
-	}
-
 	group, err = codeRepo.UpdateGroup(ctx, gid, git)
 	if err != nil {
 		return nil, err

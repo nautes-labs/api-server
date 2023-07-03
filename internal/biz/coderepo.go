@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 
 	errors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/log"
@@ -45,6 +46,7 @@ type CodeRepoUsecase struct {
 	resourcesUsecase       *ResourcesUsecase
 	codeRepoBindingUsecase *CodeRepoBindingUsecase
 	client                 client.Client
+	wg                     sync.WaitGroup
 }
 
 type CodeRepoData struct {
@@ -473,6 +475,11 @@ func (c *CodeRepoUsecase) saveDeployKey(ctx context.Context, pid int, canPush bo
 			return nil, err
 		}
 
+		err := c.clearDeployKeyWithSameName(ctx, pid, permission)
+		if err != nil {
+			return nil, err
+		}
+
 		projectDeployKey, err := c.saveDeployKeyToGitAndSecretRepo(ctx, pid, canPush, permission)
 		if err != nil {
 			return nil, err
@@ -506,6 +513,26 @@ func (c *CodeRepoUsecase) saveDeployKey(ctx context.Context, pid int, canPush bo
 	}
 
 	return projectDeployKey, nil
+}
+
+func (c *CodeRepoUsecase) clearDeployKeyWithSameName(ctx context.Context, pid int, permission string) error {
+	title := fmt.Sprintf("%s%d-%s", RepoPrefix, pid, permission)
+
+	projectDeployKeys, err := GetAllDeployKeys(ctx, c.codeRepo, pid)
+	if err != nil {
+		return err
+	}
+
+	for _, projectDeployKey := range projectDeployKeys {
+		if projectDeployKey.Title == title {
+			err := c.codeRepo.DeleteDeployKey(ctx, pid, projectDeployKey.ID)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (c *CodeRepoUsecase) removeInvalidDeploykey(ctx context.Context, pid int, projectDeployKeys ...*ProjectDeployKey) error {

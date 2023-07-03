@@ -696,23 +696,15 @@ func (c *CodeRepoBindingUsecase) updateAllAuthorization(ctx context.Context, nod
 }
 
 // updateAuthorization Authorize according to the authorization scope of the project
-func (c *CodeRepoBindingUsecase) updateAuthorization(ctx context.Context, scopes map[string]bool, nodes nodestree.Node, pid interface{}, permissions, product string) error {
-	if len(scopes) == 0 {
+func (c *CodeRepoBindingUsecase) updateAuthorization(ctx context.Context, projectScopes map[string]bool, nodes nodestree.Node, pid interface{}, permissions, product string) error {
+	if len(projectScopes) == 0 {
 		return nil
 	}
 
 	codeRepos, err := nodesToCodeRepoists(nodes, func(codeRepo *resourcev1alpha1.CodeRepo) bool {
-		for key, _ := range scopes {
-			if codeRepo.Spec.Project == key {
-				return true
-			}
-		}
-
-		return false
+		_, ok := projectScopes[codeRepo.Spec.Project]
+		return ok
 	})
-	if err != nil {
-		return err
-	}
 
 	err = c.authorizeDeployKey(ctx, codeRepos, pid, permissions)
 	if err != nil {
@@ -724,6 +716,10 @@ func (c *CodeRepoBindingUsecase) updateAuthorization(ctx context.Context, scopes
 
 // recycleAuthorization Recycle according to the authorization scope of the project.
 func (c *CodeRepoBindingUsecase) recycleAuthorization(ctx context.Context, projectScopes map[string]bool, nodes nodestree.Node, pid interface{}, permissions, product string) error {
+	if len(projectScopes) == 0 {
+		return nil
+	}
+
 	var codeRepos []*resourcev1alpha1.CodeRepo
 
 	repository, err := c.codeRepo.GetCodeRepo(ctx, pid)
@@ -735,32 +731,14 @@ func (c *CodeRepoBindingUsecase) recycleAuthorization(ctx context.Context, proje
 	if product != "" && product != currentProductName {
 		// TODO: Increase cross-product processing
 	} else {
-		tmpProjects := make([]string, 0)
-
-		projectNodes := nodestree.ListsResourceNodes(nodes, nodestree.Project)
-		for _, node := range projectNodes {
-			val, ok := node.Content.(*resourcev1alpha1.Project)
-			if !ok {
-				return fmt.Errorf("resource type is inconsistent, please check if this resource %s is legal", node.Name)
-			}
-			if _, ok := projectScopes[val.Name]; !ok {
-				tmpProjects = append(tmpProjects, val.Name)
-			}
-		}
-
 		codeRepos, err = nodesToCodeRepoists(nodes, func(codeRepo *resourcev1alpha1.CodeRepo) bool {
-			for _, project := range tmpProjects {
-				// Recycle when the project in the repository is empty or outside the projectscope range.
-				if codeRepo.Spec.Project == "" || codeRepo.Spec.Project == project {
-					return true
-				}
+			if codeRepo.Spec.Project == "" {
+				return false
 			}
 
-			return false
+			_, ok := projectScopes[codeRepo.Spec.Project]
+			return !ok
 		})
-		if err != nil {
-			return err
-		}
 	}
 
 	if err := c.RevokeDeployKey(ctx, codeRepos, pid, permissions); err != nil {
@@ -842,7 +820,7 @@ func (c *CodeRepoBindingUsecase) clearInvalidDeployKey(ctx context.Context, node
 				return
 			}
 
-			err := c.checkProjectConsistency(ctx, nodes, pid, codeRepos, deployKeyID)
+			err := c.checkProjectConsistency(ctx, nodes, pid, deployKeyID)
 			if err != nil {
 				return
 			}
@@ -950,12 +928,23 @@ func (c *CodeRepoBindingUsecase) checkDeployKeyExistence(ctx context.Context, pi
 	return false, nil
 }
 
-func (c *CodeRepoBindingUsecase) checkProjectConsistency(ctx context.Context, nodes nodestree.Node, pid int, codeRepos []*resourcev1alpha1.CodeRepo, deployKeyID int) error {
+func (c *CodeRepoBindingUsecase) checkProjectConsistency(ctx context.Context, nodes nodestree.Node, pid int, deployKeyID int) error {
+	codeRepoNodes := nodestree.ListsResourceNodes(nodes, nodestree.CodeRepo)
 	checkedCodeRepoNode := c.nodestree.GetNode(&nodes, nodestree.CodeRepo, fmt.Sprintf("%s%d", RepoPrefix, pid))
 	if checkedCodeRepoNode != nil {
-		checkedCodeRepo, _ := checkedCodeRepoNode.Content.(*resourcev1alpha1.CodeRepo)
-		for _, codeRepo := range codeRepos {
-			if checkedCodeRepo.Spec.Project == codeRepo.Spec.Project {
+		checkedCodeRepo, ok := checkedCodeRepoNode.Content.(*resourcev1alpha1.CodeRepo)
+		if !ok {
+			return fmt.Errorf("failed to check project consistency, illegal codeRepo: %s", checkedCodeRepoNode.Name)
+		}
+
+		for _, node := range codeRepoNodes {
+			codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
+			if !ok {
+				continue
+			}
+
+			if checkedCodeRepo.Spec.Project != "" &&
+				checkedCodeRepo.Spec.Project == codeRepo.Spec.Project {
 				continue
 			}
 
@@ -972,23 +961,18 @@ func (c *CodeRepoBindingUsecase) checkProjectConsistency(ctx context.Context, no
 	return nil
 }
 
-func (c *CodeRepoBindingUsecase) RevokeDeployKey(ctx context.Context, concodeRepos []*resourcev1alpha1.CodeRepo, authpid interface{}, permissions string) error {
-	for _, repo := range concodeRepos {
-		pid, err := utilstrings.ExtractNumber(RepoPrefix, repo.Name)
+func (c *CodeRepoBindingUsecase) RevokeDeployKey(ctx context.Context, codeRepos []*resourcev1alpha1.CodeRepo, authpid interface{}, permissions string) error {
+	for _, codeRepo := range codeRepos {
+		pid, err := utilstrings.ExtractNumber(RepoPrefix, codeRepo.Name)
 		if err != nil {
 			return err
 		}
 
-		repository, err := c.codeRepo.GetCodeRepo(ctx, pid)
-		if err != nil {
-			return err
-		}
-
-		if authpid == int(repository.ID) {
+		if authpid == pid {
 			continue
 		}
 
-		secretData, err := c.GetDeployKeyFromSecretRepo(ctx, repo.Name, DefaultUser, permissions)
+		secretData, err := c.GetDeployKeyFromSecretRepo(ctx, codeRepo.Name, DefaultUser, permissions)
 		if err != nil {
 			if commonv1.IsDeploykeyNotFound(err) {
 				return nil
@@ -996,24 +980,9 @@ func (c *CodeRepoBindingUsecase) RevokeDeployKey(ctx context.Context, concodeRep
 			return err
 		}
 
-		_, err = c.codeRepo.GetCodeRepo(ctx, pid)
-		if err != nil {
-			if !commonv1.IsProjectNotFound(err) {
-				return err
-			}
-
-			deploykey, err := c.codeRepo.GetDeployKey(ctx, pid, secretData.ID)
-			if err != nil {
-				if commonv1.IsDeploykeyNotFound(err) {
-					return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from git, please check if the key exists or is invalid for the repository %s under organization %s", permissions, repository.Name, c.groupName)
-				}
-				return err
-			}
-
-			err = c.codeRepo.DeleteDeployKey(ctx, authpid, deploykey.ID)
-			if err != nil && !commonv1.IsDeploykeyNotFound(err) {
-				return err
-			}
+		err = c.codeRepo.DeleteDeployKey(ctx, authpid, secretData.ID)
+		if err != nil && !commonv1.IsDeploykeyNotFound(err) {
+			return err
 		}
 	}
 
