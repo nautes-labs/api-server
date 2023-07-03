@@ -219,14 +219,14 @@ func (c *CodeRepoBindingUsecase) authorizeDeployKey(ctx context.Context, codeRep
 		repoIDs = append(repoIDs, pid)
 	}
 
-	if err := c.applyDeploykey(ctx, authorizationpid, permissions, repoIDs, func(ctx context.Context, pid interface{}, deployKeyID int) error {
-		value, _ := pid.(int)
+	if err := c.applyDeploykey(ctx, authorizationpid, permissions, repoIDs, func(ctx context.Context, authorizationpid interface{}, deployKeyID int) error {
+		value, _ := authorizationpid.(int)
 
 		if _, ok := c.cacheStore.projectDeployKeyMap[value][deployKeyID]; ok {
 			return nil
 		}
 
-		projectDeployKey, err := c.codeRepo.EnableProjectDeployKey(ctx, pid, deployKeyID)
+		projectDeployKey, err := c.codeRepo.EnableProjectDeployKey(ctx, value, deployKeyID)
 		if err != nil {
 			return err
 		}
@@ -235,7 +235,7 @@ func (c *CodeRepoBindingUsecase) authorizeDeployKey(ctx context.Context, codeRep
 			return nil
 		}
 
-		_, err = c.codeRepo.UpdateDeployKey(ctx, pid, projectDeployKey.ID, projectDeployKey.Title, true)
+		_, err = c.codeRepo.UpdateDeployKey(ctx, value, projectDeployKey.ID, projectDeployKey.Title, true)
 		if err != nil {
 			return err
 		}
@@ -280,7 +280,7 @@ func (c *CodeRepoBindingUsecase) applyDeploykey(ctx context.Context, authorizati
 		if err != nil {
 			if commonv1.IsDeploykeyNotFound(err) {
 				c.log.Debugf("failed to get deploykey during applyDeploykey, repo id: %d, err: %w", repoID, err)
-				return nil
+				continue
 			}
 			return fmt.Errorf("failed to get deploykey during applyDeploykey, repo id: %d, err: %w", repoID, err)
 		}
@@ -754,7 +754,6 @@ type deployKeyMapValue struct {
 
 func (c *CodeRepoBindingUsecase) clearInvalidDeployKey(ctx context.Context, nodes nodestree.Node) error {
 	codeRepoNodes := nodestree.ListsResourceNodes(nodes, nodestree.CodeRepo)
-
 	cacheProjectMap := make(map[int]*Project)
 	cacheProjectsDeploykeyMap := make(map[int]map[int]*ProjectDeployKey, len(codeRepoNodes))
 	deploykeyInAllProjectsMap := make(map[string]*deployKeyMapValue, len(codeRepoNodes))
@@ -780,6 +779,8 @@ func (c *CodeRepoBindingUsecase) clearInvalidDeployKey(ctx context.Context, node
 	c.wg.Wait()
 
 	for key, val := range deploykeyInAllProjectsMap {
+		// Parsing the name of deploykey to obtain the ID of the code repository.
+		// eg: repo-22-readwrite, repository id is 22.
 		re := regexp.MustCompile(`repo-(\d+)-`)
 		match := re.FindStringSubmatch(key)
 		if len(match) == 0 {
@@ -799,18 +800,19 @@ func (c *CodeRepoBindingUsecase) clearInvalidDeployKey(ctx context.Context, node
 			var DeleteDeployKeys = make(map[int]bool)
 
 			defer c.wg.Done()
-			defer func() {
+			defer func(pid int) {
 				if !isDeleteDeployKey {
 					return
 				}
 
-				err := c.deleteAssociatedRepositoryDeployKey(codeRepos, ctx, deployKeyID)
+				// Delete the deploykey associated with the repository id.
+				err := c.deleteAssociatedRepositoryDeployKey(ctx, codeRepos, deployKeyID)
 				if err != nil {
 					return
 				}
-			}()
+			}(pid)
 
-			isDeleteDeployKey, err = c.checkRepositoryExistence(ctx, cacheProjectMap, pid, isDeleteDeployKey)
+			isDeleteDeployKey, err = c.checkRepositoryExistence(ctx, cacheProjectMap, pid)
 			if err != nil {
 				return
 			}
@@ -820,7 +822,7 @@ func (c *CodeRepoBindingUsecase) clearInvalidDeployKey(ctx context.Context, node
 				return
 			}
 
-			err := c.checkProjectConsistency(ctx, nodes, pid, deployKeyID)
+			err := c.checkProjectConsistency(ctx, nodes, codeRepos, pid, deployKeyID)
 			if err != nil {
 				return
 			}
@@ -835,7 +837,7 @@ func (c *CodeRepoBindingUsecase) clearInvalidDeployKey(ctx context.Context, node
 	return nil
 }
 
-func (c *CodeRepoBindingUsecase) deleteAssociatedRepositoryDeployKey(codeRepos []*resourcev1alpha1.CodeRepo, ctx context.Context, deployKeyID int) error {
+func (c *CodeRepoBindingUsecase) deleteAssociatedRepositoryDeployKey(ctx context.Context, codeRepos []*resourcev1alpha1.CodeRepo, deployKeyID int) error {
 	for _, codeRepo := range codeRepos {
 		pid, err := utilstrings.ExtractNumber(RepoPrefix, codeRepo.Name)
 		if err != nil {
@@ -860,6 +862,7 @@ func (c *CodeRepoBindingUsecase) deduplicateAndCacheDeployKeys(ctx context.Conte
 	}
 
 	c.lock.Lock()
+	defer c.lock.Unlock()
 
 	for _, projectDeployKey := range projectDeployKeys {
 		if cacheProjectsDeploykeyMap[pid] == nil {
@@ -871,19 +874,20 @@ func (c *CodeRepoBindingUsecase) deduplicateAndCacheDeployKeys(ctx context.Conte
 			}
 		}
 
-		deploykeyInAllProjectsMap[projectDeployKey.Title] = &deployKeyMapValue{
-			deployKey: projectDeployKey,
+		if _, ok := deploykeyInAllProjectsMap[projectDeployKey.Title]; !ok {
+			deploykeyInAllProjectsMap[projectDeployKey.Title] = &deployKeyMapValue{
+				deployKey: projectDeployKey,
+				codeRepos: []*resourcev1alpha1.CodeRepo{codeRepo},
+			}
+		} else {
+			deploykeyInAllProjectsMap[projectDeployKey.Title].codeRepos = append(deploykeyInAllProjectsMap[projectDeployKey.Title].codeRepos, codeRepo)
 		}
-
-		deploykeyInAllProjectsMap[projectDeployKey.Title].codeRepos = append(deploykeyInAllProjectsMap[projectDeployKey.Title].codeRepos, codeRepo)
 	}
-
-	c.lock.Unlock()
 
 	return nil
 }
 
-func (c *CodeRepoBindingUsecase) checkRepositoryExistence(ctx context.Context, cacheProjectMap map[int]*Project, pid int, isDeleteDeployKey bool) (bool, error) {
+func (c *CodeRepoBindingUsecase) checkRepositoryExistence(ctx context.Context, cacheProjectMap map[int]*Project, pid int) (bool, error) {
 	var repository *Project
 	var ok bool
 	var err error
@@ -900,8 +904,6 @@ func (c *CodeRepoBindingUsecase) checkRepositoryExistence(ctx context.Context, c
 					c.lock.Unlock()
 					return false, err
 				}
-
-				isDeleteDeployKey = true
 
 				return true, nil
 			}
@@ -928,30 +930,20 @@ func (c *CodeRepoBindingUsecase) checkDeployKeyExistence(ctx context.Context, pi
 	return false, nil
 }
 
-func (c *CodeRepoBindingUsecase) checkProjectConsistency(ctx context.Context, nodes nodestree.Node, pid int, deployKeyID int) error {
-	codeRepoNodes := nodestree.ListsResourceNodes(nodes, nodestree.CodeRepo)
-	checkedCodeRepoNode := c.nodestree.GetNode(&nodes, nodestree.CodeRepo, fmt.Sprintf("%s%d", RepoPrefix, pid))
-	if checkedCodeRepoNode != nil {
-		checkedCodeRepo, ok := checkedCodeRepoNode.Content.(*resourcev1alpha1.CodeRepo)
-		if !ok {
-			return fmt.Errorf("failed to check project consistency, illegal codeRepo: %s", checkedCodeRepoNode.Name)
-		}
+func (c *CodeRepoBindingUsecase) checkProjectConsistency(ctx context.Context, nodes nodestree.Node, codeRepos []*resourcev1alpha1.CodeRepo, authorizationpid int, deployKeyID int) error {
+	authorizationCodeRepoNode := c.nodestree.GetNode(&nodes, nodestree.CodeRepo, fmt.Sprintf("%s%d", RepoPrefix, authorizationpid))
+	authorizationCodeRepo, ok := authorizationCodeRepoNode.Content.(*resourcev1alpha1.CodeRepo)
+	if !ok {
+		return fmt.Errorf("failed to check project consistency, illegal codeRepo: %s", authorizationCodeRepoNode.Name)
+	}
 
-		for _, node := range codeRepoNodes {
-			codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
-			if !ok {
-				continue
-			}
-
-			if checkedCodeRepo.Spec.Project != "" &&
-				checkedCodeRepo.Spec.Project == codeRepo.Spec.Project {
-				continue
-			}
-
+	for _, codeRepo := range codeRepos {
+		if codeRepo.Spec.Project != authorizationCodeRepo.Spec.Project {
 			pid, err := utilstrings.ExtractNumber(RepoPrefix, codeRepo.Name)
 			if err != nil {
 				return err
 			}
+
 			if err := c.codeRepo.DeleteDeployKey(ctx, pid, deployKeyID); err != nil {
 				return err
 			}
