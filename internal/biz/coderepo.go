@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 
 	errors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/log"
@@ -45,6 +46,7 @@ type CodeRepoUsecase struct {
 	resourcesUsecase       *ResourcesUsecase
 	codeRepoBindingUsecase *CodeRepoBindingUsecase
 	client                 client.Client
+	wg                     sync.WaitGroup
 }
 
 type CodeRepoData struct {
@@ -75,13 +77,13 @@ func (c *CodeRepoUsecase) GetProjectByCodeRepoName(ctx context.Context, codeRepo
 	}
 
 	if project != nil {
-		resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
+		resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.ID))
 		codeRepoName = resourceName
 	}
 
 	node, err := c.resourcesUsecase.Get(ctx, nodestree.CodeRepo, productName, c, func(nodes nodestree.Node) (string, error) {
 		if project != nil {
-			resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
+			resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.ID))
 			return resourceName, nil
 		}
 
@@ -117,13 +119,13 @@ func (c *CodeRepoUsecase) GetCodeRepo(ctx context.Context, codeRepoName, product
 	}
 
 	if project != nil {
-		resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
+		resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.ID))
 		codeRepoName = resourceName
 	}
 
 	node, err := c.resourcesUsecase.Get(ctx, nodestree.CodeRepo, productName, c, func(nodes nodestree.Node) (string, error) {
 		if project != nil {
-			resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
+			resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.ID))
 			return resourceName, nil
 		}
 
@@ -157,14 +159,14 @@ func (c *CodeRepoUsecase) SaveCodeRepo(ctx context.Context, options *BizOptions,
 	if err != nil {
 		return err
 	}
-	data.Spec.Product = fmt.Sprintf("%s%d", _ProductPrefix, int(group.Id))
+	data.Spec.Product = fmt.Sprintf("%s%d", _ProductPrefix, int(group.ID))
 
 	project, err := c.saveRepository(ctx, group, options.ResouceName, gitOptions)
 	if err != nil {
 		return err
 	}
-	pid := int(project.Id)
-	codeRepoName := fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
+	pid := int(project.ID)
+	codeRepoName := fmt.Sprintf("%s%d", RepoPrefix, int(project.ID))
 	data.Name = codeRepoName
 
 	resourceOptions := &resourceOptions{
@@ -225,8 +227,8 @@ func (c *CodeRepoUsecase) DeleteCodeRepo(ctx context.Context, options *BizOption
 		}
 		return err
 	}
-	pid := int(project.Id)
-	codeRepoName := fmt.Sprintf("%s%d", RepoPrefix, int(project.Id))
+	pid := int(project.ID)
+	codeRepoName := fmt.Sprintf("%s%d", RepoPrefix, int(project.ID))
 
 	resourceOptions := &resourceOptions{
 		resourceKind:      nodestree.CodeRepo,
@@ -290,6 +292,10 @@ func (c *CodeRepoUsecase) getCodeRepo(ctx context.Context, productName, codeRepo
 	}
 
 	node := c.nodestree.GetNode(nodes, nodestree.CodeRepo, codeRepoName)
+	if node == nil {
+		return nil, commonv1.ErrorNodeNotFound("failed to get coderepo of repository %s", codeRepoName)
+	}
+
 	codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
 	if !ok {
 		return nil, fmt.Errorf(" type found for %s node", node.Name)
@@ -308,12 +314,12 @@ func (c *CodeRepoUsecase) refreshAuthorization(ctx context.Context, productName,
 		return err
 	}
 
-	projectsDeploykeyMap, err := c.codeRepoBindingUsecase.clearInvalidDeployKey(ctx, *nodes)
+	err = c.codeRepoBindingUsecase.clearInvalidDeployKey(ctx, *nodes)
 	if err != nil {
 		return err
 	}
 
-	err = c.codeRepoBindingUsecase.AuthorizeForSameProjectRepo(ctx, *nodes, projectsDeploykeyMap)
+	err = c.codeRepoBindingUsecase.authorizeForSameProjectRepo(ctx, *nodes)
 	if err != nil {
 		return err
 	}
@@ -403,12 +409,12 @@ func (c *CodeRepoUsecase) saveRepository(ctx context.Context, group *Group, reso
 	}
 
 	if err != nil && e.Code == 404 {
-		project, err = c.codeRepo.CreateCodeRepo(ctx, int(group.Id), gitOptions)
+		project, err = c.codeRepo.CreateCodeRepo(ctx, int(group.ID), gitOptions)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		project, err = c.codeRepo.UpdateCodeRepo(ctx, int(project.Id), gitOptions)
+		project, err = c.codeRepo.UpdateCodeRepo(ctx, int(project.ID), gitOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -469,6 +475,11 @@ func (c *CodeRepoUsecase) saveDeployKey(ctx context.Context, pid int, canPush bo
 			return nil, err
 		}
 
+		err := c.clearDeployKeyWithSameName(ctx, pid, permission)
+		if err != nil {
+			return nil, err
+		}
+
 		projectDeployKey, err := c.saveDeployKeyToGitAndSecretRepo(ctx, pid, canPush, permission)
 		if err != nil {
 			return nil, err
@@ -502,6 +513,26 @@ func (c *CodeRepoUsecase) saveDeployKey(ctx context.Context, pid int, canPush bo
 	}
 
 	return projectDeployKey, nil
+}
+
+func (c *CodeRepoUsecase) clearDeployKeyWithSameName(ctx context.Context, pid int, permission string) error {
+	title := fmt.Sprintf("%s%d-%s", RepoPrefix, pid, permission)
+
+	projectDeployKeys, err := GetAllDeployKeys(ctx, c.codeRepo, pid)
+	if err != nil {
+		return err
+	}
+
+	for _, projectDeployKey := range projectDeployKeys {
+		if projectDeployKey.Title == title {
+			err := c.codeRepo.DeleteDeployKey(ctx, pid, projectDeployKey.ID)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (c *CodeRepoUsecase) removeInvalidDeploykey(ctx context.Context, pid int, projectDeployKeys ...*ProjectDeployKey) error {
@@ -765,7 +796,7 @@ func (c *CodeRepoUsecase) CreateNode(path string, data interface{}) (*nodestree.
 		return nil, fmt.Errorf("failed to creating specify node, the path: %s", path)
 	}
 
-	if len(val.Spec.Webhook.Events) == 0 {
+	if val.Spec.Webhook != nil && val.Spec.Webhook.Events == nil {
 		val.Spec.Webhook.Events = make([]string, 0)
 	}
 

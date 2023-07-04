@@ -77,7 +77,7 @@ func (g *gitlabRepo) CreateCodeRepo(ctx context.Context, gid int, options *biz.G
 	}
 
 	return &biz.Project{
-		Id:                int32(project.ID),
+		ID:                int32(project.ID),
 		Name:              project.Name,
 		Path:              project.Path,
 		WebUrl:            project.WebURL,
@@ -123,7 +123,7 @@ func (g *gitlabRepo) UpdateCodeRepo(ctx context.Context, pid interface{}, option
 	}
 
 	return &biz.Project{
-		Id:                int32(project.ID),
+		ID:                int32(project.ID),
 		Name:              project.Name,
 		Path:              project.Path,
 		Visibility:        string(project.Visibility),
@@ -155,7 +155,7 @@ func (g *gitlabRepo) GetCodeRepo(ctx context.Context, pid interface{}) (*biz.Pro
 	}
 
 	return &biz.Project{
-		Id:                int32(project.ID),
+		ID:                int32(project.ID),
 		Name:              project.Name,
 		Visibility:        string(project.Visibility),
 		Description:       project.Description,
@@ -176,13 +176,23 @@ func (g *gitlabRepo) GetCodeRepo(ctx context.Context, pid interface{}) (*biz.Pro
 	}, nil
 }
 
-func (g *gitlabRepo) CreateGroup(ctx context.Context, gitOptions *biz.GitGroupOptions) (*biz.Group, error) {
+func (g *gitlabRepo) CreateGroup(ctx context.Context, git *biz.GitGroupOptions) (*biz.Group, error) {
+	opts := &gitlab.CreateGroupOptions{}
+
+	if git != nil && git.Gitlab != nil {
+		jsonData, _ := json.Marshal(git.Gitlab)
+		err := json.Unmarshal(jsonData, opts)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	client, err := NewGitlabClient(ctx, g)
 	if err != nil {
 		return nil, err
 	}
 
-	group, res, err := client.CreateGroup(&gitlab.CreateGroupOptions{Name: &gitOptions.Gitlab.Name, Path: &gitOptions.Gitlab.Path})
+	group, res, err := client.CreateGroup(opts)
 	if err != nil && res != nil && res.StatusCode == 403 {
 		return nil, commonv1.ErrorNoAuthorization("no permission to create group, err: %s", err)
 	}
@@ -192,7 +202,7 @@ func (g *gitlabRepo) CreateGroup(ctx context.Context, gitOptions *biz.GitGroupOp
 	}
 
 	return &biz.Group{
-		Id:          int32(group.ID),
+		ID:          int32(group.ID),
 		Name:        group.Name,
 		Visibility:  string(group.Visibility),
 		Description: group.Description,
@@ -222,11 +232,14 @@ func (g *gitlabRepo) DeleteGroup(ctx context.Context, gid interface{}) error {
 }
 
 func (g *gitlabRepo) UpdateGroup(ctx context.Context, gid interface{}, git *biz.GitGroupOptions) (*biz.Group, error) {
-	jsonData, _ := json.Marshal(git.Gitlab)
 	opts := &gitlab.UpdateGroupOptions{}
-	err := json.Unmarshal(jsonData, opts)
-	if err != nil {
-		return nil, err
+
+	if git != nil && git.Gitlab != nil {
+		jsonData, _ := json.Marshal(git.Gitlab)
+		err := json.Unmarshal(jsonData, opts)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	client, err := NewGitlabClient(ctx, g)
@@ -240,7 +253,7 @@ func (g *gitlabRepo) UpdateGroup(ctx context.Context, gid interface{}, git *biz.
 	}
 
 	return &biz.Group{
-		Id:          int32(group.ID),
+		ID:          int32(group.ID),
 		Name:        group.Name,
 		Visibility:  string(group.Visibility),
 		Description: group.Description,
@@ -270,7 +283,7 @@ func (g *gitlabRepo) GetGroup(ctx context.Context, gid interface{}) (*biz.Group,
 	}
 
 	return &biz.Group{
-		Id:          int32(group.ID),
+		ID:          int32(group.ID),
 		Name:        group.Name,
 		Visibility:  string(group.Visibility),
 		Description: group.Description,
@@ -280,7 +293,7 @@ func (g *gitlabRepo) GetGroup(ctx context.Context, gid interface{}) (*biz.Group,
 	}, nil
 }
 
-func (g *gitlabRepo) ListGroupCodeRepos(ctx context.Context, gid interface{}) ([]*biz.Project, error) {
+func (g *gitlabRepo) ListGroupCodeRepos(ctx context.Context, gid interface{}, opts ...string) ([]*biz.Project, error) {
 	var projects []*gitlab.Project
 	var result []*biz.Project
 
@@ -289,15 +302,26 @@ func (g *gitlabRepo) ListGroupCodeRepos(ctx context.Context, gid interface{}) ([
 		return nil, err
 	}
 
-	opt := &gitlab.ListGroupProjectsOptions{}
+	search := ""
+	for _, opt := range opts {
+		search = opt
+	}
+
+	opt := &gitlab.ListGroupProjectsOptions{Search: gitlab.String(search)}
 	projects, _, err = client.ListGroupProjects(gid, opt)
 	if err != nil {
 		return nil, err
 	}
 
+	result = g.convertProject(projects, result)
+
+	return result, nil
+}
+
+func (*gitlabRepo) convertProject(projects []*gitlab.Project, result []*biz.Project) []*biz.Project {
 	for _, project := range projects {
 		result = append(result, &biz.Project{
-			Id:                int32(project.ID),
+			ID:                int32(project.ID),
 			Name:              project.Name,
 			Visibility:        string(project.Visibility),
 			Description:       project.Description,
@@ -306,8 +330,36 @@ func (g *gitlabRepo) ListGroupCodeRepos(ctx context.Context, gid interface{}) ([
 			SshUrlToRepo:      project.SSHURLToRepo,
 			HttpUrlToRepo:     project.HTTPURLToRepo,
 			PathWithNamespace: project.PathWithNamespace,
+			Namespace: &biz.ProjectNamespace{
+				ID:        project.Namespace.ID,
+				Path:      project.Namespace.Path,
+				Name:      project.Namespace.Name,
+				Kind:      project.Namespace.Kind,
+				FullPath:  project.Namespace.FullPath,
+				WebURL:    project.Namespace.WebURL,
+				AvatarURL: project.Namespace.AvatarURL,
+			},
 		})
 	}
+
+	return result
+}
+
+func (g *gitlabRepo) ListCodeRepos(ctx context.Context, search string) ([]*biz.Project, error) {
+	var projects []*gitlab.Project
+	var result []*biz.Project
+
+	client, err := NewGitlabClient(ctx, g)
+	if err != nil {
+		return nil, err
+	}
+
+	projects, _, err = client.ListProjects(search)
+	if err != nil {
+		return nil, err
+	}
+
+	result = g.convertProject(projects, result)
 
 	return result, nil
 }
@@ -326,7 +378,7 @@ func (g *gitlabRepo) ListAllGroups(ctx context.Context) ([]*biz.Group, error) {
 
 	for _, group := range groups {
 		Groups = append(Groups, &biz.Group{
-			Id:          int32(group.ID),
+			ID:          int32(group.ID),
 			Name:        group.Name,
 			Visibility:  string(group.Visibility),
 			Description: group.Description,

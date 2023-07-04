@@ -17,6 +17,7 @@ package biz
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	errors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/log"
@@ -27,10 +28,11 @@ import (
 const (
 	_ProductKind     = "Product"
 	_ProductDestUser = "Argo"
+	DefaultProject   = "default.project"
 )
 
 type Group struct {
-	Id          int32
+	ID          int32
 	Name        string
 	Visibility  string
 	Description string
@@ -50,7 +52,7 @@ type ProjectNamespace struct {
 }
 
 type Project struct {
-	Id                int32
+	ID                int32
 	Name              string
 	Visibility        string
 	Description       string
@@ -71,6 +73,8 @@ type ProductUsecase struct {
 	configs          *nautesconfigs.Config
 	resourcesUsecase *ResourcesUsecase
 	codeRepoUsecase  *CodeRepoUsecase
+	wg               sync.WaitGroup
+	lock             sync.RWMutex
 }
 
 type GroupAndProjectItem struct {
@@ -122,23 +126,60 @@ func (p *ProductUsecase) GetProduct(ctx context.Context, productName string) (*G
 }
 
 func (p *ProductUsecase) ListProducts(ctx context.Context) ([]*GroupAndProjectItem, error) {
-	groups, err := p.codeRepo.ListAllGroups(ctx)
+	var products []*GroupAndProjectItem
+
+	projects, err := p.codeRepo.ListCodeRepos(ctx, DefaultProject)
 	if err != nil {
 		return nil, err
 	}
 
-	var products []*GroupAndProjectItem
-	for _, group := range groups {
-		product, err := p.GetGroupAndDefaultProject(ctx, group.Name)
-		if err != nil {
-			return nil, err
-		}
-		if product != nil {
+	errChan := make(chan error)
+	semaphore := make(chan struct{}, 10)
+
+	for _, project := range projects {
+		gid := project.Namespace.ID
+
+		p.wg.Add(1)
+
+		go func(gid int, project *Project) {
+			defer p.wg.Done()
+
+			semaphore <- struct{}{}
+			defer func() {
+				<-semaphore
+			}()
+
+			group, err := GetGroup(ctx, p.codeRepo, gid)
+			if err != nil {
+				if commonv1.IsGroupNotFound(err) {
+					return
+				}
+				errChan <- err
+				return
+			}
+
+			p.lock.Lock()
+
 			products = append(products, &GroupAndProjectItem{
-				Group:   product.Group,
-				Project: product.Project,
+				Group:   group,
+				Project: project,
 			})
-		}
+
+			p.lock.Unlock()
+
+		}(gid, project)
+	}
+
+	go func() {
+		p.wg.Wait()
+
+		close(semaphore)
+
+		close(errChan)
+	}()
+
+	for err := range errChan {
+		return nil, err
 	}
 
 	return products, nil
@@ -157,7 +198,7 @@ func (p *ProductUsecase) SaveProduct(ctx context.Context, productName string, gi
 			return
 		}
 	} else {
-		group, err = UpdateGroup(ctx, p.codeRepo, p.configs, int(group.Id), gitOptions)
+		group, err = UpdateGroup(ctx, p.codeRepo, p.configs, int(group.ID), gitOptions)
 		if err != nil {
 			return
 		}
@@ -186,7 +227,7 @@ func (p *ProductUsecase) saveDefaultProject(ctx context.Context, group *Group) (
 			},
 		}
 
-		project, err = p.codeRepo.CreateCodeRepo(ctx, int(group.Id), opt)
+		project, err = p.codeRepo.CreateCodeRepo(ctx, int(group.ID), opt)
 		if err != nil {
 			return nil, err
 		}
@@ -222,16 +263,16 @@ func (p *ProductUsecase) saveDefaultProject(ctx context.Context, group *Group) (
 }
 
 func (p *ProductUsecase) grantAuthorizationDefaultProject(ctx context.Context, project *Project) error {
-	projectDeployKey, err := p.codeRepoUsecase.saveDeployKey(ctx, int(project.Id), false)
+	projectDeployKey, err := p.codeRepoUsecase.saveDeployKey(ctx, int(project.ID), false)
 	if err != nil {
 		return err
 	}
 
-	if err := p.codeRepoUsecase.removeInvalidDeploykey(ctx, int(project.Id), projectDeployKey); err != nil {
+	if err := p.codeRepoUsecase.removeInvalidDeploykey(ctx, int(project.ID), projectDeployKey); err != nil {
 		return err
 	}
 
-	err = p.secretRepo.AuthorizationSecret(ctx, int(project.Id), _ProductDestUser, string(p.configs.Git.GitType), p.configs.Secret.Vault.MountPath)
+	err = p.secretRepo.AuthorizationSecret(ctx, int(project.ID), _ProductDestUser, string(p.configs.Git.GitType), p.configs.Secret.Vault.MountPath)
 	if err != nil {
 		return err
 	}
@@ -245,7 +286,7 @@ func (p *ProductUsecase) DeleteProduct(ctx context.Context, productID string) er
 		return err
 	}
 
-	codeRepos, err := p.codeRepo.ListGroupCodeRepos(ctx, int(group.Id))
+	codeRepos, err := p.codeRepo.ListGroupCodeRepos(ctx, int(group.ID))
 	if err != nil {
 		return err
 	}
@@ -261,13 +302,13 @@ func (p *ProductUsecase) DeleteProduct(ctx context.Context, productID string) er
 			return err
 		}
 
-		err = p.secretRepo.DeleteSecret(ctx, int(project.Id), DefaultUser, string(ReadOnly))
+		err = p.secretRepo.DeleteSecret(ctx, int(project.ID), DefaultUser, string(ReadOnly))
 		if err != nil {
 			return err
 		}
 	}
 
-	err = p.codeRepo.DeleteGroup(ctx, int(group.Id))
+	err = p.codeRepo.DeleteGroup(ctx, int(group.ID))
 	if err != nil {
 		return err
 	}
@@ -303,11 +344,6 @@ func CreateGroup(ctx context.Context, codeRepo CodeRepo, gitOptions *GitGroupOpt
 }
 
 func UpdateGroup(ctx context.Context, codeRepo CodeRepo, configClient *nautesconfigs.Config, gid int, git *GitGroupOptions) (group *Group, err error) {
-	_, err = codeRepo.ListGroupCodeRepos(ctx, gid)
-	if err != nil {
-		return
-	}
-
 	group, err = codeRepo.UpdateGroup(ctx, gid, git)
 	if err != nil {
 		return nil, err

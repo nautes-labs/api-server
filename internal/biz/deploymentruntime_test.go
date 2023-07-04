@@ -81,8 +81,8 @@ func createFakeDeployRuntimeNodes(node *nodestree.Node) nodestree.Node {
 var _ = Describe("Get deployment runtime", func() {
 	var (
 		resourceName = "runtime1"
-		toGetProject = &Project{Id: 1222, HttpUrlToRepo: fmt.Sprintf("ssh://git@gitlab.io/nautes-labs/%s.git", resourceName)}
-		repoID       = fmt.Sprintf("%s%d", RepoPrefix, int(toGetProject.Id))
+		toGetProject = &Project{ID: 1222, HttpUrlToRepo: fmt.Sprintf("ssh://git@gitlab.io/nautes-labs/%s.git", resourceName)}
+		repoID       = fmt.Sprintf("%s%d", RepoPrefix, int(toGetProject.ID))
 		fakeResource = createDeploymentRuntimeResource(resourceName, repoID)
 		fakeNode     = createFakeDeploymentRuntimeNode(fakeResource)
 		fakeNodes    = createFakeDeployRuntimeNodes(fakeNode)
@@ -110,8 +110,8 @@ var _ = Describe("Get deployment runtime", func() {
 var _ = Describe("List deployment runtimes", func() {
 	var (
 		resourceName = "runtime1"
-		toGetProject = &Project{Id: 1222, HttpUrlToRepo: fmt.Sprintf("ssh://git@gitlab.io/nautes-labs/%s.git", resourceName)}
-		repoID       = fmt.Sprintf("%s%d", RepoPrefix, int(toGetProject.Id))
+		toGetProject = &Project{ID: 1222, HttpUrlToRepo: fmt.Sprintf("ssh://git@gitlab.io/nautes-labs/%s.git", resourceName)}
+		repoID       = fmt.Sprintf("%s%d", RepoPrefix, int(toGetProject.ID))
 		fakeResource = createDeploymentRuntimeResource(resourceName, repoID)
 		fakeNode     = createFakeDeploymentRuntimeNode(fakeResource)
 		fakeNodes    = createFakeDeployRuntimeNodes(fakeNode)
@@ -148,13 +148,13 @@ var _ = Describe("List deployment runtimes", func() {
 var _ = Describe("Save deployment runtime", func() {
 	var (
 		resourceName          = "runtime1"
-		toGetProject          = &Project{Id: 1222, HttpUrlToRepo: fmt.Sprintf("ssh://git@gitlab.io/nautes-labs/%s.git", resourceName)}
-		repoID                = fmt.Sprintf("%s%d", RepoPrefix, int(toGetProject.Id))
+		toGetProject          = &Project{ID: 1222, HttpUrlToRepo: fmt.Sprintf("ssh://git@gitlab.io/nautes-labs/%s.git", resourceName)}
+		repoID                = fmt.Sprintf("%s%d", RepoPrefix, int(toGetProject.ID))
 		fakeResource          = createDeploymentRuntimeResource(resourceName, repoID)
 		fakeNode              = createFakeDeploymentRuntimeNode(fakeResource)
 		fakeNodes             = createFakeDeployRuntimeNodes(fakeNode)
 		pid                   = fmt.Sprintf("%s/%s", defaultGroupName, fakeResource.Spec.ManifestSource.CodeRepo)
-		project               = &Project{Id: 1222}
+		project               = &Project{ID: 1222}
 		deploymentRuntimeData = &DeploymentRuntimeData{
 			Name: fakeResource.Name,
 			Spec: fakeResource.Spec,
@@ -270,8 +270,8 @@ var _ = Describe("Save deployment runtime", func() {
 
 	Describe("check reference by resources", func() {
 		var (
-			projectForBase       = &Project{Name: "base", Id: 1223, HttpUrlToRepo: fmt.Sprintf("ssh://git@gitlab.io/nautes-labs/%s.git", resourceName)}
-			projectForBaseRepoID = fmt.Sprintf("%s%d", RepoPrefix, int(projectForBase.Id))
+			projectForBase       = &Project{Name: "base", ID: 1223, HttpUrlToRepo: fmt.Sprintf("ssh://git@gitlab.io/nautes-labs/%s.git", resourceName)}
+			projectForBaseRepoID = fmt.Sprintf("%s%d", RepoPrefix, int(projectForBase.ID))
 			environmentName      = "env1"
 		)
 		It("incorrect product name", testUseCase.CheckReferenceButIncorrectProduct(fakeNodes, func(options nodestree.CompareOptions, nodestree *nodestree.MockNodesTree) {
@@ -370,8 +370,8 @@ var _ = Describe("Save deployment runtime", func() {
 var _ = Describe("Delete deployment runtime", func() {
 	var (
 		resourceName = "runtime1"
-		toGetProject = &Project{Id: 1222, HttpUrlToRepo: fmt.Sprintf("ssh://git@gitlab.io/nautes-labs/%s.git", resourceName)}
-		repoID       = fmt.Sprintf("%s%d", RepoPrefix, int(toGetProject.Id))
+		toGetProject = &Project{ID: 1222, HttpUrlToRepo: fmt.Sprintf("ssh://git@gitlab.io/nautes-labs/%s.git", resourceName)}
+		repoID       = fmt.Sprintf("%s%d", RepoPrefix, int(toGetProject.ID))
 		fakeResource = createDeploymentRuntimeResource(resourceName, repoID)
 		fakeNode     = createFakeDeploymentRuntimeNode(fakeResource)
 		fakeNodes    = createFakeDeployRuntimeNodes(fakeNode)

@@ -419,6 +419,22 @@ func (mr *MockGitlabOperatorMockRecorder) ListProjectAccessToken(pid, opt interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListProjectAccessToken", reflect.TypeOf((*MockGitlabOperator)(nil).ListProjectAccessToken), varargs...)
 }
 
+// ListProjects mocks base method.
+func (m *MockGitlabOperator) ListProjects(search string) ([]*go_gitlab.Project, *go_gitlab.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListProjects", search)
+	ret0, _ := ret[0].([]*go_gitlab.Project)
+	ret1, _ := ret[1].(*go_gitlab.Response)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListProjects indicates an expected call of ListProjects.
+func (mr *MockGitlabOperatorMockRecorder) ListProjects(search interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListProjects", reflect.TypeOf((*MockGitlabOperator)(nil).ListProjects), search)
+}
+
 // NewGitlabClient mocks base method.
 func (m *MockGitlabOperator) NewGitlabClient(url, token string) (GitlabOperator, error) {
 	m.ctrl.T.Helper()

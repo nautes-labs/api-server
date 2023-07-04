@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"sync"
 
 	errors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/log"
@@ -27,6 +28,7 @@ import (
 	utilstrings "github.com/nautes-labs/api-server/util/string"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
+	"golang.org/x/sync/singleflight"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -40,6 +42,14 @@ type CodeRepoBindingUsecase struct {
 	config           *nautesconfigs.Config
 	client           client.Client
 	groupName        string
+	lock             sync.RWMutex
+	wg               sync.WaitGroup
+	cacheStore       *CacheStore
+}
+
+type CacheStore struct {
+	projectDeployKeyMap       map[int]map[int]*ProjectDeployKey
+	deploykeyInAllProjectsMap map[string]*deployKeyMapValue
 }
 
 type CodeRepoBindingData struct {
@@ -47,9 +57,17 @@ type CodeRepoBindingData struct {
 	Spec resourcev1alpha1.CodeRepoBindingSpec
 }
 
+type deployKeyMapValue struct {
+	deployKey *ProjectDeployKey
+	codeRepos []*resourcev1alpha1.CodeRepo
+}
+
 type applyDeploykeyFunc func(ctx context.Context, pid interface{}, deployKey int) error
 
 func NewCodeRepoCodeRepoBindingUsecase(logger log.Logger, codeRepo CodeRepo, secretRepo Secretrepo, nodestree nodestree.NodesTree, resourcesUsecase *ResourcesUsecase, config *nautesconfigs.Config, client client.Client) *CodeRepoBindingUsecase {
+	cacheStore := &CacheStore{
+		projectDeployKeyMap: map[int]map[int]*ProjectDeployKey{},
+	}
 	codeRepoBindingUsecase := &CodeRepoBindingUsecase{
 		log:              log.NewHelper(log.With(logger)),
 		codeRepo:         codeRepo,
@@ -58,6 +76,7 @@ func NewCodeRepoCodeRepoBindingUsecase(logger log.Logger, codeRepo CodeRepo, sec
 		resourcesUsecase: resourcesUsecase,
 		config:           config,
 		client:           client,
+		cacheStore:       cacheStore,
 	}
 	nodestree.AppendOperators(codeRepoBindingUsecase)
 
@@ -195,22 +214,14 @@ func (c *CodeRepoBindingUsecase) getCodeRepoBindings(nodes nodestree.Node, codeR
 	return codeRepoBindings, nil
 }
 
-func (c *CodeRepoBindingUsecase) authorizeDeployKey(ctx context.Context, codeRepos []*resourcev1alpha1.CodeRepo, pid interface{}, permissions string) error {
-	var repositories []*Project
-	for _, repo := range codeRepos {
-		pid, err := utilstrings.ExtractNumber(RepoPrefix, repo.Name)
-		if err != nil {
-			return err
+func (c *CodeRepoBindingUsecase) authorizeDeployKey(ctx context.Context, codeRepos []*resourcev1alpha1.CodeRepo, authorizationpid interface{}, permissions string) error {
+	if err := c.applyDeploykey(ctx, authorizationpid, permissions, codeRepos, func(ctx context.Context, authorizationpid interface{}, deployKeyID int) error {
+		value, ok := authorizationpid.(int)
+		if !ok {
+			return fmt.Errorf("the ID of the authorized repository is not of type int during applyDeploykey: %v", authorizationpid)
 		}
-		project, err := c.codeRepo.GetCodeRepo(ctx, pid)
-		if err != nil {
-			return err
-		}
-		repositories = append(repositories, project)
-	}
 
-	if err := c.applyDeploykey(ctx, pid, permissions, repositories, func(ctx context.Context, pid interface{}, deployKey int) error {
-		projectDeployKey, err := c.codeRepo.EnableProjectDeployKey(ctx, pid, deployKey)
+		projectDeployKey, err := c.codeRepo.EnableProjectDeployKey(ctx, value, deployKeyID)
 		if err != nil {
 			return err
 		}
@@ -219,7 +230,7 @@ func (c *CodeRepoBindingUsecase) authorizeDeployKey(ctx context.Context, codeRep
 			return nil
 		}
 
-		_, err = c.codeRepo.UpdateDeployKey(ctx, pid, projectDeployKey.ID, projectDeployKey.Title, true)
+		_, err = c.codeRepo.UpdateDeployKey(ctx, value, projectDeployKey.ID, projectDeployKey.Title, true)
 		if err != nil {
 			return err
 		}
@@ -232,25 +243,55 @@ func (c *CodeRepoBindingUsecase) authorizeDeployKey(ctx context.Context, codeRep
 	return nil
 }
 
-func (c *CodeRepoBindingUsecase) applyDeploykey(ctx context.Context, pid interface{}, permissions string, repositories []*Project, fn applyDeploykeyFunc) error {
-	for _, repository := range repositories {
-		repoid := fmt.Sprintf("%s%d", RepoPrefix, repository.Id)
-		secretData, err := c.GetDeployKeyFromSecretRepo(ctx, repoid, DefaultUser, permissions)
+func (c *CodeRepoBindingUsecase) applyDeploykey(ctx context.Context, authorizationpid interface{}, permissions string, codeRepos []*resourcev1alpha1.CodeRepo, fn applyDeploykeyFunc) error {
+	for _, codeRepo := range codeRepos {
+		pid, err := utilstrings.ExtractNumber(RepoPrefix, codeRepo.Name)
 		if err != nil {
-			return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from secret repo, please check if the key under /%s/%s exists or is invalid", permissions, c.config.Git.GitType, repoid)
+			return err
 		}
 
-		//Revoke in-product authorization, not revoke the deploykey of the authorization repository.
-		if pid == int(repository.Id) {
+		val, ok := authorizationpid.(int)
+		if !ok {
+			return fmt.Errorf("the ID of the authorized repository is not of type int during applyDeploykey: %v", authorizationpid)
+		}
+		if val == pid {
 			continue
 		}
 
-		deploykey, err := c.codeRepo.GetDeployKey(ctx, int(repository.Id), secretData.ID)
-		if err != nil {
-			return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from git, please check if the key exists or is invalid for the repository %s under organization %s", permissions, repository.Name, c.groupName)
+		deployKeyTitle := fmt.Sprintf("%s%d-%s", RepoPrefix, pid, permissions)
+		tmpMap, exists := c.cacheStore.deploykeyInAllProjectsMap[deployKeyTitle]
+		if !exists {
+			secretData, err := c.GetDeployKeyFromSecretRepo(ctx, fmt.Sprintf("%s%d", RepoPrefix, pid), DefaultUser, permissions)
+			if err != nil {
+				if commonv1.IsDeploykeyNotFound(err) {
+					return nil
+				}
+				return err
+			}
+			tmpMap = &deployKeyMapValue{}
+			tmpMap.deployKey = &ProjectDeployKey{}
+			tmpMap.deployKey.ID = secretData.ID
 		}
 
-		err = fn(ctx, pid, deploykey.ID)
+		deploykey, exists := c.cacheStore.projectDeployKeyMap[pid][tmpMap.deployKey.ID]
+		if exists {
+			err := fn(ctx, authorizationpid, deploykey.ID)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+
+		deploykey, err = c.codeRepo.GetDeployKey(ctx, pid, tmpMap.deployKey.ID)
+		if err != nil {
+			if commonv1.IsDeploykeyNotFound(err) {
+				c.log.Debugf("failed to get deploykey during applyDeploykey, repo id: %d, err: %w", pid, err)
+				continue
+			}
+			return fmt.Errorf("failed to get deploykey during applyDeploykey, repo id: %d, err: %w", pid, err)
+		}
+
+		err = fn(ctx, authorizationpid, deploykey.ID)
 		if err != nil {
 			return err
 		}
@@ -260,12 +301,12 @@ func (c *CodeRepoBindingUsecase) applyDeploykey(ctx context.Context, pid interfa
 }
 
 func (c *CodeRepoBindingUsecase) refreshAuthorization(ctx context.Context, nodes nodestree.Node, codeRepoName string) error {
-	projectsDeploykeyMap, err := c.clearInvalidDeployKey(ctx, nodes)
+	err := c.clearInvalidDeployKey(ctx, nodes)
 	if err != nil {
 		return err
 	}
 
-	err = c.AuthorizeForSameProjectRepo(ctx, nodes, projectsDeploykeyMap)
+	err = c.authorizeForSameProjectRepo(ctx, nodes)
 	if err != nil {
 		return err
 	}
@@ -289,20 +330,25 @@ func (c *CodeRepoBindingUsecase) processAuthorization(ctx context.Context, nodes
 	}
 
 	codeRepoBindings := c.getCodeRepoBindingsInAuthorizedRepo(ctx, nodes, authRepoName, permissions)
-	codeRepo, err := c.getAuthorizedRepoCodeRepo(ctx, nodes, authRepoName)
-	if err != nil {
-		return err
-	}
-
-	scopes := c.calculateAuthorizationScopes(ctx, codeRepoBindings, permissions, codeRepo.Spec.Project)
+	scopes := c.calculateAuthorizationScopes(ctx, codeRepoBindings, permissions)
 	for _, scope := range scopes {
 		if scope.isProductPermission {
-			err := c.updateAllAuthorization(ctx, nodes, pid, permissions, scope.ProductName)
+			err = c.recycleAuthorizationByPermissions(ctx, nodes, pid, permissions, scope.ProductName)
+			if err != nil {
+				return err
+			}
+
+			err = c.updateAllAuthorization(ctx, nodes, pid, permissions, scope.ProductName)
 			if err != nil {
 				return err
 			}
 		} else {
-			err := c.recycleAuthorization(ctx, scope.ProjectScopes, nodes, pid, permissions, scope.ProductName)
+			err = c.recycleAuthorizationByPermissions(ctx, nodes, pid, permissions, scope.ProductName)
+			if err != nil {
+				return err
+			}
+
+			err = c.recycleAuthorizationByProjectScopes(ctx, scope.ProjectScopes, nodes, pid, permissions, scope.ProductName)
 			if err != nil {
 				return err
 			}
@@ -315,7 +361,7 @@ func (c *CodeRepoBindingUsecase) processAuthorization(ctx context.Context, nodes
 	}
 
 	if len(codeRepoBindings) == 0 {
-		err := c.recycleAuthorization(ctx, nil, nodes, pid, permissions, "")
+		err := c.recycleAuthorizationByProjectScopes(ctx, nil, nodes, pid, permissions, "")
 		if err != nil {
 			return err
 		}
@@ -324,8 +370,68 @@ func (c *CodeRepoBindingUsecase) processAuthorization(ctx context.Context, nodes
 	return nil
 }
 
-func (c *CodeRepoBindingUsecase) AuthorizeForSameProjectRepo(ctx context.Context, nodes nodestree.Node, projectDeploykeysMap map[int]map[int]*ProjectDeployKey) error {
-	tmpSecretDeploykeyMap := make(map[string]*DeployKeySecretData, 0)
+func (c *CodeRepoBindingUsecase) authorizeForSameProjectRepo(ctx context.Context, nodes nodestree.Node) error {
+	codeRepos := c.getCodeRepos(nodes)
+	errChan := make(chan error)
+	semaphore := make(chan struct{}, 10)
+
+	wg := sync.WaitGroup{}
+	for i := 0; i < len(codeRepos); i++ {
+		for j := i + 1; j < len(codeRepos); j++ {
+			repo1 := codeRepos[i]
+			repo2 := codeRepos[j]
+
+			ok := validateCodeRepo(repo1, repo2)
+			if !ok {
+				continue
+			}
+
+			wg.Add(1)
+			go func(repo1, repo2 *resourcev1alpha1.CodeRepo) {
+				defer wg.Done()
+
+				semaphore <- struct{}{}
+				defer func() {
+					<-semaphore
+				}()
+
+				c.authorizeRepositories(ctx, repo1, repo2, errChan)
+			}(repo1, repo2)
+		}
+	}
+
+	go func() {
+		wg.Wait()
+		close(errChan)
+		close(semaphore)
+	}()
+
+	for err := range errChan {
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateCodeRepo(repo1 *resourcev1alpha1.CodeRepo, repo2 *resourcev1alpha1.CodeRepo) bool {
+	if repo1.Name == repo2.Name {
+		return false
+	}
+
+	if repo1.Spec.Project == "" && repo2.Spec.Project == "" {
+		return false
+	}
+
+	if repo1.Spec.Project != repo2.Spec.Project {
+		return false
+	}
+
+	return true
+}
+
+func (*CodeRepoBindingUsecase) getCodeRepos(nodes nodestree.Node) []*resourcev1alpha1.CodeRepo {
 	codeRepoNodes := nodestree.ListsResourceNodes(nodes, nodestree.CodeRepo)
 	tmpCodeRepos := make([]*resourcev1alpha1.CodeRepo, 0)
 
@@ -335,62 +441,71 @@ func (c *CodeRepoBindingUsecase) AuthorizeForSameProjectRepo(ctx context.Context
 			tmpCodeRepos = append(tmpCodeRepos, codeRepo)
 		}
 	}
-
-	for _, repo1 := range tmpCodeRepos {
-		for _, repo2 := range tmpCodeRepos {
-			if repo1.Name == repo2.Name {
-				continue
-			}
-
-			if repo1.Spec.Project != repo2.Spec.Project {
-				continue
-			}
-
-			roDeployKey1Info, err := c.getDeployKey(ctx, repo1, projectDeploykeysMap, tmpSecretDeploykeyMap, ReadOnly)
-			if err != nil {
-				return err
-			}
-
-			rwDeployKey1Info, err := c.getDeployKey(ctx, repo1, projectDeploykeysMap, tmpSecretDeploykeyMap, ReadWrite)
-			if err != nil {
-				return err
-			}
-
-			roDeployKey2Info, err := c.getDeployKey(ctx, repo2, projectDeploykeysMap, tmpSecretDeploykeyMap, ReadOnly)
-			if err != nil {
-				return err
-			}
-
-			rwDeployKey2Info, err := c.getDeployKey(ctx, repo2, projectDeploykeysMap, tmpSecretDeploykeyMap, ReadWrite)
-			if err != nil {
-				return err
-			}
-
-			pid1, err := utilstrings.ExtractNumber(RepoPrefix, repo1.Name)
-			if err != nil {
-				return err
-			}
-			pid2, err := utilstrings.ExtractNumber(RepoPrefix, repo2.Name)
-			if err != nil {
-				return err
-			}
-
-			err = c.enableProjectDeployKey(ctx, pid1, projectDeploykeysMap, roDeployKey2Info, rwDeployKey2Info)
-			if err != nil {
-				return err
-			}
-
-			err = c.enableProjectDeployKey(ctx, pid2, projectDeploykeysMap, roDeployKey1Info, rwDeployKey1Info)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
+	return tmpCodeRepos
 }
 
-func (c *CodeRepoBindingUsecase) getDeployKey(ctx context.Context, repo *resourcev1alpha1.CodeRepo, projectDeploykeysMap map[int]map[int]*ProjectDeployKey, tmpSecretDeploykeyMap map[string]*DeployKeySecretData, permission DeployKeyType) (*ProjectDeployKey, error) {
+func (c *CodeRepoBindingUsecase) authorizeRepositories(ctx context.Context, repo1, repo2 *resourcev1alpha1.CodeRepo, errChan chan error) {
+
+	c.lock.Lock()
+
+	tmpSecretDeploykeyMap := make(map[string]*DeployKeySecretData, 0)
+
+	roDeployKey1Info, err := c.getDeployKey(ctx, repo1, tmpSecretDeploykeyMap, ReadOnly)
+	if err != nil {
+		c.lock.Unlock()
+		if commonv1.IsDeploykeyNotFound(err) {
+			return
+		}
+		errChan <- err
+		return
+	}
+
+	rwDeployKey1Info, err := c.getDeployKey(ctx, repo1, tmpSecretDeploykeyMap, ReadWrite)
+	if err != nil {
+		c.lock.Unlock()
+		if commonv1.IsDeploykeyNotFound(err) {
+			return
+		}
+		errChan <- err
+		return
+	}
+
+	roDeployKey2Info, err := c.getDeployKey(ctx, repo2, tmpSecretDeploykeyMap, ReadOnly)
+	if err != nil {
+		c.lock.Unlock()
+		if commonv1.IsDeploykeyNotFound(err) {
+			return
+		}
+		errChan <- err
+		return
+	}
+
+	rwDeployKey2Info, err := c.getDeployKey(ctx, repo2, tmpSecretDeploykeyMap, ReadWrite)
+	if err != nil {
+		c.lock.Unlock()
+		if commonv1.IsDeploykeyNotFound(err) {
+			return
+		}
+		errChan <- err
+		return
+	}
+
+	c.lock.Unlock()
+
+	err = c.enableProjectDeployKey(ctx, repo1, roDeployKey2Info, rwDeployKey2Info)
+	if err != nil {
+		errChan <- err
+		return
+	}
+
+	err = c.enableProjectDeployKey(ctx, repo2, roDeployKey1Info, rwDeployKey1Info)
+	if err != nil {
+		errChan <- err
+		return
+	}
+}
+
+func (c *CodeRepoBindingUsecase) getDeployKey(ctx context.Context, repo *resourcev1alpha1.CodeRepo, tmpSecretDeploykeyMap map[string]*DeployKeySecretData, permission DeployKeyType) (*ProjectDeployKey, error) {
 	var err error
 
 	pid, err := utilstrings.ExtractNumber(RepoPrefix, repo.Name)
@@ -398,54 +513,76 @@ func (c *CodeRepoBindingUsecase) getDeployKey(ctx context.Context, repo *resourc
 		return nil, err
 	}
 
+	// Building cache keys for deploy keys.
 	key := fmt.Sprintf("%s-%s", repo.Name, permission)
-	roDeployKey1, ok := tmpSecretDeploykeyMap[key]
+
+	// Check if there is a deploy key in the cache, and if it does not exist, obtain it from the keystore.
+	deployKey, ok := tmpSecretDeploykeyMap[key]
 	if !ok {
-		roDeployKey1, err = c.GetDeployKeyFromSecretRepo(ctx, repo.Name, DefaultUser, string(permission))
+		deployKey, err = c.GetDeployKeyFromSecretRepo(ctx, repo.Name, DefaultUser, string(permission))
 		if err != nil {
 			if commonv1.IsDeploykeyNotFound(err) {
-				return nil, commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from secret repo, please check if the key under /%s/%s exists or is invalid", string(permission), c.config.Git.GitType, repo.Name)
+				return nil, nil
 			}
 			return nil, err
 		}
-		tmpSecretDeploykeyMap[key] = roDeployKey1
+		tmpSecretDeploykeyMap[key] = deployKey
 	}
 
-	repo1Map, ok := projectDeploykeysMap[pid]
-	roDeployKeyInfo, ok := repo1Map[roDeployKey1.ID]
+	// Check if there is a deploy key for the project in the cache, and if it does not exist, obtain it from codeRepo.
+	projectDeploykey, ok := c.cacheStore.projectDeployKeyMap[pid][deployKey.ID]
 	if !ok {
-		roDeployKeyInfo, err = c.codeRepo.GetDeployKey(ctx, pid, roDeployKey1.ID)
+		projectDeploykey, err = c.codeRepo.GetDeployKey(ctx, pid, deployKey.ID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get respoitory %s %s deploy key", repo.Name, permission)
+			return nil, err
+		}
+		c.cacheStore.projectDeployKeyMap[pid] = map[int]*ProjectDeployKey{
+			deployKey.ID: projectDeploykey,
 		}
 	}
-	return roDeployKeyInfo, nil
+
+	return projectDeploykey, nil
+}
+func (c *CodeRepoBindingUsecase) enableProjectDeployKey(ctx context.Context, repo *resourcev1alpha1.CodeRepo, roDeployKeyInfo *ProjectDeployKey, rwDeployKeyInfo *ProjectDeployKey) error {
+	pid, err := utilstrings.ExtractNumber(RepoPrefix, repo.Name)
+	if err != nil {
+		return err
+	}
+
+	if _, ok := c.cacheStore.projectDeployKeyMap[pid][roDeployKeyInfo.ID]; !ok {
+		err = c.enableDeployKey(ctx, pid, roDeployKeyInfo.ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	if _, ok := c.cacheStore.projectDeployKeyMap[pid][rwDeployKeyInfo.ID]; !ok {
+		err = c.enableDeployKey(ctx, pid, rwDeployKeyInfo.ID)
+		if err != nil {
+			return err
+		}
+
+		err = c.updateDeployKey(ctx, pid, rwDeployKeyInfo.ID, rwDeployKeyInfo.Title, true)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
-func (c *CodeRepoBindingUsecase) enableProjectDeployKey(ctx context.Context, pid int, projectDeploykeysMap map[int]map[int]*ProjectDeployKey, roDeployKey2Info *ProjectDeployKey, rwDeployKey2Info *ProjectDeployKey) error {
-	var err error
-
-	repoMap := projectDeploykeysMap[pid]
-
-	_, ok := repoMap[roDeployKey2Info.ID]
-	if !ok {
-		_, err = c.codeRepo.EnableProjectDeployKey(ctx, pid, roDeployKey2Info.ID)
-		if err != nil {
-			return err
-		}
+func (c *CodeRepoBindingUsecase) enableDeployKey(ctx context.Context, pid int, deployKeyID int) error {
+	_, err := c.codeRepo.EnableProjectDeployKey(ctx, pid, deployKeyID)
+	if err != nil {
+		return err
 	}
+	return nil
+}
 
-	_, ok = repoMap[rwDeployKey2Info.ID]
-	if !ok {
-		_, err = c.codeRepo.EnableProjectDeployKey(ctx, pid, rwDeployKey2Info.ID)
-		if err != nil {
-			return err
-		}
-
-		_, err = c.codeRepo.UpdateDeployKey(ctx, pid, rwDeployKey2Info.ID, rwDeployKey2Info.Title, true)
-		if err != nil {
-			return err
-		}
+func (c *CodeRepoBindingUsecase) updateDeployKey(ctx context.Context, pid int, deployKeyID int, title string, enabled bool) error {
+	_, err := c.codeRepo.UpdateDeployKey(ctx, pid, deployKeyID, title, enabled)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -503,12 +640,11 @@ type ProductAuthorization struct {
 // Return a list of ProductAuthorization entities, recording the authorization scope for each product.
 // Each entity contains permissions for product name, product level, and project scopes.
 // Projectscopes have merged all project permissions under CodeRepoBinding for the product, This is a reserved data.
-func (c *CodeRepoBindingUsecase) calculateAuthorizationScopes(ctx context.Context, codeRepoBindings []*resourcev1alpha1.CodeRepoBinding, permissions, authorizedCodeRepoProject string) []*ProductAuthorization {
+func (c *CodeRepoBindingUsecase) calculateAuthorizationScopes(ctx context.Context, codeRepoBindings []*resourcev1alpha1.CodeRepoBinding, permissions string) []*ProductAuthorization {
 	scopes := []*ProductAuthorization{}
 
 	for _, codeRepoBinding := range codeRepoBindings {
 		isProductPermission := len(codeRepoBinding.Spec.Projects) == 0
-
 		projectScopes := make(map[string]bool)
 
 		for _, project := range codeRepoBinding.Spec.Projects {
@@ -525,10 +661,6 @@ func (c *CodeRepoBindingUsecase) calculateAuthorizationScopes(ctx context.Contex
 			}
 		} else {
 			// authorizedCodeRepoProject is project of the authorized repository, when isProductPermission is false that it is required.
-			if !isProductPermission && authorizedCodeRepoProject != "" && !projectScopes[authorizedCodeRepoProject] {
-				projectScopes[authorizedCodeRepoProject] = true
-			}
-
 			scopes = append(scopes, &ProductAuthorization{
 				ProductName:         codeRepoBinding.Spec.Product,
 				isProductPermission: isProductPermission,
@@ -549,7 +681,8 @@ func findExistingScope(scopes []*ProductAuthorization, productName string) *Prod
 	return nil
 }
 
-func (c *CodeRepoBindingUsecase) updateAllAuthorization(ctx context.Context, nodes nodestree.Node, pid interface{}, permissions, product string) error {
+// updateAllAuthorization Authorize all Codebase under the specified product.
+func (c *CodeRepoBindingUsecase) updateAllAuthorization(ctx context.Context, nodes nodestree.Node, pid interface{}, permissions, productName string) error {
 	codeRepos, err := nodesToCodeRepoists(nodes)
 	if err != nil {
 		return err
@@ -564,25 +697,25 @@ func (c *CodeRepoBindingUsecase) updateAllAuthorization(ctx context.Context, nod
 }
 
 // updateAuthorization Authorize according to the authorization scope of the project
-func (c *CodeRepoBindingUsecase) updateAuthorization(ctx context.Context, scopes map[string]bool, nodes nodestree.Node, pid interface{}, permissions, product string) error {
-	if len(scopes) == 0 {
+func (c *CodeRepoBindingUsecase) updateAuthorization(ctx context.Context, projectScopes map[string]bool, nodes nodestree.Node, pid interface{}, permissions, product string) error {
+	if len(projectScopes) == 0 {
 		return nil
 	}
 
-	codeRepos, err := nodesToCodeRepoists(nodes, func(codeRepo *resourcev1alpha1.CodeRepo) bool {
-		for key, _ := range scopes {
-			if codeRepo.Spec.Project == key {
-				return true
+	authorizedCodeRepos := []*resourcev1alpha1.CodeRepo{}
+	codeRepos, err := nodesToCodeRepoists(nodes)
+	if err != nil {
+		return fmt.Errorf("failed to convert codeRepo nodes when update authorization")
+	}
+	for _, codeRepo := range codeRepos {
+		for project, _ := range projectScopes {
+			if codeRepo.Spec.Project == project {
+				authorizedCodeRepos = append(authorizedCodeRepos, codeRepo)
 			}
 		}
-
-		return false
-	})
-	if err != nil {
-		return err
 	}
 
-	err = c.authorizeDeployKey(ctx, codeRepos, pid, permissions)
+	err = c.authorizeDeployKey(ctx, authorizedCodeRepos, pid, permissions)
 	if err != nil {
 		return err
 	}
@@ -591,182 +724,86 @@ func (c *CodeRepoBindingUsecase) updateAuthorization(ctx context.Context, scopes
 }
 
 // recycleAuthorization Recycle according to the authorization scope of the project.
-func (c *CodeRepoBindingUsecase) recycleAuthorization(ctx context.Context, projectScopes map[string]bool, nodes nodestree.Node, pid interface{}, permissions, product string) error {
-	var codeRepos []*resourcev1alpha1.CodeRepo
+func (c *CodeRepoBindingUsecase) recycleAuthorizationByProjectScopes(ctx context.Context, projectScopes map[string]bool, nodes nodestree.Node, authorizationpid interface{}, permissions, productName string) error {
+	if len(projectScopes) == 0 {
+		return nil
+	}
 
-	repository, err := c.codeRepo.GetCodeRepo(ctx, pid)
+	authorizedRepository, err := c.codeRepo.GetCodeRepo(ctx, authorizationpid)
 	if err != nil {
 		return err
 	}
 
-	currentProductName := fmt.Sprintf("%s%d", _ProductPrefix, repository.Namespace.ID)
-	if product != "" && product != currentProductName {
-		// TODO: Increase cross-product processing
-	} else {
-		tmpProjects := make([]string, 0)
-
-		projectNodes := nodestree.ListsResourceNodes(nodes, nodestree.Project)
-		for _, node := range projectNodes {
-			val, ok := node.Content.(*resourcev1alpha1.Project)
-			if !ok {
-				return fmt.Errorf("resource type is inconsistent, please check if this resource %s is legal", node.Name)
-			}
-			if _, ok := projectScopes[val.Name]; !ok {
-				tmpProjects = append(tmpProjects, val.Name)
-			}
-		}
-
+	codeRepos := []*resourcev1alpha1.CodeRepo{}
+	currentProductName := fmt.Sprintf("%s%d", _ProductPrefix, authorizedRepository.Namespace.ID)
+	if productName == currentProductName {
 		codeRepos, err = nodesToCodeRepoists(nodes, func(codeRepo *resourcev1alpha1.CodeRepo) bool {
-			for _, project := range tmpProjects {
-				// Recycle when the project in the repository is empty or outside the projectscope range.
-				if codeRepo.Spec.Project == "" || codeRepo.Spec.Project == project {
-					return true
-				}
+			pid, err := utilstrings.ExtractNumber(RepoPrefix, codeRepo.Name)
+			if err != nil {
+				return false
 			}
 
-			return false
+			if pid == authorizationpid {
+				return false
+			}
+
+			if codeRepo.Spec.Project == "" {
+				return true
+			}
+
+			_, ok := projectScopes[codeRepo.Spec.Project]
+			return !ok
 		})
 		if err != nil {
 			return err
 		}
+	} else {
+		// TODO: Increase cross-product processing
 	}
 
-	if err := c.RevokeDeployKey(ctx, codeRepos, pid, permissions); err != nil {
+	if err := c.RevokeDeployKey(ctx, codeRepos, authorizationpid, permissions); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *CodeRepoBindingUsecase) clearInvalidDeployKey(ctx context.Context, nodes nodestree.Node) (map[int]map[int]*ProjectDeployKey, error) {
-	tmpProjectMap := make(map[int]*Project, 0)
-	tmpProjectsDeploykeyMap := make(map[int]map[int]*ProjectDeployKey, 0)
-
+func (c *CodeRepoBindingUsecase) recycleAuthorizationByPermissions(ctx context.Context, nodes nodestree.Node, authorizationpid interface{}, permissions, productName string) error {
 	codeRepoNodes := nodestree.ListsResourceNodes(nodes, nodestree.CodeRepo)
-
-	for _, codeRepoNode := range codeRepoNodes {
-		codeRepo, ok := codeRepoNode.Content.(*resourcev1alpha1.CodeRepo)
+	for _, node := range codeRepoNodes {
+		codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
 		if !ok {
 			continue
 		}
 
 		pid, err := utilstrings.ExtractNumber(RepoPrefix, codeRepo.Name)
 		if err != nil {
-			return nil, err
-		}
-
-		projectDeployKeys, err := GetAllDeployKeys(ctx, c.codeRepo, pid)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, projectDeployKey := range projectDeployKeys {
-			re := regexp.MustCompile(`repo-(\d+)-`)
-			match := re.FindStringSubmatch(projectDeployKey.Title)
-			if len(match) == 0 {
-				continue
-			}
-
-			matchpid, err := strconv.Atoi(match[1])
-			if err != nil {
-				return nil, err
-			}
-
-			if matchpid == pid {
-				continue
-			}
-
-			repository, ok := tmpProjectMap[matchpid]
-			if !ok {
-				repository, err = c.codeRepo.GetCodeRepo(ctx, matchpid)
-				if err != nil {
-					if !commonv1.IsProjectNotFound(err) {
-						return nil, err
-					}
-					if err := c.codeRepo.DeleteDeployKey(ctx, pid, projectDeployKey.ID); err != nil {
-						return nil, err
-					}
-				}
-				tmpProjectMap[matchpid] = repository
-			}
-
-			_, err = c.codeRepo.GetDeployKey(ctx, int(repository.Id), projectDeployKey.ID)
-			if err != nil {
-				if commonv1.IsDeploykeyNotFound(err) {
-					err := c.codeRepo.DeleteDeployKey(ctx, pid, projectDeployKey.ID)
-					if err != nil {
-						return nil, err
-					}
-				} else {
-					return nil, err
-				}
-			}
-
-			checkedCodeRepoNode := c.nodestree.GetNode(&nodes, nodestree.CodeRepo, fmt.Sprintf("%s%d", RepoPrefix, matchpid))
-			if checkedCodeRepoNode != nil {
-				checkedCodeRepo, _ := checkedCodeRepoNode.Content.(*resourcev1alpha1.CodeRepo)
-				if checkedCodeRepo.Spec.Project != codeRepo.Spec.Project {
-					err := c.codeRepo.DeleteDeployKey(ctx, pid, projectDeployKey.ID)
-					if err != nil {
-						if commonv1.IsDeploykeyNotFound(err) {
-							continue
-						}
-						return nil, err
-					}
-				}
-			}
-
-			if err == nil {
-				tmpMap := make(map[int]*ProjectDeployKey, 0)
-				for _, key := range projectDeployKeys {
-					tmpMap[key.ID] = key
-				}
-				tmpProjectsDeploykeyMap[pid] = tmpMap
-			}
-		}
-	}
-
-	return tmpProjectsDeploykeyMap, nil
-}
-
-func (c *CodeRepoBindingUsecase) RevokeDeployKey(ctx context.Context, concodeRepos []*resourcev1alpha1.CodeRepo, authpid interface{}, permissions string) error {
-	for _, repo := range concodeRepos {
-		pid, err := utilstrings.ExtractNumber(RepoPrefix, repo.Name)
-		if err != nil {
 			return err
 		}
 
-		repository, err := c.codeRepo.GetCodeRepo(ctx, pid)
-		if err != nil {
-			return err
+		value, ok := authorizationpid.(int)
+		if !ok {
+			return fmt.Errorf("failed to get authorizationpid when recyclePermissionAuthorization")
 		}
 
-		if authpid == int(repository.Id) {
+		if pid == value {
 			continue
 		}
 
-		secretData, err := c.GetDeployKeyFromSecretRepo(ctx, repo.Name, DefaultUser, permissions)
-		if err != nil {
-			if commonv1.IsDeploykeyNotFound(err) {
-				return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from secret repo, please check if the key under /%s/%s exists or is invalid", permissions, c.config.Git.GitType, repo.Name)
-			}
-			return err
+		deploykeyTitle := ""
+		if permissions == string(ReadOnly) {
+			deploykeyTitle = fmt.Sprintf("%s%d-%s", RepoPrefix, pid, ReadWrite)
+		} else {
+			deploykeyTitle = fmt.Sprintf("%s%d-%s", RepoPrefix, pid, ReadOnly)
 		}
 
-		_, err = c.codeRepo.GetCodeRepo(ctx, pid)
-		if err != nil {
-			if !commonv1.IsProjectNotFound(err) {
-				return err
-			}
+		tmpValue, ok := c.cacheStore.deploykeyInAllProjectsMap[deploykeyTitle]
+		if !ok {
+			continue
+		}
 
-			deploykey, err := c.codeRepo.GetDeployKey(ctx, pid, secretData.ID)
-			if err != nil {
-				if commonv1.IsDeploykeyNotFound(err) {
-					return commonv1.ErrorDeploykeyNotFound("failed to get the %s deploykey from git, please check if the key exists or is invalid for the repository %s under organization %s", permissions, repository.Name, c.groupName)
-				}
-				return err
-			}
-
-			err = c.codeRepo.DeleteDeployKey(ctx, authpid, deploykey.ID)
+		_, exists := c.cacheStore.projectDeployKeyMap[value][tmpValue.deployKey.ID]
+		if exists {
+			err = c.codeRepo.DeleteDeployKey(ctx, value, tmpValue.deployKey.ID)
 			if err != nil && !commonv1.IsDeploykeyNotFound(err) {
 				return err
 			}
@@ -776,72 +813,253 @@ func (c *CodeRepoBindingUsecase) RevokeDeployKey(ctx context.Context, concodeRep
 	return nil
 }
 
-func (c *CodeRepoBindingUsecase) GetAuthorizedRepositories(ctx context.Context, spec resourcev1alpha1.CodeRepoBindingSpec) ([]*Project, error) {
-	gid, err := utilstrings.ExtractNumber(_ProductPrefix, spec.Product)
-	if err != nil {
-		return nil, err
-	}
-	nodes, err := c.resourcesUsecase.List(ctx, gid, c)
-	if err != nil {
-		return nil, err
-	}
+func (c *CodeRepoBindingUsecase) clearInvalidDeployKey(ctx context.Context, nodes nodestree.Node) error {
+	codeRepoNodes := nodestree.ListsResourceNodes(nodes, nodestree.CodeRepo)
+	cacheProjectMap := make(map[int]*Project)
+	cacheProjectsDeploykeyMap := make(map[int]map[int]*ProjectDeployKey, len(codeRepoNodes))
+	deploykeyInAllProjectsMap := make(map[string]*deployKeyMapValue, len(codeRepoNodes))
 
-	// Get all CodeRepoBindings for the same authorized repository.
-	codeRepoBindingNodes := nodestree.ListsResourceNodes(*nodes, nodestree.CodeRepoBinding, func(node *nodestree.Node) bool {
-		val, ok := node.Content.(*resourcev1alpha1.CodeRepoBinding)
+	for _, codeRepoNode := range codeRepoNodes {
+		codeRepo, ok := codeRepoNode.Content.(*resourcev1alpha1.CodeRepo)
 		if !ok {
-			return false
+			continue
 		}
 
-		if val.Spec.CodeRepo == spec.CodeRepo {
-			return true
-		}
+		c.wg.Add(1)
 
-		return false
-	})
+		go func(codeRepo *resourcev1alpha1.CodeRepo) {
+			defer c.wg.Done()
+			err := c.deduplicateAndCacheDeployKeys(ctx, codeRepo, cacheProjectsDeploykeyMap, deploykeyInAllProjectsMap)
+			if err != nil {
+				return
+			}
+		}(codeRepo)
 
-	// if product-level authorization is found, all repository are directly authorized, otherwise it will try to merge project authorization scope.
-	tmpProjects := make([]string, 0)
-	for _, node := range codeRepoBindingNodes {
-		val, ok := node.Content.(*resourcev1alpha1.CodeRepoBinding)
-		if !ok {
-			return nil, fmt.Errorf("resource type is inconsistent, please check if this resource %s is legal", node.Name)
-		}
-		if len(val.Spec.Projects) == 0 {
-			tmpProjects = make([]string, 0)
-			break
-		}
-		tmpProjects = append(tmpProjects, val.Spec.Projects...)
 	}
 
-	// Get CodeRepos within the specified authorization scope.
-	codeRepos, err := nodesToCodeRepoists(*nodes, func(codeRepo *resourcev1alpha1.CodeRepo) bool {
-		for _, project := range tmpProjects {
-			if codeRepo.Spec.Project == project {
-				return true
+	c.wg.Wait()
+
+	for key, val := range deploykeyInAllProjectsMap {
+		// Parsing the name of deploykey to obtain the ID of the code repository.
+		// eg: repo-22-readwrite, repository id is 22.
+		re := regexp.MustCompile(`repo-(\d+)-`)
+		match := re.FindStringSubmatch(key)
+		if len(match) == 0 {
+			continue
+		}
+		pid, err := strconv.Atoi(match[1])
+		if err != nil {
+			return err
+		}
+
+		deployKeyID := val.deployKey.ID
+
+		c.wg.Add(1)
+
+		go func(pid, deployKeyID int, codeRepos []*resourcev1alpha1.CodeRepo) {
+			var isDeleteDeployKey bool
+			var DeleteDeployKeys = make(map[int]bool)
+
+			defer c.wg.Done()
+			defer func(pid int) {
+				if !isDeleteDeployKey {
+					return
+				}
+
+				// Delete the deploykey associated with the repository id.
+				err := c.deleteAssociatedRepositoryDeployKey(ctx, codeRepos, deployKeyID)
+				if err != nil {
+					return
+				}
+			}(pid)
+
+			isDeleteDeployKey, err = c.checkRepositoryExistence(ctx, cacheProjectMap, pid)
+			if err != nil {
+				return
+			}
+
+			isDeleteDeployKey, err = c.checkDeployKeyExistence(ctx, pid, deployKeyID, DeleteDeployKeys)
+			if err != nil {
+				return
+			}
+
+			err := c.checkProjectConsistency(ctx, nodes, codeRepos, pid, deployKeyID)
+			if err != nil {
+				return
+			}
+
+		}(pid, deployKeyID, val.codeRepos)
+	}
+
+	c.wg.Wait()
+
+	c.cacheStore.projectDeployKeyMap = cacheProjectsDeploykeyMap
+	c.cacheStore.deploykeyInAllProjectsMap = deploykeyInAllProjectsMap
+
+	return nil
+}
+
+func (c *CodeRepoBindingUsecase) deleteAssociatedRepositoryDeployKey(ctx context.Context, codeRepos []*resourcev1alpha1.CodeRepo, deployKeyID int) error {
+	for _, codeRepo := range codeRepos {
+		pid, err := utilstrings.ExtractNumber(RepoPrefix, codeRepo.Name)
+		if err != nil {
+			return err
+		}
+		if err := c.codeRepo.DeleteDeployKey(ctx, pid, deployKeyID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *CodeRepoBindingUsecase) deduplicateAndCacheDeployKeys(ctx context.Context, codeRepo *resourcev1alpha1.CodeRepo, cacheProjectsDeploykeyMap map[int]map[int]*ProjectDeployKey, deploykeyInAllProjectsMap map[string]*deployKeyMapValue) error {
+	pid, err := utilstrings.ExtractNumber(RepoPrefix, codeRepo.Name)
+	if err != nil {
+		return err
+	}
+
+	projectDeployKeys, err := GetAllDeployKeys(ctx, c.codeRepo, pid)
+	if err != nil {
+		return err
+	}
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	for _, projectDeployKey := range projectDeployKeys {
+		if cacheProjectsDeploykeyMap[pid] == nil {
+			cacheProjectsDeploykeyMap[pid] = make(map[int]*ProjectDeployKey)
+			cacheProjectsDeploykeyMap[pid][projectDeployKey.ID] = projectDeployKey
+		} else {
+			if _, ok := cacheProjectsDeploykeyMap[pid][projectDeployKey.ID]; !ok {
+				cacheProjectsDeploykeyMap[pid][projectDeployKey.ID] = projectDeployKey
 			}
 		}
 
-		return false
-	})
+		if _, ok := deploykeyInAllProjectsMap[projectDeployKey.Title]; !ok {
+			deploykeyInAllProjectsMap[projectDeployKey.Title] = &deployKeyMapValue{
+				deployKey: projectDeployKey,
+				codeRepos: []*resourcev1alpha1.CodeRepo{codeRepo},
+			}
+		} else {
+			deploykeyInAllProjectsMap[projectDeployKey.Title].codeRepos = append(deploykeyInAllProjectsMap[projectDeployKey.Title].codeRepos, codeRepo)
+		}
+	}
+
+	return nil
+}
+
+func (c *CodeRepoBindingUsecase) checkRepositoryExistence(ctx context.Context, cacheProjectMap map[int]*Project, pid int) (bool, error) {
+	var repository *Project
+	var ok bool
+	var err error
+
+	c.lock.Lock()
+
+	repository, ok = cacheProjectMap[pid]
+	if !ok {
+		sg := &singleflight.Group{}
+		sg.Do(fmt.Sprintf("%d", pid), func() (interface{}, error) {
+			repository, err = c.codeRepo.GetCodeRepo(ctx, pid)
+			if err != nil {
+				if !commonv1.IsProjectNotFound(err) {
+					c.lock.Unlock()
+					return false, err
+				}
+
+				return true, nil
+			}
+
+			cacheProjectMap[pid] = repository
+
+			return false, nil
+		})
+	}
+	c.lock.Unlock()
+
+	return false, nil
+}
+
+func (c *CodeRepoBindingUsecase) checkDeployKeyExistence(ctx context.Context, pid int, deployKeyID int, DeleteDeployKeys map[int]bool) (bool, error) {
+	_, err := c.codeRepo.GetDeployKey(ctx, pid, deployKeyID)
 	if err != nil {
-		return nil, err
+		if !commonv1.IsDeploykeyNotFound(err) {
+			return false, err
+		}
+		return true, nil
 	}
 
-	var repositories []*Project
-	for _, repo := range codeRepos {
-		pid, err := utilstrings.ExtractNumber(RepoPrefix, repo.Name)
-		if err != nil {
-			return nil, err
-		}
-		project, err := c.codeRepo.GetCodeRepo(ctx, pid)
-		if err != nil {
-			return nil, err
-		}
-		repositories = append(repositories, project)
+	return false, nil
+}
+
+func (c *CodeRepoBindingUsecase) checkProjectConsistency(ctx context.Context, nodes nodestree.Node, codeRepos []*resourcev1alpha1.CodeRepo, authorizationpid int, deployKeyID int) error {
+	authorizationCodeRepoNode := c.nodestree.GetNode(&nodes, nodestree.CodeRepo, fmt.Sprintf("%s%d", RepoPrefix, authorizationpid))
+	if authorizationCodeRepoNode == nil {
+		return nil
 	}
 
-	return repositories, nil
+	authorizationCodeRepo, ok := authorizationCodeRepoNode.Content.(*resourcev1alpha1.CodeRepo)
+	if !ok {
+		return fmt.Errorf("failed to check project consistency, illegal codeRepo: %s", authorizationCodeRepoNode.Name)
+	}
+
+	for _, codeRepo := range codeRepos {
+		if codeRepo.Spec.Project != authorizationCodeRepo.Spec.Project {
+			pid, err := utilstrings.ExtractNumber(RepoPrefix, codeRepo.Name)
+			if err != nil {
+				return err
+			}
+
+			if err := c.codeRepo.DeleteDeployKey(ctx, pid, deployKeyID); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (c *CodeRepoBindingUsecase) RevokeDeployKey(ctx context.Context, codeRepos []*resourcev1alpha1.CodeRepo, authorizationpid interface{}, permissions string) error {
+	for _, codeRepo := range codeRepos {
+		pid, err := utilstrings.ExtractNumber(RepoPrefix, codeRepo.Name)
+		if err != nil {
+			return err
+		}
+
+		value, ok := authorizationpid.(int)
+		if !ok {
+			return fmt.Errorf("the ID of the authorized repository is not of type int during applyDeploykey: %v", authorizationpid)
+		}
+		if value == pid {
+			continue
+		}
+
+		deployKeyTitle := fmt.Sprintf("%s%d-%s", RepoPrefix, pid, permissions)
+		tmpMap, exists := c.cacheStore.deploykeyInAllProjectsMap[deployKeyTitle]
+		if !exists {
+			secretData, err := c.GetDeployKeyFromSecretRepo(ctx, codeRepo.Name, DefaultUser, permissions)
+			if err != nil {
+				if commonv1.IsDeploykeyNotFound(err) {
+					return nil
+				}
+				return err
+			}
+
+			tmpMap = &deployKeyMapValue{}
+			tmpMap.deployKey = &ProjectDeployKey{}
+			tmpMap.deployKey.ID = secretData.ID
+		}
+
+		deploykey, exists := c.cacheStore.projectDeployKeyMap[value][tmpMap.deployKey.ID]
+		if exists {
+			err = c.codeRepo.DeleteDeployKey(ctx, value, deploykey.ID)
+			if err != nil && !commonv1.IsDeploykeyNotFound(err) {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (c *CodeRepoBindingUsecase) GetDeployKeyFromSecretRepo(ctx context.Context, repoName, user, permissions string) (*DeployKeySecretData, error) {
@@ -962,38 +1180,6 @@ func (c *CodeRepoBindingUsecase) CreateResource(kind string) interface{} {
 	}
 
 	return &resourcev1alpha1.CodeRepoBinding{}
-}
-
-func (c *CodeRepoBindingUsecase) nodesToLists(nodes nodestree.Node) ([]*resourcev1alpha1.CodeRepoBinding, error) {
-	var codeReposDir *nodestree.Node
-	var resources []*resourcev1alpha1.CodeRepoBinding
-
-	for _, child := range nodes.Children {
-		if child.Name == _CodeReposSubDir {
-			codeReposDir = child
-			break
-		}
-	}
-
-	if codeReposDir == nil {
-		return nil, fmt.Errorf("the %s directory is not exist", _CodeReposSubDir)
-	}
-
-	for _, subNode := range codeReposDir.Children {
-		for _, node := range subNode.Children {
-			if node.Kind != nodestree.CodeRepoBinding {
-				continue
-			}
-
-			resource, err := c.nodeToResource(node)
-			if err != nil {
-				return nil, err
-			}
-			resources = append(resources, resource)
-		}
-	}
-
-	return resources, nil
 }
 
 func (c *CodeRepoBindingUsecase) nodeToResource(node *nodestree.Node) (*resourcev1alpha1.CodeRepoBinding, error) {

@@ -43,7 +43,7 @@ func createProjectResource(name string) *resourcev1alpha1.Project {
 		},
 		Spec: resourcev1alpha1.ProjectSpec{
 			Language: "go",
-			Product:  fmt.Sprintf("%s%d", _ProductPrefix, int(defaultProductGroup.Id)),
+			Product:  fmt.Sprintf("%s%d", _ProductPrefix, int(defaultProductGroup.ID)),
 		},
 	}
 }
@@ -139,7 +139,7 @@ var _ = Describe("Save project", func() {
 		fakeNode     = createProjectNode(fakeResource)
 		fakeNodes    = createProjectNodes(fakeNode)
 		projectData  = &ProjectData{
-			ProductName: fmt.Sprintf("%s%d", _ProductPrefix, int(defaultProductGroup.Id)),
+			ProductName: fmt.Sprintf("%s%d", _ProductPrefix, int(defaultProductGroup.ID)),
 			ProjectName: resourceName,
 			Language:    "Java",
 		}

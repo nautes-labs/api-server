@@ -200,10 +200,10 @@ func (v *vaultRepo) GetDeployKey(ctx context.Context, secretOptions *biz.SecretO
 	if err != nil {
 		err = errors.Unwrap(err)
 		if err == vault.ErrSecretNotFound {
-			return nil, commonv1.ErrorSecretNotFound("unable to read secret, err: %s", err)
+			return nil, commonv1.ErrorSecretNotFound("unable to read secret path: %s, err: %s", secretOptions.SecretPath, err)
 		}
 
-		return nil, fmt.Errorf("unable to read secret: %w", err)
+		return nil, fmt.Errorf("unable to read secret path: %s, err: %w", secretOptions.SecretPath, err)
 	}
 
 	val, ok := secret.Data[biz.Fingerprint]
@@ -272,7 +272,7 @@ func (v *vaultRepo) SaveDeployKey(ctx context.Context, id, key, user, permission
 	opt := &vaultproxyv1.GitRequest{
 		Meta: &vaultproxyv1.GitMeta{
 			ProviderType: string(v.config.Git.GitType),
-			Id:           id,
+			ID:           id,
 			Username:     user,
 			Permission:   permission,
 		},
@@ -342,7 +342,7 @@ func (v *vaultRepo) SaveProjectAccessToken(ctx context.Context, id, key, user, p
 	opt := &vaultproxyv1.GitRequest{
 		Meta: &vaultproxyv1.GitMeta{
 			ProviderType: string(v.config.Git.GitType),
-			Id:           id,
+			ID:           id,
 			Username:     user,
 			Permission:   permission,
 		},
@@ -364,7 +364,7 @@ func (v *vaultRepo) SaveClusterConfig(ctx context.Context, id, config string) er
 	var permission = "admin"
 	opt := &vaultproxyv1.ClusterRequest{
 		Meta: &vaultproxyv1.ClusterMeta{
-			Id:         id,
+			ID:         id,
 			Type:       clustertype,
 			Username:   _USERNAME,
 			Permission: permission,
@@ -386,7 +386,7 @@ func (v *vaultRepo) DeleteSecret(ctx context.Context, id int, user, permission s
 	opt := &vaultproxyv1.GitRequest{
 		Meta: &vaultproxyv1.GitMeta{
 			ProviderType: string(v.config.Git.GitType),
-			Id:           repoID,
+			ID:           repoID,
 			Username:     user,
 			Permission:   permission,
 		},
@@ -419,7 +419,7 @@ func (v *vaultRepo) AuthorizationSecret(ctx context.Context, id int, destUser, g
 		DestUser:    destUser,
 		Secret: &vaultproxyv1.GitMeta{
 			ProviderType: gitType,
-			Id:           repoID,
+			ID:           repoID,
 			Username:     _USERNAME,
 			Permission:   _PERMISSION,
 		},

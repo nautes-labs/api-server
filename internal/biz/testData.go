@@ -82,7 +82,7 @@ var (
 	// git platform group
 	defaultGroupName    = "API_SERVER_TEST_GROUP"
 	defaultProductGroup = &Group{
-		Id:       int32(560),
+		ID:       int32(560),
 		Name:     defaultGroupName,
 		Path:     defaultGroupName,
 		WebUrl:   "https://github.com/groups/" + defaultGroupName,
@@ -91,16 +91,21 @@ var (
 	// git platform default project
 	defaultProjectName = nautesConfigs.Git.DefaultProductName
 	defautlProject     = &Project{
-		Id:                int32(297),
+		ID:                int32(297),
 		Name:              defaultProjectName,
 		Path:              defaultProjectName,
 		WebUrl:            fmt.Sprintf("https://github.com/test-2/%s", defaultProjectName),
 		SshUrlToRepo:      fmt.Sprintf("ssh://git@github.com:2222/test-2/%s.git", defaultProjectName),
 		HttpUrlToRepo:     fmt.Sprintf("https://github.com:2222/test-2/%s.git", defaultProjectName),
 		PathWithNamespace: fmt.Sprintf("%s/%s", defaultProductGroup.Path, defaultProjectName),
+		Namespace: &ProjectNamespace{
+			ID:   3123,
+			Name: defaultGroupName,
+			Path: defaultGroupName,
+		},
 	}
 	defaultProjectPath = fmt.Sprintf("%v/%v", defaultProductGroup.Path, defaultProjectName)
-	defaultProductId   = fmt.Sprintf("%s%d", _ProductPrefix, int(defaultProductGroup.Id))
+	defaultProductId   = fmt.Sprintf("%s%d", _ProductPrefix, int(defaultProductGroup.ID))
 	// node
 	emptyNodes = nodestree.Node{
 		Name:     defaultProjectName,
