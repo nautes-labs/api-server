@@ -246,6 +246,9 @@ func (c *CodeRepoBindingUsecase) authorizeDeployKey(ctx context.Context, codeRep
 func (c *CodeRepoBindingUsecase) applyDeploykey(ctx context.Context, authorizationpid interface{}, permissions string, codeRepos []*resourcev1alpha1.CodeRepo, fn applyDeploykeyFunc) error {
 	for _, codeRepo := range codeRepos {
 		pid, err := utilstrings.ExtractNumber(RepoPrefix, codeRepo.Name)
+		if err != nil {
+			return err
+		}
 
 		val, ok := authorizationpid.(int)
 		if !ok {
@@ -330,12 +333,17 @@ func (c *CodeRepoBindingUsecase) processAuthorization(ctx context.Context, nodes
 	scopes := c.calculateAuthorizationScopes(ctx, codeRepoBindings, permissions)
 	for _, scope := range scopes {
 		if scope.isProductPermission {
-			err := c.updateAllAuthorization(ctx, nodes, pid, permissions, scope.ProductName)
+			err = c.recyclePermissionAuthorization(ctx, nodes, pid, permissions, scope.ProductName)
+			if err != nil {
+				return err
+			}
+
+			err = c.updateAllAuthorization(ctx, nodes, pid, permissions, scope.ProductName)
 			if err != nil {
 				return err
 			}
 		} else {
-			err := c.recycleAuthorization(ctx, scope.ProjectScopes, nodes, pid, permissions, scope.ProductName)
+			err = c.recycleAuthorization(ctx, scope.ProjectScopes, nodes, pid, permissions, scope.ProductName)
 			if err != nil {
 				return err
 			}
@@ -688,12 +696,20 @@ func (c *CodeRepoBindingUsecase) updateAuthorization(ctx context.Context, projec
 		return nil
 	}
 
-	codeRepos, err := nodesToCodeRepoists(nodes, func(codeRepo *resourcev1alpha1.CodeRepo) bool {
-		_, ok := projectScopes[codeRepo.Spec.Project]
-		return ok
-	})
+	authorizedCodeRepos := []*resourcev1alpha1.CodeRepo{}
+	codeRepos, err := nodesToCodeRepoists(nodes)
+	if err != nil {
+		return fmt.Errorf("failed to convert codeRepo nodes when update authorization")
+	}
+	for _, codeRepo := range codeRepos {
+		for project, _ := range projectScopes {
+			if codeRepo.Spec.Project == project {
+				authorizedCodeRepos = append(authorizedCodeRepos, codeRepo)
+			}
+		}
+	}
 
-	err = c.authorizeDeployKey(ctx, codeRepos, pid, permissions)
+	err = c.authorizeDeployKey(ctx, authorizedCodeRepos, pid, permissions)
 	if err != nil {
 		return err
 	}
@@ -742,6 +758,52 @@ func (c *CodeRepoBindingUsecase) recycleAuthorization(ctx context.Context, proje
 	if err := c.RevokeDeployKey(ctx, codeRepos, authorizationpid, permissions); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (c *CodeRepoBindingUsecase) recyclePermissionAuthorization(ctx context.Context, nodes nodestree.Node, authorizationpid interface{}, permissions, productName string) error {
+	codeRepoNodes := nodestree.ListsResourceNodes(nodes, nodestree.CodeRepo)
+	for _, node := range codeRepoNodes {
+		codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
+		if !ok {
+			continue
+		}
+
+		pid, err := utilstrings.ExtractNumber(RepoPrefix, codeRepo.Name)
+		if err != nil {
+			return err
+		}
+
+		value, ok := authorizationpid.(int)
+		if !ok {
+			return fmt.Errorf("failed to get authorizationpid when recyclePermissionAuthorization")
+		}
+
+		if pid == value {
+			continue
+		}
+
+		deploykeyTitle := ""
+		if permissions == string(ReadOnly) {
+			deploykeyTitle = fmt.Sprintf("%s%d-%s", RepoPrefix, pid, ReadWrite)
+		} else {
+			deploykeyTitle = fmt.Sprintf("%s%d-%s", RepoPrefix, pid, ReadOnly)
+		}
+
+		tmpValue, ok := c.cacheStore.deploykeyInAllProjectsMap[deploykeyTitle]
+		if !ok {
+			continue
+		}
+
+		_, exists := c.cacheStore.projectDeployKeyMap[value][tmpValue.deployKey.ID]
+		if exists {
+			err = c.codeRepo.DeleteDeployKey(ctx, value, tmpValue.deployKey.ID)
+			if err != nil && !commonv1.IsDeploykeyNotFound(err) {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
