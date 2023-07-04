@@ -30,8 +30,8 @@ require (
 	github.com/hashicorp/vault/api v1.9.0
 	github.com/hashicorp/vault/api/auth/kubernetes v0.4.0
 	github.com/nautes-labs/pkg v0.3.3
-	github.com/onsi/ginkgo/v2 v2.10.0
-	github.com/onsi/gomega v1.27.7
+	github.com/onsi/ginkgo/v2 v2.11.0
+	github.com/onsi/gomega v1.27.8
 	k8s.io/api v0.26.2
 	k8s.io/apimachinery v0.26.2
 	k8s.io/client-go v0.26.2
@@ -173,8 +173,8 @@ require (
 	golang.org/x/exp v0.0.0-20230307190834-24139beb5833 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/oauth2 v0.6.0 // indirect
-	golang.org/x/sync v0.3.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/sync v0.3.0
+	golang.org/x/sys v0.9.0 // indirect
 	golang.org/x/term v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
