@@ -20,6 +20,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+import (
+	_ "net/http/pprof"
+)
+
 // Injectors from wire.go:
 
 // wireApp init kratos application.
@@ -45,7 +49,7 @@ func wireApp(confServer *conf.Server, logger log.Logger, nodesTree nodestree.Nod
 	projectPipelineRuntimeUsecase := biz.NewProjectPipelineRuntimeUsecase(logger, codeRepo, nodesTree, resourcesUsecase, client2, config)
 	projectPipelineRuntimeService := service.NewProjectPipelineRuntimeService(projectPipelineRuntimeUsecase, resourcesUsecase)
 	deploymentRuntimeUsecase := biz.NewDeploymentRuntimeUsecase(logger, codeRepo, nodesTree, resourcesUsecase, client2, config)
-	deploymentruntimeService := service.NewDeploymentruntimeService(deploymentRuntimeUsecase)
+	deploymentruntimeService := service.NewDeploymentruntimeService(deploymentRuntimeUsecase, resourcesUsecase)
 	codeRepoService := service.NewCodeRepoService(codeRepoUsecase, config)
 	codeRepoBindingService := service.NewCodeRepoBindingService(codeRepoBindingUsecase, resourcesUsecase)
 	projectUsecase := biz.NewProjectUsecase(logger, codeRepo, secretrepo, nodesTree, config, resourcesUsecase)
