@@ -1093,15 +1093,7 @@ func (c *CodeRepoBindingUsecase) CheckReference(options nodestree.CompareOptions
 
 	ok = nodestree.IsResourceExist(options, codeRepoBinding.Spec.CodeRepo, nodestree.CodeRepo)
 	if !ok {
-		objKey := client.ObjectKey{
-			Namespace: codeRepoBinding.Spec.Product,
-			Name:      codeRepoBinding.Spec.CodeRepo,
-		}
-
-		err := k8sClient.Get(context.TODO(), objKey, &resourcev1alpha1.CodeRepo{})
-		if err != nil {
-			return true, err
-		}
+		return true, fmt.Errorf("the authorization repository %s does not exist when checking CodeRepoBinding %s", codeRepoBinding.Spec.CodeRepo, codeRepoBinding.Name)
 	}
 
 	// TODO:
