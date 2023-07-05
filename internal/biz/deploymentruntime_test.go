@@ -23,7 +23,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/nautes-labs/api-server/pkg/kubernetes"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
-	utilstrings "github.com/nautes-labs/api-server/util/string"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -89,11 +88,6 @@ var _ = Describe("Get deployment runtime", func() {
 	)
 
 	It("will get successed", testUseCase.GetResourceSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourcesUsecase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		id, _ := utilstrings.ExtractNumber("product-", fakeResource.Spec.Product)
-		codeRepo.EXPECT().GetGroup(gomock.Any(), id).Return(defaultProductGroup, nil)
-		id, _ = utilstrings.ExtractNumber("repo-", fakeResource.Spec.ManifestSource.CodeRepo)
-		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), id).Return(defautlProject, nil)
-
 		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourcesUsecase, client, nautesConfigs)
 		result, err := biz.GetDeploymentRuntime(context.Background(), resourceName, defaultGroupName)
 		Expect(err).ShouldNot(HaveOccurred())
