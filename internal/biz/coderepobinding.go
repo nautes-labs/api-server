@@ -91,33 +91,12 @@ func (c *CodeRepoBindingUsecase) GetCodeRepoBinding(ctx context.Context, options
 		return nil, err
 	}
 
-	resource, err := c.nodeToResource(node)
-	if err != nil {
-		return nil, err
+	codeRepoBinding, ok := node.Content.(*resourcev1alpha1.CodeRepoBinding)
+	if !ok {
+		return nil, fmt.Errorf("failed to get instance when get %s coderepoBinding", node.Name)
 	}
 
-	err = c.ConvertRuntime(ctx, resource)
-	if err != nil {
-		return nil, err
-	}
-
-	return resource, nil
-}
-
-func (c *CodeRepoBindingUsecase) ConvertRuntime(ctx context.Context, resource *resourcev1alpha1.CodeRepoBinding) error {
-	repoName, err := c.resourcesUsecase.ConvertCodeRepoToRepoName(ctx, resource.Spec.CodeRepo)
-	if err != nil {
-		return err
-	}
-	resource.Spec.CodeRepo = repoName
-
-	groupName, err := c.resourcesUsecase.ConvertProductToGroupName(ctx, resource.Spec.Product)
-	if err != nil {
-		return err
-	}
-	resource.Spec.Product = groupName
-
-	return nil
+	return codeRepoBinding, nil
 }
 
 func (c *CodeRepoBindingUsecase) ListCodeRepoBindings(ctx context.Context, options *BizOptions) ([]*nodestree.Node, error) {
@@ -619,15 +598,6 @@ func (c *CodeRepoBindingUsecase) getCodeRepoBindingsInAuthorizedRepo(ctx context
 	}
 
 	return codeRepoBindings
-}
-
-func (c *CodeRepoBindingUsecase) getAuthorizedRepoCodeRepo(ctx context.Context, nodes nodestree.Node, authRepoName string) (*resourcev1alpha1.CodeRepo, error) {
-	node := c.nodestree.GetNode(&nodes, nodestree.CodeRepo, authRepoName)
-	codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
-	if !ok {
-		return nil, fmt.Errorf("wrong type found for %s node when checking CodeRepo type", node.Name)
-	}
-	return codeRepo, nil
 }
 
 type ProductAuthorization struct {
@@ -1172,13 +1142,4 @@ func (c *CodeRepoBindingUsecase) CreateResource(kind string) interface{} {
 	}
 
 	return &resourcev1alpha1.CodeRepoBinding{}
-}
-
-func (c *CodeRepoBindingUsecase) nodeToResource(node *nodestree.Node) (*resourcev1alpha1.CodeRepoBinding, error) {
-	r, ok := node.Content.(*resourcev1alpha1.CodeRepoBinding)
-	if !ok {
-		return nil, fmt.Errorf("failed to get instance when get %s coderepoBinding", node.Name)
-	}
-
-	return r, nil
 }

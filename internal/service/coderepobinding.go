@@ -64,7 +64,13 @@ func (s *CodeRepoBindingService) GetCodeRepoBinding(ctx context.Context, req *co
 		ProductName: req.ProductName,
 		ResouceName: req.CoderepoBindingName,
 	}
+
 	codeRepoBinding, err := s.codeRepoBindingUsecase.GetCodeRepoBinding(ctx, options)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.ConvertProductAndRepoName(ctx, codeRepoBinding)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +96,7 @@ func (s *CodeRepoBindingService) ListCodeRepoBindings(ctx context.Context, req *
 			continue
 		}
 
-		err = s.codeRepoBindingUsecase.ConvertRuntime(ctx, codeRepoBinding)
+		err = s.ConvertProductAndRepoName(ctx, codeRepoBinding)
 		if err != nil {
 			return nil, err
 		}
@@ -169,4 +175,20 @@ func (s *CodeRepoBindingService) DeleteCodeRepoBinding(ctx context.Context, req 
 	return &coderepobindingv1.DeleteReply{
 		Msg: fmt.Sprintf("Successfully deleted %v configuration", req.CoderepoBindingName),
 	}, nil
+}
+
+func (c *CodeRepoBindingService) ConvertProductAndRepoName(ctx context.Context, resource *resourcev1alpha1.CodeRepoBinding) error {
+	repoName, err := c.resourcesUsecase.ConvertCodeRepoToRepoName(ctx, resource.Spec.CodeRepo)
+	if err != nil {
+		return err
+	}
+	resource.Spec.CodeRepo = repoName
+
+	groupName, err := c.resourcesUsecase.ConvertProductToGroupName(ctx, resource.Spec.Product)
+	if err != nil {
+		return err
+	}
+	resource.Spec.Product = groupName
+
+	return nil
 }

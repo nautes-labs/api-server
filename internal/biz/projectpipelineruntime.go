@@ -83,15 +83,14 @@ func (p *ProjectPipelineRuntimeUsecase) ListProjectPipelineRuntimes(ctx context.
 }
 
 func (p *ProjectPipelineRuntimeUsecase) SaveProjectPipelineRuntime(ctx context.Context, options *BizOptions, data *ProjectPipelineRuntimeData) error {
-	var err error
-
-	data.Spec.PipelineSource, err = p.resourcesUsecase.ConvertRepoNameToCodeRepo(ctx, options.ProductName, data.Spec.PipelineSource)
+	source, err := p.resourcesUsecase.ConvertRepoNameToCodeRepo(ctx, options.ProductName, data.Spec.PipelineSource)
 	if err != nil {
 		return err
 	}
+	data.Spec.PipelineSource = source
 
 	for idx, eventSource := range data.Spec.EventSources {
-		if eventSource.Gitlab.RepoName != "" {
+		if eventSource.Gitlab != nil && eventSource.Gitlab.RepoName != "" {
 			eventSource.Gitlab.RepoName, err = p.resourcesUsecase.ConvertRepoNameToCodeRepo(ctx, options.ProductName, eventSource.Gitlab.RepoName)
 			if err != nil {
 				return err
@@ -142,32 +141,6 @@ func (p *ProjectPipelineRuntimeUsecase) IsRepositoryExist(ctx context.Context, p
 		}
 	}
 	return project, nil
-}
-
-func (p *ProjectPipelineRuntimeUsecase) ConvertCodeRepoToRepoName(ctx context.Context, runtime *resourcev1alpha1.ProjectPipelineRuntime) error {
-	if runtime.Spec.PipelineSource == "" {
-		return fmt.Errorf("the pipelineSource field value of projectPipelineRuntime %s should not be empty", runtime.Name)
-	}
-
-	if runtime.Spec.PipelineSource != "" {
-		repoName, err := p.resourcesUsecase.ConvertCodeRepoToRepoName(ctx, runtime.Spec.PipelineSource)
-		if err != nil {
-			return err
-		}
-		runtime.Spec.PipelineSource = repoName
-	}
-
-	for _, event := range runtime.Spec.EventSources {
-		if event.Gitlab != nil {
-			repoName, err := p.resourcesUsecase.ConvertCodeRepoToRepoName(ctx, event.Gitlab.RepoName)
-			if err != nil {
-				return err
-			}
-			event.Gitlab.RepoName = repoName
-		}
-	}
-
-	return nil
 }
 
 func (p *ProjectPipelineRuntimeUsecase) CreateNode(path string, data interface{}) (*nodestree.Node, error) {
