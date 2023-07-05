@@ -18,37 +18,79 @@ import (
 	"context"
 )
 
+// Common
 const (
+	// Argo-operator Index key, Used to obtain roles from the configuration
+	ArgoOperator = "Argo"
+	// Product default project name
+	DefaultProject        = "default.project"
+	KustomizationFileName = "kustomization.yaml"
+)
+
+const (
+	// When pushing code configuration, there is a key with a context retry
+	RretryCount RretryCountType = "RretryCount"
+)
+
+// prefix...
+const (
+	// Product naming prefix
+	ProductPrefix = "product-"
 	// CodeRepo naming prefix
 	RepoPrefix = "repo-"
-	// Key data default store user
-	DefaultUser = "default"
-	// DeployKey fingerprint data Key
-	Fingerprint = "fingerprint"
-	// DeployKey fingerprint data ID
-	DeployKeyID = "id"
-	// AccessToken fingerprint data ID
-	AccessTokenID = "id"
+)
+
+// Secret store Constants
+const (
 	// Secret Repo stores git related data engine name
 	SecretsGitEngine = "git"
 	// Secret Repo stores deploykey key
 	SecretsDeployKey = "deploykey"
 	// Secret Repo stores access token key
 	SecretsAccessToken = "accesstoken"
-	// Access token key path name
-	AccessTokenName = "accesstoken-api"
+	// Key data default store user
+	DefaultUser = "default"
+	// DeployKey fingerprint data Key
+	Fingerprint = "fingerprint"
+	// DeployKey fingerprint data ID
+	DeployKeyID = "id"
+)
+
+// Deploykey
+const (
 	// Git read-only and read-write permissions
 	ReadOnly  DeployKeyType = "readonly"
 	ReadWrite DeployKeyType = "readwrite"
+)
+
+// Access token
+const (
+	// AccessToken fingerprint data ID
+	AccessTokenID = "id"
+	// Access token key path name
+	AccessTokenName = "accesstoken-api"
 	// Access token scope permissions
 	APIPermission AccessTokenPermission = "api"
 	// Access token authorization role
-	Developer       AccessLevelValue = 30
-	Maintainer      AccessLevelValue = 40
-	Owner           AccessLevelValue = 50
-	ResourceInfoKey                  = "ResourceInfoKey"
-	SaveMethod                       = "Save"
-	DeleteMethod                     = "Delete"
+	Developer  AccessLevelValue = 30
+	Maintainer AccessLevelValue = 40
+	Owner      AccessLevelValue = 50
+)
+
+const (
+	// layout resouce directory names
+	CodeReposSubDir = "code-repos"
+	RuntimesDir     = "runtimes"
+	EnvSubDir       = "envs"
+	ProjectsDir     = "projects"
+)
+
+// Constants used to store commit information
+const (
+	ResourceInfoKey = "ResourceInfoKey"
+	// How to mark this request method
+	SaveMethod   = "Save"
+	DeleteMethod = "Delete"
 )
 
 type ResourceInfo struct {

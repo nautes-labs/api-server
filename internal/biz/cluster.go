@@ -34,8 +34,8 @@ import (
 )
 
 const (
-	_TenantLabel              = "coderepo.resource.nautes.io/tenant-management"
-	_NautesClusterDir         = "nautes/overlays/production/clusters"
+	TenantLabel               = "coderepo.resource.nautes.io/tenant-management"
+	NautesClusterDir          = "nautes/overlays/production/clusters"
 	DefaultClusterTemplateURL = "https://github.com/nautes-labs/cluster-templates.git"
 	SecretPath                = "default"
 	SecretEngine              = "pki"
@@ -312,7 +312,7 @@ func (c *ClusterUsecase) GetCacert(ctx context.Context) (string, error) {
 
 func (c *ClusterUsecase) GetTenantRepository(ctx context.Context) (*Project, error) {
 	codeRepos := &resourcev1alpha1.CodeRepoList{}
-	labelSelector := labels.SelectorFromSet(map[string]string{_TenantLabel: c.configs.Nautes.TenantName})
+	labelSelector := labels.SelectorFromSet(map[string]string{TenantLabel: c.configs.Nautes.TenantName})
 	err := c.client.List(context.Background(), codeRepos, &client.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
 		return nil, err
@@ -402,7 +402,7 @@ func GetClusterTemplateHttpsURL(configs *nautesconfigs.Config) string {
 }
 
 func GetCluster(tenantRepositoryLocalPath, clusterName string) (*resourcev1alpha1.Cluster, error) {
-	filePath := fmt.Sprintf("%s/%s/%s.yaml", tenantRepositoryLocalPath, _NautesClusterDir, clusterName)
+	filePath := fmt.Sprintf("%s/%s/%s.yaml", tenantRepositoryLocalPath, NautesClusterDir, clusterName)
 
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return nil, err

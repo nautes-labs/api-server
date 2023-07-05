@@ -25,12 +25,6 @@ import (
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 )
 
-const (
-	_ProductKind     = "Product"
-	_ProductDestUser = "Argo"
-	DefaultProject   = "default.project"
-)
-
 type Group struct {
 	ID          int32
 	Name        string
@@ -272,7 +266,7 @@ func (p *ProductUsecase) grantAuthorizationDefaultProject(ctx context.Context, p
 		return err
 	}
 
-	err = p.secretRepo.AuthorizationSecret(ctx, int(project.ID), _ProductDestUser, string(p.configs.Git.GitType), p.configs.Secret.Vault.MountPath)
+	err = p.secretRepo.AuthorizationSecret(ctx, int(project.ID), ArgoOperator, string(p.configs.Git.GitType), p.configs.Secret.Vault.MountPath)
 	if err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-FROM golang:1.20 AS builder
+FROM ubuntu:22.04
 
 RUN  apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates netbase curl git vim openssh-client \

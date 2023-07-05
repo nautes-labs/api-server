@@ -80,7 +80,7 @@ func createFakeProjectPipelineRuntimeNode(resource *resourcev1alpha1.ProjectPipe
 	return &nodestree.Node{
 		Name:    resource.Name,
 		Kind:    nodestree.ProjectPipelineRuntime,
-		Path:    fmt.Sprintf("%s/%s/%s/%s.yaml", localRepositoryPath, _ProjectsDir, _TestProject, resource.Name),
+		Path:    fmt.Sprintf("%s/%s/%s/%s.yaml", localRepositoryPath, ProjectsDir, _TestProject, resource.Name),
 		Level:   4,
 		Content: resource,
 	}
@@ -94,14 +94,14 @@ func createFakeProjectPipelineRuntimeNodes(node *nodestree.Node) nodestree.Node 
 		Level: 1,
 		Children: []*nodestree.Node{
 			{
-				Name:  _ProjectsDir,
-				Path:  fmt.Sprintf("%s/%s", defaultProjectName, _ProjectsDir),
+				Name:  ProjectsDir,
+				Path:  fmt.Sprintf("%s/%s", defaultProjectName, ProjectsDir),
 				IsDir: true,
 				Level: 2,
 				Children: []*nodestree.Node{
 					{
 						Name:  _TestProject,
-						Path:  fmt.Sprintf("%s/%s/%s", defaultProjectName, _ProjectsDir, _TestProject),
+						Path:  fmt.Sprintf("%s/%s/%s", defaultProjectName, ProjectsDir, _TestProject),
 						IsDir: true,
 						Level: 3,
 						Children: []*nodestree.Node{

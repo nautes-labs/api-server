@@ -59,7 +59,7 @@ func createFakeCodeRepoResource(name string) *resourcev1alpha1.CodeRepo {
 func createFakeCodeRepoNode(resource *resourcev1alpha1.CodeRepo) *nodestree.Node {
 	return &nodestree.Node{
 		Name:    resource.Name,
-		Path:    fmt.Sprintf("%s/%s/%s/%s.yaml", localRepositoryPath, _CodeReposSubDir, resource.Name, resource.Name),
+		Path:    fmt.Sprintf("%s/%s/%s/%s.yaml", localRepositoryPath, CodeReposSubDir, resource.Name, resource.Name),
 		Level:   4,
 		Content: resource,
 		Kind:    nodestree.CodeRepo,
@@ -74,14 +74,14 @@ func createFakeCcontainingCodeRepoNodes(node *nodestree.Node) nodestree.Node {
 		Level: 1,
 		Children: []*nodestree.Node{
 			{
-				Name:  _CodeReposSubDir,
-				Path:  fmt.Sprintf("%v/%v", defaultProjectName, _CodeReposSubDir),
+				Name:  CodeReposSubDir,
+				Path:  fmt.Sprintf("%v/%v", defaultProjectName, CodeReposSubDir),
 				IsDir: true,
 				Level: 2,
 				Children: []*nodestree.Node{
 					{
 						Name:  node.Name,
-						Path:  fmt.Sprintf("%s/%s/%s", localRepositoryPath, _CodeReposSubDir, node.Name),
+						Path:  fmt.Sprintf("%s/%s/%s", localRepositoryPath, CodeReposSubDir, node.Name),
 						IsDir: true,
 						Level: 3,
 						Children: []*nodestree.Node{
@@ -159,7 +159,7 @@ var _ = Describe("Save codeRepo", func() {
 		}
 		extendKVs         = make(map[string]string)
 		toGetCodeRepoPath = fmt.Sprintf("%s/%s", defaultProductGroup.Path, resourceName)
-		repoName          = fmt.Sprintf("repo-%d", toSaveProject.ID)
+		repoName          = getCodeRepoResourceName(int(toSaveProject.ID))
 		data              = &CodeRepoData{
 			Name: resourceName,
 			Spec: resourcev1alpha1.CodeRepoSpec{
@@ -252,9 +252,9 @@ var _ = Describe("Save codeRepo", func() {
 		codeRepo.EXPECT().ListAccessTokens(gomock.Any(), gomock.Eq(int(toSaveProject.ID)), gomock.Any()).Return(projectAccessTokens, nil).AnyTimes()
 
 		secretRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any()).Return(nil, commonv1.ErrorSecretNotFound("secret data is not found")).Times(2)
-		secretRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Eq(convertRepoName(int(toSaveProject.ID))), gomock.Any(), gomock.Any(), gomock.Any(), extendKVs).Return(nil).Times(2)
+		secretRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Eq(getCodeRepoResourceName(int(toSaveProject.ID))), gomock.Any(), gomock.Any(), gomock.Any(), extendKVs).Return(nil).Times(2)
 		secretRepo.EXPECT().GetProjectAccessToken(gomock.Any(), secretOptions).Return(nil, commonv1.ErrorSecretNotFound("secret data is not found"))
-		secretRepo.EXPECT().SaveProjectAccessToken(gomock.Any(), gomock.Eq(convertRepoName(int(toSaveProject.ID))), gomock.Eq(projectAccessToken.Token), gomock.Any(), gomock.Any(), gomock.Eq(accessTokenExtendKVs)).Return(nil)
+		secretRepo.EXPECT().SaveProjectAccessToken(gomock.Any(), gomock.Eq(getCodeRepoResourceName(int(toSaveProject.ID))), gomock.Eq(projectAccessToken.Token), gomock.Any(), gomock.Any(), gomock.Eq(accessTokenExtendKVs)).Return(nil)
 
 		nodestree.EXPECT().GetNodes().Return(&fakeNodes, nil).AnyTimes()
 		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Eq(codeRepoKind), gomock.Any()).Return(fakeNode).AnyTimes()
@@ -287,7 +287,7 @@ var _ = Describe("Save codeRepo", func() {
 		codeRepo.EXPECT().ListAccessTokens(gomock.Any(), gomock.Eq(int(toSaveProject.ID)), gomock.Any()).Return(projectAccessTokens, nil).AnyTimes()
 
 		secretRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any()).Return(nil, commonv1.ErrorSecretNotFound("secret data is not found")).Times(2)
-		secretRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Eq(convertRepoName(int(toSaveProject.ID))), gomock.Any(), gomock.Any(), gomock.Any(), extendKVs).Return(nil).Times(2)
+		secretRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Eq(getCodeRepoResourceName(int(toSaveProject.ID))), gomock.Any(), gomock.Any(), gomock.Any(), extendKVs).Return(nil).Times(2)
 		secretRepo.EXPECT().GetProjectAccessToken(gomock.Any(), secretOptions).Return(accessTokenSecretData, nil)
 
 		cloneRepositoryParam := &CloneRepositoryParam{
@@ -319,9 +319,9 @@ var _ = Describe("Save codeRepo", func() {
 		codeRepo.EXPECT().ListAccessTokens(gomock.Any(), gomock.Eq(int(toSaveProject.ID)), gomock.Any()).Return(projectAccessTokens, nil).AnyTimes()
 
 		secretRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any()).Return(nil, commonv1.ErrorSecretNotFound("secret data is not found")).Times(2)
-		secretRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Eq(convertRepoName(int(toSaveProject.ID))), gomock.Any(), gomock.Any(), gomock.Any(), extendKVs).Return(nil).Times(2).Times(2)
+		secretRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Eq(getCodeRepoResourceName(int(toSaveProject.ID))), gomock.Any(), gomock.Any(), gomock.Any(), extendKVs).Return(nil).Times(2).Times(2)
 		secretRepo.EXPECT().GetProjectAccessToken(gomock.Any(), secretOptions).Return(nil, commonv1.ErrorSecretNotFound("secret data is not found"))
-		secretRepo.EXPECT().SaveProjectAccessToken(gomock.Any(), gomock.Eq(convertRepoName(int(toSaveProject.ID))), gomock.Eq(projectAccessToken.Token), gomock.Any(), gomock.Any(), gomock.Eq(accessTokenExtendKVs)).Return(nil)
+		secretRepo.EXPECT().SaveProjectAccessToken(gomock.Any(), gomock.Eq(getCodeRepoResourceName(int(toSaveProject.ID))), gomock.Eq(projectAccessToken.Token), gomock.Any(), gomock.Any(), gomock.Eq(accessTokenExtendKVs)).Return(nil)
 
 		cloneRepositoryParam := &CloneRepositoryParam{
 			URL:   toSaveProject.HttpUrlToRepo,

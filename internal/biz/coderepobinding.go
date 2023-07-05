@@ -705,7 +705,7 @@ func (c *CodeRepoBindingUsecase) recycleAuthorizationByProjectScopes(ctx context
 	}
 
 	codeRepos := []*resourcev1alpha1.CodeRepo{}
-	currentProductName := fmt.Sprintf("%s%d", _ProductPrefix, authorizedRepository.Namespace.ID)
+	currentProductName := fmt.Sprintf("%s%d", ProductPrefix, authorizedRepository.Namespace.ID)
 	if productName == currentProductName {
 		codeRepos, err = nodesToCodeRepoists(nodes, func(codeRepo *resourcev1alpha1.CodeRepo) bool {
 			pid, err := utilstrings.ExtractNumber(RepoPrefix, codeRepo.Name)
@@ -1099,7 +1099,7 @@ func (c *CodeRepoBindingUsecase) CreateNode(path string, data interface{}) (*nod
 		Spec: val.Spec,
 	}
 
-	resourceDirectory := fmt.Sprintf("%s/%s", path, "code-repos")
+	resourceDirectory := fmt.Sprintf("%s/%s", path, CodeReposSubDir)
 	resourcePath := fmt.Sprintf("%s/%s/%s.yaml", resourceDirectory, val.Spec.CodeRepo, val.Name)
 
 	return &nodestree.Node{

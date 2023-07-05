@@ -50,7 +50,7 @@ func createDeploymentRuntimeResource(name, repoID string) *resourcev1alpha1.Depl
 func createFakeDeploymentRuntimeNode(resource *resourcev1alpha1.DeploymentRuntime) *nodestree.Node {
 	return &nodestree.Node{
 		Name:    resource.Name,
-		Path:    fmt.Sprintf("%s/%s/%s.yaml", localRepositoryPath, _RuntimesDir, resource.Name),
+		Path:    fmt.Sprintf("%s/%s/%s.yaml", localRepositoryPath, RuntimesDir, resource.Name),
 		Level:   3,
 		Content: resource,
 		Kind:    nodestree.DeploymentRuntime,
@@ -60,7 +60,7 @@ func createFakeDeploymentRuntimeNode(resource *resourcev1alpha1.DeploymentRuntim
 func createFakeDeployRuntimeNodes(node *nodestree.Node) nodestree.Node {
 	fakeSubNode := &nodestree.Node{
 		Name:     nodestree.DeploymentRuntime,
-		Path:     fmt.Sprintf("%s/%s", localRepositoryPath, _RuntimesDir),
+		Path:     fmt.Sprintf("%s/%s", localRepositoryPath, RuntimesDir),
 		IsDir:    true,
 		Level:    2,
 		Content:  node,

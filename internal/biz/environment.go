@@ -29,10 +29,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	_EnvSubDir = "envs"
-)
-
 type EnvironmentUsecase struct {
 	log              *log.Helper
 	codeRepo         CodeRepo
@@ -104,7 +100,7 @@ func (e *EnvironmentUsecase) nodesToLists(nodes nodestree.Node) ([]*resourcev1al
 	var resources []*resourcev1alpha1.Environment
 
 	for _, child := range nodes.Children {
-		if child.Name == _EnvSubDir {
+		if child.Name == EnvSubDir {
 			resourcesSubDir = child
 			break
 		}
@@ -141,7 +137,7 @@ func (e *EnvironmentUsecase) SaveEnvironment(ctx context.Context, options *BizOp
 		return err
 	}
 
-	data.Spec.Product = fmt.Sprintf("%s%d", _ProductPrefix, int(group.ID))
+	data.Spec.Product = fmt.Sprintf("%s%d", ProductPrefix, int(group.ID))
 	resourceOptions := &resourceOptions{
 		resourceName:      options.ResouceName,
 		resourceKind:      nodestree.Environment,
@@ -174,7 +170,7 @@ func (e *EnvironmentUsecase) CreateNode(path string, data interface{}) (*nodestr
 		Spec: val.Spec,
 	}
 
-	resourceDirectory := fmt.Sprintf("%s/%s", path, _EnvSubDir)
+	resourceDirectory := fmt.Sprintf("%s/%s", path, EnvSubDir)
 	resourceFile := fmt.Sprintf("%s/%s.yaml", resourceDirectory, val.Name)
 
 	return &nodestree.Node{
@@ -236,7 +232,7 @@ func (e *EnvironmentUsecase) CheckReference(options nodestree.CompareOptions, no
 	err := k8sClient.Get(context.TODO(), objKey, &resourcev1alpha1.Cluster{})
 	if err != nil {
 		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable+"err: "+err.Error(), nodestree.Cluster, env.Spec.Cluster,
-			nodestree.Environment, env.Name, _EnvSubDir)
+			nodestree.Environment, env.Name, EnvSubDir)
 	}
 
 	ok, err = e.compare(options.Nodes)

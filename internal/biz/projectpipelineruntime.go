@@ -30,10 +30,6 @@ import (
 	"github.com/nautes-labs/api-server/pkg/validate"
 )
 
-const (
-	_PipelineRuntimeKind = "PipelineRuntime"
-)
-
 type ProjectPipelineRuntimeUsecase struct {
 	log              *log.Helper
 	codeRepo         CodeRepo
@@ -162,7 +158,7 @@ func (p *ProjectPipelineRuntimeUsecase) CreateNode(path string, data interface{}
 		Spec: val.Spec,
 	}
 
-	storageResourceDirectory := fmt.Sprintf("%s/%s", path, _ProjectsDir)
+	storageResourceDirectory := fmt.Sprintf("%s/%s", path, ProjectsDir)
 	resourceParentDir := fmt.Sprintf("%s/%s", storageResourceDirectory, val.Spec.Project)
 	resourceFile := fmt.Sprintf("%s/%s.yaml", resourceParentDir, val.Name)
 	resourceNode = &nodestree.Node{
@@ -212,24 +208,24 @@ func (p *ProjectPipelineRuntimeUsecase) CheckReference(options nodestree.Compare
 	}
 
 	projectName := projectPipelineRuntime.Spec.Project
-	resourceDirectory := fmt.Sprintf("%s/%s", _ProjectsDir, projectPipelineRuntime.Spec.Project)
+	resourceDirectory := fmt.Sprintf("%s/%s", ProjectsDir, projectPipelineRuntime.Spec.Project)
 	ok = nodestree.IsResourceExist(options, projectName, nodestree.Project)
 	if !ok {
-		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, _ProjectKind, projectName, _PipelineRuntimeKind,
+		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, nodestree.Project, projectName, nodestree.ProjectPipelineRuntime,
 			projectPipelineRuntime.Name, resourceDirectory)
 	}
 
 	targetEnvironment := projectPipelineRuntime.Spec.Destination
 	ok = nodestree.IsResourceExist(options, targetEnvironment, nodestree.Environment)
 	if !ok {
-		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, nodestree.Environment, targetEnvironment, _PipelineRuntimeKind,
+		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, nodestree.Environment, targetEnvironment, nodestree.ProjectPipelineRuntime,
 			projectPipelineRuntime.Name, resourceDirectory)
 	}
 
 	pipelineRepository := projectPipelineRuntime.Spec.PipelineSource
 	ok = nodestree.IsResourceExist(options, pipelineRepository, nodestree.CodeRepo)
 	if !ok {
-		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, nodestree.CodeRepo, pipelineRepository, _PipelineRuntimeKind,
+		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, nodestree.CodeRepo, pipelineRepository, nodestree.ProjectPipelineRuntime,
 			projectPipelineRuntime.Name, resourceDirectory)
 	}
 
@@ -239,7 +235,7 @@ func (p *ProjectPipelineRuntimeUsecase) CheckReference(options nodestree.Compare
 				// TODO
 				// In the future, cross product query codeRepo will be supported.
 				if ok := nodestree.IsResourceExist(options, event.Gitlab.RepoName, nodestree.CodeRepo); !ok {
-					return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, nodestree.CodeRepo, event.Gitlab.RepoName, _PipelineRuntimeKind,
+					return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, nodestree.CodeRepo, event.Gitlab.RepoName, nodestree.ProjectPipelineRuntime,
 						projectPipelineRuntime.Name, resourceDirectory)
 				}
 			}
