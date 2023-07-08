@@ -101,7 +101,7 @@ func (cr *ClusterRegistration) InitializeClusterConfig(param *ClusterRegistratio
 		ClusterTemplateRepoLocalPath: param.ClusterTemplateRepoLocalPath,
 		TenantConfigRepoLocalPath:    param.TenantConfigRepoLocalPath,
 		RepoURL:                      param.RepoURL,
-		CaBundle:                     param.CaBundle,
+		CaBundleList:                 param.CaBundleList,
 		Usage:                        usage,
 		HostCluster:                  hostCluster,
 		Vcluster:                     vcluster,

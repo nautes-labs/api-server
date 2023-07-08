@@ -18,11 +18,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 
 	"github.com/golang/mock/gomock"
 	clusterregistration "github.com/nautes-labs/api-server/pkg/cluster"
+	"github.com/nautes-labs/api-server/pkg/gitlab"
 	"github.com/nautes-labs/api-server/pkg/kubernetes"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
@@ -120,6 +122,24 @@ var _ = Describe("Save cluster", func() {
 		kubeconfig     = "apiVersion: v1\nclusters:\n- cluster:\n    certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJkekNDQVIyZ0F3SUJBZ0lCQURBS0JnZ3Foa2pPUFFRREFqQWpNU0V3SHdZRFZRUUREQmhyTTNNdGMyVnkKZG1WeUxXTmhRREUyTlRVM01EVTFOemt3SGhjTk1qSXdOakl3TURZeE1qVTVXaGNOTXpJd05qRTNNRFl4TWpVNQpXakFqTVNFd0h3WURWUVFEREJock0zTXRjMlZ5ZG1WeUxXTmhRREUyTlRVM01EVTFOemt3V1RBVEJnY3Foa2pPClBRSUJCZ2dxaGtqT1BRTUJCd05DQUFUeXhrT2xIVm52ZkJlN01MUUU2N0ZpTTBTcDY2eXREYi8ydUY3MWdWclAKeFk2cDlZRm5YWU5PYXA2bktZZ2hMMzRFVU9FUHNFTWh0YTZ3bGxQWnNXeG5vMEl3UURBT0JnTlZIUThCQWY4RQpCQU1DQXFRd0R3WURWUjBUQVFIL0JBVXdBd0VCL3pBZEJnTlZIUTRFRmdRVUZHaGY4czJwYkFjT0svL3ZrdU5GCnVMS3d6U0V3Q2dZSUtvWkl6ajBFQXdJRFNBQXdSUUlnU2dRUnplKzE2TG40aWRvbUg5Zk40bjc4dE9VSHFMdlgKL2V5RjFpL1NwQ2tDSVFDNy9Fcmc2UUtXSjRRQXl5QlZuSFloOVNvd3FiZWkwSk83c2tFY01zWVhkZz09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K\n    server: https://127.0.0.1:6443\n  name: default\ncontexts:\n- context:\n    cluster: default\n    user: default\n  name: default\ncurrent-context: default\nkind: Config\npreferences: {}\nusers:\n- name: default\n  user:\n    client-certificate-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJrakNDQVRlZ0F3SUJBZ0lJRDRCbThDSk5sM2N3Q2dZSUtvWkl6ajBFQXdJd0l6RWhNQjhHQTFVRUF3d1kKYXpOekxXTnNhV1Z1ZEMxallVQXhOalUxTnpBMU5UYzVNQjRYRFRJeU1EWXlNREEyTVRJMU9Wb1hEVEl6TURZeQpNREEyTVRJMU9Wb3dNREVYTUJVR0ExVUVDaE1PYzNsemRHVnRPbTFoYzNSbGNuTXhGVEFUQmdOVkJBTVRESE41CmMzUmxiVHBoWkcxcGJqQlpNQk1HQnlxR1NNNDlBZ0VHQ0NxR1NNNDlBd0VIQTBJQUJGYXhQSFpjb0tLRDJmRWsKZHlsYm9GNXNPZzNQRE85ZGRqdGt2cGdRTEdtaEw0RUlUQUZWRlRVYndJV0l0aUdTa0RQQVhzVjVibDFtYXhhawpvVXFJcEhXalNEQkdNQTRHQTFVZER3RUIvd1FFQXdJRm9EQVRCZ05WSFNVRUREQUtCZ2dyQmdFRkJRY0RBakFmCkJnTlZIU01FR0RBV2dCUnpEZ3AxMERYeEhtL3F4M0lOenRxMlJORnUxekFLQmdncWhrak9QUVFEQWdOSkFEQkcKQWlFQXRzVVVFRkIwRXY3b1IwRmtvT2JSVE1NM25oQVNNZFMwMHQvOGdYNmRybDhDSVFEbGIvSTNNelNnV2JodQpNR0Fqc2l4WlYrRitkWkF6emNJSzg2ZjFWZXRBdUE9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCi0tLS0tQkVHSU4gQ0VSVElGSUNBVEUtLS0tLQpNSUlCZHpDQ0FSMmdBd0lCQWdJQkFEQUtCZ2dxaGtqT1BRUURBakFqTVNFd0h3WURWUVFEREJock0zTXRZMnhwClpXNTBMV05oUURFMk5UVTNNRFUxTnprd0hoY05Nakl3TmpJd01EWXhNalU1V2hjTk16SXdOakUzTURZeE1qVTUKV2pBak1TRXdId1lEVlFRRERCaHJNM010WTJ4cFpXNTBMV05oUURFMk5UVTNNRFUxTnprd1dUQVRCZ2NxaGtqTwpQUUlCQmdncWhrak9QUU1CQndOQ0FBVHpKZC92QTE1NCtmVkRSUFlZNzZqTVh5OHJzZmhMUEZrSElnUERCQm9nClJYKzNlNlFOQStHV3pNemtDQWpjUVBJMVdaWHM0YWU3WlB4MkhnWVpGVmJDbzBJd1FEQU9CZ05WSFE4QkFmOEUKQkFNQ0FxUXdEd1lEVlIwVEFRSC9CQVV3QXdFQi96QWRCZ05WSFE0RUZnUVVjdzRLZGRBMThSNXY2c2R5RGM3YQp0a1RSYnRjd0NnWUlLb1pJemowRUF3SURTQUF3UlFJaEFON2JjOTFiSEpvYXhiUWhOVDZLS0F6dE1IdzM5OHhqCkJsTks1Wm9lY0VYc0FpQUx1TWZJUWNwUjI4ekE4d2g1YTdheVR3SSt5bTJ0enliQitSZnJkQVJqb1E9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==\n    client-key-data: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSU56Rk9hWXJjaHRqL3kyV1p5UFJia29UQjhTVmNaM1JZSnN3OGs4eUJHMEtvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFVnJFOGRseWdvb1BaOFNSM0tWdWdYbXc2RGM4TTcxMTJPMlMrbUJBc2FhRXZnUWhNQVZVVgpOUnZBaFlpMklaS1FNOEJleFhsdVhXWnJGcVNoU29pa2RRPT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo=\n"
 	)
 
+	u, err := url.Parse(nautesConfigs.Git.Addr)
+	Expect(err).ShouldNot(HaveOccurred())
+	gitlabCertPath := fmt.Sprintf("%s/%s.crt", gitlab.SSLDirectory, u.Hostname())
+
+	BeforeEach(func() {
+		dir := filepath.Dir(gitlabCertPath)
+		err := os.MkdirAll(dir, os.ModePerm)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		_, err = os.Create(gitlabCertPath)
+		Expect(err).ShouldNot(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		err = os.RemoveAll(gitlabCertPath)
+		Expect(err).ShouldNot(HaveOccurred())
+	})
+
 	It("successfully saved host cluster", func() {
 		param.Cluster = hostCluster
 
@@ -174,25 +194,6 @@ var _ = Describe("Save cluster", func() {
 		Expect(err).Should(HaveOccurred())
 	})
 
-	It("failed to get cacert", func() {
-		param.Cluster = hostCluster
-
-		client := kubernetes.NewMockClient(ctl)
-		codeRepo := NewMockCodeRepo(ctl)
-		secretRepo := NewMockSecretrepo(ctl)
-		secretRepo.EXPECT().GetSecret(gomock.Any(), cacertSecretOptions).Return("", errors.New("the cacert is not found"))
-		secretRepo.EXPECT().SaveClusterConfig(gomock.Any(), param.Cluster.Name, gomock.Any()).Return(nil)
-		gitRepo := NewMockGitRepo(ctl)
-
-		resourceusecase := NewResourcesUsecase(logger, codeRepo, secretRepo, gitRepo, nil, nautesConfigs)
-		clusteroperator := clusterregistration.NewMockClusterRegistrationOperator(ctl)
-		dex := NewMockDexRepo(ctl)
-
-		clusterusecase := NewClusterUsecase(logger, codeRepo, secretRepo, resourceusecase, nautesConfigs, client, clusteroperator, dex)
-		err := clusterusecase.SaveCluster(context.Background(), param, kubeconfig)
-		Expect(err).Should(HaveOccurred())
-	})
-
 	It("failed to clone cluster template", func() {
 		param.Cluster = hostCluster
 
@@ -201,7 +202,6 @@ var _ = Describe("Save cluster", func() {
 		codeRepo.EXPECT().GetCurrentUser(gomock.Any()).Return(_GitUser, _GitEmail, nil).AnyTimes()
 
 		secretRepo := NewMockSecretrepo(ctl)
-		secretRepo.EXPECT().GetSecret(gomock.Any(), cacertSecretOptions).Return("cacert", nil)
 		secretRepo.EXPECT().SaveClusterConfig(gomock.Any(), param.Cluster.Name, gomock.Any()).Return(nil)
 
 		gitRepo := NewMockGitRepo(ctl)
@@ -228,7 +228,6 @@ var _ = Describe("Save cluster", func() {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Any()).Return(tenant, nil)
 
 		secretRepo := NewMockSecretrepo(ctl)
-		secretRepo.EXPECT().GetSecret(gomock.Any(), cacertSecretOptions).Return("cacert", nil)
 		secretRepo.EXPECT().SaveClusterConfig(gomock.Any(), param.Cluster.Name, gomock.Any()).Return(nil)
 
 		gitRepo := NewMockGitRepo(ctl)
@@ -328,7 +327,6 @@ var _ = Describe("Save cluster", func() {
 		codeRepo.EXPECT().GetCurrentUser(gomock.Any()).Return(_GitUser, _GitEmail, nil).AnyTimes()
 
 		secretRepo := NewMockSecretrepo(ctl)
-		secretRepo.EXPECT().GetSecret(gomock.Any(), cacertSecretOptions).Return("cacert", nil)
 
 		gitRepo := NewMockGitRepo(ctl)
 		gitRepo.EXPECT().Clone(gomock.Any(), clusterTemplateCloneParam).Return(clusterTemplateLocalPath, nil)

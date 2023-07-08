@@ -15,6 +15,7 @@
 package string
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"strings"
@@ -76,4 +77,8 @@ func ParseMetadataString(metadataStr string) map[string]string {
 		}
 	}
 	return metadataMap
+}
+
+func EncodeToString(str string) string {
+	return base64.StdEncoding.EncodeToString([]byte(str))
 }

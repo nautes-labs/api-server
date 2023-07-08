@@ -687,12 +687,12 @@ func NewGitlabClient(ctx context.Context, g *gitlabRepo) (gitlabclient.GitlabOpe
 	if token == nil {
 		return nil, fmt.Errorf("token is not found")
 	}
-	tokenstring, ok := token.(string)
+	t, ok := token.(string)
 	if !ok {
 		return nil, fmt.Errorf("token type error, it must be string")
 	}
 
-	client, err := g.client.NewGitlabClient(g.url, tokenstring)
+	client, err := g.client.NewGitlabClient(g.url, t)
 	if err != nil {
 		return nil, err
 	}

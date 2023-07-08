@@ -41,12 +41,10 @@ import (
 )
 
 const (
-	_USERNAME              = "default"
-	_PERMISSION            = "readonly"
-	_ACCESS_TYPE           = "deploykey"
-	_DefaultServiceAccount = "api-server-manager"
-	_CAPATH                = "/opt/nautes/out/pki"
-	_VAULTTOKENKEY         = "token"
+	Username              = "default"
+	DefaultServiceAccount = "api-server-manager"
+	CaPath                = "/opt/nautes/out/pki"
+	vaultTokenKey         = "token"
 )
 
 type vaultRepo struct {
@@ -56,7 +54,7 @@ type vaultRepo struct {
 }
 
 func NewVaultClient(config *nautesconfigs.Config) (biz.Secretrepo, error) {
-	http, err := NewHttpClientForVault(config.Secret.Vault.ProxyAddr)
+	http, err := NewHttpClientForVault(config.Secret.Vault.ProxyAddr, config.Secret.Vault.CABundle)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +85,7 @@ func GetToken(namespace string) (string, error) {
 	sa := &corev1.ServiceAccount{}
 	saNamespaceName := types.NamespacedName{
 		Namespace: namespace,
-		Name:      _DefaultServiceAccount,
+		Name:      DefaultServiceAccount,
 	}
 
 	client, err := kubernetes.NewClient()
@@ -111,7 +109,7 @@ func GetToken(namespace string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(secret.Data[_VAULTTOKENKEY]), nil
+	return string(secret.Data[vaultTokenKey]), nil
 }
 
 func NewKubernetesAuth(mountPath string, roles map[string]string, namespace string) (*auth.KubernetesAuth, error) {
@@ -366,7 +364,7 @@ func (v *vaultRepo) SaveClusterConfig(ctx context.Context, id, config string) er
 		Meta: &vaultproxyv1.ClusterMeta{
 			ID:         id,
 			Type:       clustertype,
-			Username:   _USERNAME,
+			Username:   Username,
 			Permission: permission,
 		},
 		Account: &vaultproxyv1.ClusterAccount{
@@ -420,8 +418,8 @@ func (v *vaultRepo) AuthorizationSecret(ctx context.Context, id int, destUser, g
 		Secret: &vaultproxyv1.GitMeta{
 			ProviderType: gitType,
 			ID:           repoID,
-			Username:     _USERNAME,
-			Permission:   _PERMISSION,
+			Username:     Username,
+			Permission:   string(biz.ReadOnly),
 		},
 	}
 	_, err := v.auth.GrantAuthroleGitPolicy(context.Background(), opt)
@@ -431,7 +429,7 @@ func (v *vaultRepo) AuthorizationSecret(ctx context.Context, id int, destUser, g
 	return nil
 }
 
-func NewHttpClientForVault(serverAddress string) (*kratoshttp.Client, error) {
+func NewHttpClientForVault(serverAddress, vaultCABundle string) (*kratoshttp.Client, error) {
 	content, err := url.Parse(serverAddress)
 	if err != nil {
 		return nil, err
@@ -442,22 +440,16 @@ func NewHttpClientForVault(serverAddress string) (*kratoshttp.Client, error) {
 	if len(splits) == 2 && len(splits[1]) != 0 {
 		host = splits[0]
 	}
+	apiServerCrtFilePath := fmt.Sprintf("%s/apiserver.crt", CaPath)
+	apiServerCrtKeyPath := fmt.Sprintf("%s/apiserver.key", CaPath)
 
-	caCertFilePath := fmt.Sprintf("%v/ca.crt", _CAPATH)
-	apiServerCrtFilePath := fmt.Sprintf("%v/apiserver.crt", _CAPATH)
-	apiServerCrtKeyPath := fmt.Sprintf("%v/apiserver.key", _CAPATH)
-
-	caCert, err := os.ReadFile(caCertFilePath)
-	if err != nil {
-		return nil, err
-	}
 	cert, err := tls.LoadX509KeyPair(apiServerCrtFilePath, apiServerCrtKeyPath)
 	if err != nil {
 		return nil, err
 	}
 
 	cp := x509.NewCertPool()
-	if !cp.AppendCertsFromPEM(caCert) {
+	if !cp.AppendCertsFromPEM([]byte(vaultCABundle)) {
 		return nil, err
 	}
 
