@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 
 	errors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/log"
@@ -41,6 +42,7 @@ type CodeRepoUsecase struct {
 	resourcesUsecase       *ResourcesUsecase
 	codeRepoBindingUsecase *CodeRepoBindingUsecase
 	client                 client.Client
+	wg                     sync.WaitGroup
 }
 
 type CodeRepoData struct {
