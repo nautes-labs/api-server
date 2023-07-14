@@ -105,7 +105,7 @@ var (
 		},
 	}
 	defaultProjectPath = fmt.Sprintf("%v/%v", defaultProductGroup.Path, defaultProjectName)
-	defaultProductId   = fmt.Sprintf("%s%d", _ProductPrefix, int(defaultProductGroup.ID))
+	defaultProductId   = fmt.Sprintf("%s%d", ProductPrefix, int(defaultProductGroup.ID))
 	// node
 	emptyNodes = nodestree.Node{
 		Name:     defaultProjectName,

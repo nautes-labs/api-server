@@ -23,7 +23,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/nautes-labs/api-server/pkg/kubernetes"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
-	utilstrings "github.com/nautes-labs/api-server/util/string"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -51,7 +50,7 @@ func createDeploymentRuntimeResource(name, repoID string) *resourcev1alpha1.Depl
 func createFakeDeploymentRuntimeNode(resource *resourcev1alpha1.DeploymentRuntime) *nodestree.Node {
 	return &nodestree.Node{
 		Name:    resource.Name,
-		Path:    fmt.Sprintf("%s/%s/%s.yaml", localRepositoryPath, _RuntimesDir, resource.Name),
+		Path:    fmt.Sprintf("%s/%s/%s.yaml", localRepositoryPath, RuntimesDir, resource.Name),
 		Level:   3,
 		Content: resource,
 		Kind:    nodestree.DeploymentRuntime,
@@ -61,7 +60,7 @@ func createFakeDeploymentRuntimeNode(resource *resourcev1alpha1.DeploymentRuntim
 func createFakeDeployRuntimeNodes(node *nodestree.Node) nodestree.Node {
 	fakeSubNode := &nodestree.Node{
 		Name:     nodestree.DeploymentRuntime,
-		Path:     fmt.Sprintf("%s/%s", localRepositoryPath, _RuntimesDir),
+		Path:     fmt.Sprintf("%s/%s", localRepositoryPath, RuntimesDir),
 		IsDir:    true,
 		Level:    2,
 		Content:  node,
@@ -89,11 +88,6 @@ var _ = Describe("Get deployment runtime", func() {
 	)
 
 	It("will get successed", testUseCase.GetResourceSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourcesUsecase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		id, _ := utilstrings.ExtractNumber("product-", fakeResource.Spec.Product)
-		codeRepo.EXPECT().GetGroup(gomock.Any(), id).Return(defaultProductGroup, nil)
-		id, _ = utilstrings.ExtractNumber("repo-", fakeResource.Spec.ManifestSource.CodeRepo)
-		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), id).Return(defautlProject, nil)
-
 		biz := NewDeploymentRuntimeUsecase(logger, codeRepo, nodestree, resourcesUsecase, client, nautesConfigs)
 		result, err := biz.GetDeploymentRuntime(context.Background(), resourceName, defaultGroupName)
 		Expect(err).ShouldNot(HaveOccurred())

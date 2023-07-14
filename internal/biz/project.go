@@ -26,11 +26,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	_ProjectKind = "Project"
-	_ProjectsDir = "projects"
-)
-
 type ProjectUsecase struct {
 	log              *log.Helper
 	codeRepo         CodeRepo
@@ -138,7 +133,7 @@ func (p *ProjectUsecase) SaveProject(ctx context.Context, options *BizOptions, d
 		return err
 	}
 
-	data.ProductName = fmt.Sprintf("%s%d", _ProductPrefix, int(group.ID))
+	data.ProductName = fmt.Sprintf("%s%d", ProductPrefix, int(group.ID))
 	resourceOptions := &resourceOptions{
 		resourceKind:      nodestree.Project,
 		resourceName:      options.ResouceName,
@@ -179,7 +174,7 @@ func (p *ProjectUsecase) CreateNode(path string, data interface{}) (*nodestree.N
 		},
 	}
 
-	storageResourceDirectory := fmt.Sprintf("%v/%v", path, _ProjectsDir)
+	storageResourceDirectory := fmt.Sprintf("%v/%v", path, ProjectsDir)
 	resourceParentDir := fmt.Sprintf("%v/%v", storageResourceDirectory, projectName)
 	resourceFile := fmt.Sprintf("%v/%v.yaml", resourceParentDir, projectName)
 	resourceNode = &nodestree.Node{

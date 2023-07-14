@@ -76,6 +76,11 @@ type ProjectPipelineItem struct {
 	TektonConfig    *TektonConfig
 }
 
+type CaBundleList struct {
+	Default string
+	Gitlab  string
+}
+
 type ClusterRegistrationParam struct {
 	RepoURL                      string
 	ClusterTemplateRepoLocalPath string
@@ -87,7 +92,7 @@ type ClusterRegistrationParam struct {
 	TektonHost                   string
 	Traefik                      *Traefik
 	Configs                      *nautesconfigs.Config
-	CaBundle                     string
+	CaBundleList                 CaBundleList
 }
 
 type ClusterRegistration struct {
@@ -96,7 +101,6 @@ type ClusterRegistration struct {
 	ClusterTemplateRepoLocalPath string
 	TenantConfigRepoLocalPath    string
 	RepoURL                      string
-	CaBundle                     string
 	Usage                        ClusterUsage
 	HostCluster                  *HostCluster
 	HostClusterNames             []string
@@ -108,4 +112,5 @@ type ClusterRegistration struct {
 	GitConfigs                   nautesconfigs.GitRepo
 	SecretConfigs                nautesconfigs.SecretRepo
 	OauthConfigs                 nautesconfigs.OAuth
+	CaBundleList                 CaBundleList
 }

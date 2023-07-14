@@ -91,33 +91,12 @@ func (c *CodeRepoBindingUsecase) GetCodeRepoBinding(ctx context.Context, options
 		return nil, err
 	}
 
-	resource, err := c.nodeToResource(node)
-	if err != nil {
-		return nil, err
+	codeRepoBinding, ok := node.Content.(*resourcev1alpha1.CodeRepoBinding)
+	if !ok {
+		return nil, fmt.Errorf("failed to get instance when get %s coderepoBinding", node.Name)
 	}
 
-	err = c.ConvertRuntime(ctx, resource)
-	if err != nil {
-		return nil, err
-	}
-
-	return resource, nil
-}
-
-func (c *CodeRepoBindingUsecase) ConvertRuntime(ctx context.Context, resource *resourcev1alpha1.CodeRepoBinding) error {
-	repoName, err := c.resourcesUsecase.ConvertCodeRepoToRepoName(ctx, resource.Spec.CodeRepo)
-	if err != nil {
-		return err
-	}
-	resource.Spec.CodeRepo = repoName
-
-	groupName, err := c.resourcesUsecase.ConvertProductToGroupName(ctx, resource.Spec.Product)
-	if err != nil {
-		return err
-	}
-	resource.Spec.Product = groupName
-
-	return nil
+	return codeRepoBinding, nil
 }
 
 func (c *CodeRepoBindingUsecase) ListCodeRepoBindings(ctx context.Context, options *BizOptions) ([]*nodestree.Node, error) {
@@ -621,15 +600,6 @@ func (c *CodeRepoBindingUsecase) getCodeRepoBindingsInAuthorizedRepo(ctx context
 	return codeRepoBindings
 }
 
-func (c *CodeRepoBindingUsecase) getAuthorizedRepoCodeRepo(ctx context.Context, nodes nodestree.Node, authRepoName string) (*resourcev1alpha1.CodeRepo, error) {
-	node := c.nodestree.GetNode(&nodes, nodestree.CodeRepo, authRepoName)
-	codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
-	if !ok {
-		return nil, fmt.Errorf("wrong type found for %s node when checking CodeRepo type", node.Name)
-	}
-	return codeRepo, nil
-}
-
 type ProductAuthorization struct {
 	ProductName         string
 	ProjectScopes       map[string]bool
@@ -735,7 +705,7 @@ func (c *CodeRepoBindingUsecase) recycleAuthorizationByProjectScopes(ctx context
 	}
 
 	codeRepos := []*resourcev1alpha1.CodeRepo{}
-	currentProductName := fmt.Sprintf("%s%d", _ProductPrefix, authorizedRepository.Namespace.ID)
+	currentProductName := fmt.Sprintf("%s%d", ProductPrefix, authorizedRepository.Namespace.ID)
 	if productName == currentProductName {
 		codeRepos, err = nodesToCodeRepoists(nodes, func(codeRepo *resourcev1alpha1.CodeRepo) bool {
 			pid, err := utilstrings.ExtractNumber(RepoPrefix, codeRepo.Name)
@@ -1093,15 +1063,7 @@ func (c *CodeRepoBindingUsecase) CheckReference(options nodestree.CompareOptions
 
 	ok = nodestree.IsResourceExist(options, codeRepoBinding.Spec.CodeRepo, nodestree.CodeRepo)
 	if !ok {
-		objKey := client.ObjectKey{
-			Namespace: codeRepoBinding.Spec.Product,
-			Name:      codeRepoBinding.Spec.CodeRepo,
-		}
-
-		err := k8sClient.Get(context.TODO(), objKey, &resourcev1alpha1.CodeRepo{})
-		if err != nil {
-			return true, err
-		}
+		return true, fmt.Errorf("the authorization repository %s does not exist when checking CodeRepoBinding %s", codeRepoBinding.Spec.CodeRepo, codeRepoBinding.Name)
 	}
 
 	// TODO:
@@ -1137,7 +1099,7 @@ func (c *CodeRepoBindingUsecase) CreateNode(path string, data interface{}) (*nod
 		Spec: val.Spec,
 	}
 
-	resourceDirectory := fmt.Sprintf("%s/%s", path, "code-repos")
+	resourceDirectory := fmt.Sprintf("%s/%s", path, CodeReposSubDir)
 	resourcePath := fmt.Sprintf("%s/%s/%s.yaml", resourceDirectory, val.Spec.CodeRepo, val.Name)
 
 	return &nodestree.Node{
@@ -1180,13 +1142,4 @@ func (c *CodeRepoBindingUsecase) CreateResource(kind string) interface{} {
 	}
 
 	return &resourcev1alpha1.CodeRepoBinding{}
-}
-
-func (c *CodeRepoBindingUsecase) nodeToResource(node *nodestree.Node) (*resourcev1alpha1.CodeRepoBinding, error) {
-	r, ok := node.Content.(*resourcev1alpha1.CodeRepoBinding)
-	if !ok {
-		return nil, fmt.Errorf("failed to get instance when get %s coderepoBinding", node.Name)
-	}
-
-	return r, nil
 }

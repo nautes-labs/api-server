@@ -27,18 +27,11 @@ import (
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
 	utilstrings "github.com/nautes-labs/api-server/util/string"
-	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
+
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 	sjson "github.com/tidwall/sjson"
 	kustomize "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/yaml"
-)
-
-const (
-	KustomizationFileName                 = "kustomization.yaml"
-	RretryCount           RretryCountType = "RretryCount"
-	_ProductPrefix                        = "product-"
-	_DefaultProjectPath                   = "DefaultProjectPath"
 )
 
 type RretryCountType string
@@ -51,7 +44,6 @@ type ResourcesUsecase struct {
 	gitRepo    GitRepo
 	nodestree  nodestree.NodesTree
 	configs    *nautesconfigs.Config
-	validate   resourcev1alpha1.ValidateClient
 }
 
 func NewResourcesUsecase(log log.Logger, codeRepo CodeRepo, secretRepo Secretrepo, gitRepo GitRepo, nodestree nodestree.NodesTree, configs *nautesconfigs.Config) *ResourcesUsecase {
@@ -166,7 +158,7 @@ func (r *ResourcesUsecase) Save(ctx context.Context, resourceOptions *resourceOp
 
 	options := nodestree.CompareOptions{
 		Nodes:       nodes,
-		ProductName: fmt.Sprintf("%s%d", _ProductPrefix, int(product.ID)),
+		ProductName: fmt.Sprintf("%s%d", ProductPrefix, int(product.ID)),
 	}
 
 	resourceNode = r.GetNode(&nodes, resourceOptions.resourceKind, resourceOptions.resourceName)
@@ -245,7 +237,7 @@ func (r *ResourcesUsecase) Delete(ctx context.Context, resourceOptions *resource
 
 	options := nodestree.CompareOptions{
 		Nodes:       nodes,
-		ProductName: fmt.Sprintf("%s%d", _ProductPrefix, int(product.ID)),
+		ProductName: fmt.Sprintf("%s%d", ProductPrefix, int(product.ID)),
 	}
 
 	resourceName, err := getResourceName(nodes)
@@ -558,7 +550,7 @@ func (r *ResourcesUsecase) ConvertGroupToProduct(ctx context.Context, productNam
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%s%d", _ProductPrefix, int(group.ID)), nil
+	return fmt.Sprintf("%s%d", ProductPrefix, int(group.ID)), nil
 }
 
 func (r *ResourcesUsecase) retryAutoMerge(ctx context.Context, path string) error {

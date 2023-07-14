@@ -58,7 +58,7 @@ func createEnvironmentNode(resource *resourcev1alpha1.Environment) *nodestree.No
 	return &nodestree.Node{
 		Name:    resource.Name,
 		Kind:    nodestree.Environment,
-		Path:    fmt.Sprintf("%s/%s/%s.yaml", localRepositoryPath, _EnvSubDir, resource.Name),
+		Path:    fmt.Sprintf("%s/%s/%s.yaml", localRepositoryPath, EnvSubDir, resource.Name),
 		Level:   3,
 		Content: resource,
 	}
@@ -72,8 +72,8 @@ func createContainEnvironmentNodes(node *nodestree.Node) nodestree.Node {
 		Level: 1,
 		Children: []*nodestree.Node{
 			{
-				Name:  _EnvSubDir,
-				Path:  fmt.Sprintf("%v/%v", defaultProjectName, _EnvSubDir),
+				Name:  EnvSubDir,
+				Path:  fmt.Sprintf("%v/%v", defaultProjectName, EnvSubDir),
 				IsDir: true,
 				Level: 2,
 				Children: []*nodestree.Node{

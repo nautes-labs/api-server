@@ -43,7 +43,7 @@ func createProjectResource(name string) *resourcev1alpha1.Project {
 		},
 		Spec: resourcev1alpha1.ProjectSpec{
 			Language: "go",
-			Product:  fmt.Sprintf("%s%d", _ProductPrefix, int(defaultProductGroup.ID)),
+			Product:  fmt.Sprintf("%s%d", ProductPrefix, int(defaultProductGroup.ID)),
 		},
 	}
 }
@@ -52,7 +52,7 @@ func createProjectNode(resource *resourcev1alpha1.Project) *nodestree.Node {
 	return &nodestree.Node{
 		Name:    resource.Name,
 		Kind:    nodestree.Project,
-		Path:    fmt.Sprintf("%s/%s/%s/%s.yaml", localRepositoryPath, _ProjectsDir, resource.Name, resource.Name),
+		Path:    fmt.Sprintf("%s/%s/%s/%s.yaml", localRepositoryPath, ProjectsDir, resource.Name, resource.Name),
 		Level:   4,
 		Content: resource,
 	}
@@ -66,14 +66,14 @@ func createProjectNodes(node *nodestree.Node) nodestree.Node {
 		Level: 1,
 		Children: []*nodestree.Node{
 			{
-				Name:  _ProjectsDir,
-				Path:  fmt.Sprintf("%s/%s", defaultProjectName, _ProjectsDir),
+				Name:  ProjectsDir,
+				Path:  fmt.Sprintf("%s/%s", defaultProjectName, ProjectsDir),
 				IsDir: true,
 				Level: 2,
 				Children: []*nodestree.Node{
 					{
 						Name:  node.Name,
-						Path:  fmt.Sprintf("%s/%s/%s", defaultProjectName, _ProjectsDir, node.Name),
+						Path:  fmt.Sprintf("%s/%s/%s", defaultProjectName, ProjectsDir, node.Name),
 						IsDir: true,
 						Level: 3,
 						Children: []*nodestree.Node{
@@ -139,7 +139,7 @@ var _ = Describe("Save project", func() {
 		fakeNode     = createProjectNode(fakeResource)
 		fakeNodes    = createProjectNodes(fakeNode)
 		projectData  = &ProjectData{
-			ProductName: fmt.Sprintf("%s%d", _ProductPrefix, int(defaultProductGroup.ID)),
+			ProductName: fmt.Sprintf("%s%d", ProductPrefix, int(defaultProductGroup.ID)),
 			ProjectName: resourceName,
 			Language:    "Java",
 		}

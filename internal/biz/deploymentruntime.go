@@ -28,10 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	_RuntimesDir = "runtimes"
-)
-
 type DeploymentRuntimeUsecase struct {
 	log              *log.Helper
 	codeRepo         CodeRepo
@@ -59,35 +55,6 @@ func NewDeploymentRuntimeUsecase(logger log.Logger, codeRepo CodeRepo, nodestree
 	return runtime
 }
 
-func (p *DeploymentRuntimeUsecase) ConvertCodeRepoToRepoName(ctx context.Context, runtime *resourcev1alpha1.DeploymentRuntime) error {
-	if runtime.Spec.ManifestSource.CodeRepo == "" {
-		return fmt.Errorf("the codeRepo field value of deploymentruntime %s should not be empty", runtime.Name)
-	}
-
-	repoName, err := p.resourcesUsecase.ConvertCodeRepoToRepoName(ctx, runtime.Spec.ManifestSource.CodeRepo)
-	if err != nil {
-		return err
-	}
-	runtime.Spec.ManifestSource.CodeRepo = repoName
-
-	return nil
-}
-
-func (c *DeploymentRuntimeUsecase) ConvertProductToGroupName(ctx context.Context, runtime *resourcev1alpha1.DeploymentRuntime) error {
-	if runtime.Spec.Product == "" {
-		return fmt.Errorf("the product field value of deploymentruntime %s should not be empty", runtime.Name)
-	}
-
-	groupName, err := c.resourcesUsecase.ConvertProductToGroupName(ctx, runtime.Spec.Product)
-	if err != nil {
-		return err
-	}
-
-	runtime.Spec.Product = groupName
-
-	return nil
-}
-
 func (d *DeploymentRuntimeUsecase) GetDeploymentRuntime(ctx context.Context, deploymentRuntimeName, productName string) (*resourcev1alpha1.DeploymentRuntime, error) {
 	resourceNode, err := d.resourcesUsecase.Get(ctx, nodestree.DeploymentRuntime, productName, d, func(nodes nodestree.Node) (string, error) {
 		return deploymentRuntimeName, nil
@@ -101,26 +68,7 @@ func (d *DeploymentRuntimeUsecase) GetDeploymentRuntime(ctx context.Context, dep
 		return nil, fmt.Errorf("the resource type of %s is inconsistent", deploymentRuntimeName)
 	}
 
-	err = d.ConvertRuntime(ctx, runtime)
-	if err != nil {
-		return nil, err
-	}
-
 	return runtime, nil
-}
-
-func (d *DeploymentRuntimeUsecase) ConvertRuntime(ctx context.Context, runtime *resourcev1alpha1.DeploymentRuntime) error {
-	err := d.ConvertCodeRepoToRepoName(ctx, runtime)
-	if err != nil {
-		return err
-	}
-
-	err = d.ConvertProductToGroupName(ctx, runtime)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (d *DeploymentRuntimeUsecase) ListDeploymentRuntimes(ctx context.Context, productName string) ([]*nodestree.Node, error) {
@@ -147,7 +95,7 @@ func (d *DeploymentRuntimeUsecase) SaveDeploymentRuntime(ctx context.Context, op
 	}
 
 	data.Spec.ManifestSource.CodeRepo = fmt.Sprintf("%s%d", RepoPrefix, int(project.ID))
-	data.Spec.Product = fmt.Sprintf("%s%d", _ProductPrefix, int(group.ID))
+	data.Spec.Product = fmt.Sprintf("%s%d", ProductPrefix, int(group.ID))
 	resourceOptions := &resourceOptions{
 		resourceName:      options.ResouceName,
 		resourceKind:      nodestree.DeploymentRuntime,
@@ -180,7 +128,7 @@ func (e *DeploymentRuntimeUsecase) CreateNode(path string, data interface{}) (*n
 		Spec: val.Spec,
 	}
 
-	resourceDirectory := fmt.Sprintf("%s/%s", path, _RuntimesDir)
+	resourceDirectory := fmt.Sprintf("%s/%s", path, RuntimesDir)
 	resourceFile := fmt.Sprintf("%s/%s.yaml", resourceDirectory, val.Name)
 
 	return &nodestree.Node{
@@ -241,14 +189,14 @@ func (d *DeploymentRuntimeUsecase) CheckReference(options nodestree.CompareOptio
 	ok = nodestree.IsResourceExist(options, envName, nodestree.Environment)
 	if !ok {
 		err := fmt.Errorf("failed to get environment %s", envName)
-		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable+"err: "+err.Error(), nodestree.Environment, fmt.Sprintf("%s/%s", _RuntimesDir, deploymentRuntime.Name))
+		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable+"err: "+err.Error(), nodestree.Environment, fmt.Sprintf("%s/%s", RuntimesDir, deploymentRuntime.Name))
 	}
 
 	codeRepoName := deploymentRuntime.Spec.ManifestSource.CodeRepo
 	ok = nodestree.IsResourceExist(options, codeRepoName, nodestree.CodeRepo)
 	if !ok {
 		err := fmt.Errorf("failed to get codeRepo %s", codeRepoName)
-		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable+"err: "+err.Error(), nodestree.CodeRepo, fmt.Sprintf("%s/%s", _CodeReposSubDir, deploymentRuntime.Name))
+		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable+"err: "+err.Error(), nodestree.CodeRepo, fmt.Sprintf("%s/%s", CodeReposSubDir, deploymentRuntime.Name))
 	}
 
 	ok, err := d.compare(options.Nodes)

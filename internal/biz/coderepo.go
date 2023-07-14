@@ -33,10 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	_CodeReposSubDir = "code-repos"
-)
-
 type CodeRepoUsecase struct {
 	log                    *log.Helper
 	codeRepo               CodeRepo
@@ -67,48 +63,6 @@ func NewCodeRepoUsecase(logger log.Logger, codeRepo CodeRepo, secretRepo Secretr
 	}
 	nodestree.AppendOperators(codeRepoUsecase)
 	return codeRepoUsecase
-}
-
-func (c *CodeRepoUsecase) GetProjectByCodeRepoName(ctx context.Context, codeRepoName, productName string) (*resourcev1alpha1.CodeRepo, *Project, error) {
-	pid := fmt.Sprintf("%s/%s", productName, codeRepoName)
-	project, err := c.codeRepo.GetCodeRepo(ctx, pid)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if project != nil {
-		resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.ID))
-		codeRepoName = resourceName
-	}
-
-	node, err := c.resourcesUsecase.Get(ctx, nodestree.CodeRepo, productName, c, func(nodes nodestree.Node) (string, error) {
-		if project != nil {
-			resourceName := fmt.Sprintf("%s%d", RepoPrefix, int(project.ID))
-			return resourceName, nil
-		}
-
-		resourceName, err := c.getCodeRepoName(nodes, codeRepoName)
-		if err != nil {
-			return "", nil
-		}
-
-		return resourceName, nil
-	})
-	if err != nil {
-		return nil, nil, err
-	}
-
-	codeRepo, err := nodeToCodeRepo(node)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	err = c.convertProductToGroupName(ctx, codeRepo)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return codeRepo, project, nil
 }
 
 func (c *CodeRepoUsecase) GetCodeRepo(ctx context.Context, codeRepoName, productName string) (*nodestree.Node, error) {
@@ -159,7 +113,7 @@ func (c *CodeRepoUsecase) SaveCodeRepo(ctx context.Context, options *BizOptions,
 	if err != nil {
 		return err
 	}
-	data.Spec.Product = fmt.Sprintf("%s%d", _ProductPrefix, int(group.ID))
+	data.Spec.Product = fmt.Sprintf("%s%d", ProductPrefix, int(group.ID))
 
 	project, err := c.saveRepository(ctx, group, options.ResouceName, gitOptions)
 	if err != nil {
@@ -759,7 +713,7 @@ func (c *CodeRepoUsecase) saveDeployKeyToGitAndSecretRepo(ctx context.Context, p
 	extendKVs := make(map[string]string)
 	extendKVs[Fingerprint] = projectDeployKey.Key
 	extendKVs[DeployKeyID] = strconv.Itoa(projectDeployKey.ID)
-	err = c.secretRepo.SaveDeployKey(ctx, convertRepoName(pid), string(privateKey), DefaultUser, permission, extendKVs)
+	err = c.secretRepo.SaveDeployKey(ctx, getCodeRepoResourceName(pid), string(privateKey), DefaultUser, permission, extendKVs)
 	if err != nil {
 		return nil, err
 	}
@@ -782,7 +736,7 @@ func (c *CodeRepoUsecase) createAccessTokenToGitAndSecretRepo(ctx context.Contex
 
 	extendKVs := make(map[string]string)
 	extendKVs[AccessTokenID] = strconv.Itoa(projectToken.ID)
-	err = c.secretRepo.SaveProjectAccessToken(ctx, convertRepoName(pid), string(projectToken.Token), DefaultUser, name, extendKVs)
+	err = c.secretRepo.SaveProjectAccessToken(ctx, getCodeRepoResourceName(pid), string(projectToken.Token), DefaultUser, name, extendKVs)
 	if err != nil {
 		return nil, err
 	}
@@ -894,8 +848,8 @@ func (c *CodeRepoUsecase) CheckReference(options nodestree.CompareOptions, node 
 	if codeRepo.Spec.Project != "" {
 		ok = nodestree.IsResourceExist(options, codeRepo.Spec.Project, nodestree.Project)
 		if !ok {
-			return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, _ProjectKind,
-				codeRepo.Spec.Project, nodestree.CodeRepo, codeRepo.Spec.RepoName, _CodeReposSubDir+"/"+codeRepo.ObjectMeta.Name)
+			return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable, nodestree.Project,
+				codeRepo.Spec.Project, nodestree.CodeRepo, codeRepo.Spec.RepoName, CodeReposSubDir+"/"+codeRepo.ObjectMeta.Name)
 		}
 	}
 
@@ -971,14 +925,14 @@ func nodesToCodeRepoists(nodes nodestree.Node, options ...ListMatchOptions) ([]*
 	var filteredRepos []*resourcev1alpha1.CodeRepo
 
 	for _, childNode := range nodes.Children {
-		if childNode.Name == _CodeReposSubDir {
+		if childNode.Name == CodeReposSubDir {
 			codeReposDir = childNode
 			break
 		}
 	}
 
 	if codeReposDir == nil {
-		return nil, fmt.Errorf("the %s directory is not exist", _CodeReposSubDir)
+		return nil, fmt.Errorf("the %s directory is not exist", CodeReposSubDir)
 	}
 
 	for _, subNode := range codeReposDir.Children {
@@ -1019,7 +973,7 @@ func (c *CodeRepoUsecase) getCodeRepoName(nodes nodestree.Node, codeRepoName str
 	var codeReposDir *nodestree.Node
 
 	for _, node := range nodes.Children {
-		if node.Name == _CodeReposSubDir {
+		if node.Name == CodeReposSubDir {
 			codeReposDir = node
 			break
 		}
@@ -1068,6 +1022,48 @@ func getCodeRepoProvider(k8sClient client.Client, namespace string) (*resourcev1
 	return nil, nil
 }
 
-func convertRepoName(id int) string {
-	return fmt.Sprintf("repo-%d", id)
+func getCodeRepoResourceName(id int) string {
+	return fmt.Sprintf("%s%d", RepoPrefix, id)
+}
+
+func (c *CodeRepoUsecase) GetProjectByCodeRepoName(ctx context.Context, codeRepoName, productName string) (*resourcev1alpha1.CodeRepo, *Project, error) {
+	pid := fmt.Sprintf("%s/%s", productName, codeRepoName)
+	project, err := c.codeRepo.GetCodeRepo(ctx, pid)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if project != nil {
+		resourceName := getCodeRepoResourceName(int(project.ID))
+		codeRepoName = resourceName
+	}
+
+	node, err := c.resourcesUsecase.Get(ctx, nodestree.CodeRepo, productName, c, func(nodes nodestree.Node) (string, error) {
+		if project != nil {
+			resourceName := getCodeRepoResourceName(int(project.ID))
+			return resourceName, nil
+		}
+
+		resourceName, err := c.getCodeRepoName(nodes, codeRepoName)
+		if err != nil {
+			return "", nil
+		}
+
+		return resourceName, nil
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	codeRepo, err := nodeToCodeRepo(node)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = c.convertProductToGroupName(ctx, codeRepo)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return codeRepo, project, nil
 }

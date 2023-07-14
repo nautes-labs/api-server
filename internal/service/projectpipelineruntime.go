@@ -116,14 +116,18 @@ func (s *ProjectPipelineRuntimeService) ListProjectPipelineRuntimes(ctx context.
 }
 
 func (s *ProjectPipelineRuntimeService) SaveProjectPipelineRuntime(ctx context.Context, req *projectpipelineruntimev1.SaveRequest) (*projectpipelineruntimev1.SaveReply, error) {
+	eventSources := s.convertEventSources(req.Body.EventSources)
+	pipelines := s.convertPipelines(req.Body.Pipelines)
+	pipelineTriggers := s.convertPipelineTriggers(req.Body.PipelineTriggers)
+
 	data := &biz.ProjectPipelineRuntimeData{
 		Name: req.ProjectPipelineRuntimeName,
 		Spec: resourcev1alpha1.ProjectPipelineRuntimeSpec{
 			Project:          req.Body.Project,
 			PipelineSource:   req.Body.PipelineSource,
-			EventSources:     s.convertEventSources(req.Body.EventSources),
-			Pipelines:        s.convertPipelines(req.Body.Pipelines),
-			PipelineTriggers: s.convertPipelineTriggers(req.Body.PipelineTriggers),
+			EventSources:     eventSources,
+			Pipelines:        pipelines,
+			PipelineTriggers: pipelineTriggers,
 			Destination:      req.Body.Destination,
 			Isolation:        req.Body.Isolation,
 		},

@@ -18,8 +18,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"net/url"
+	"os"
 
 	"github.com/xanzy/go-gitlab"
 )
@@ -28,6 +29,7 @@ const (
 	_CaCertPath        = "/opt/nautes/out/pki/ca.crt"
 	_ApiServerCertPath = "/opt/nautes/out/pki/apiserver.crt"
 	_ApiServerKeyPath  = "/opt/nautes/out/pki/apiserver.key"
+	SSLDirectory       = "/opt/nautes/ssl"
 )
 
 type GitlabClient struct {
@@ -39,13 +41,13 @@ func NewGitlabOperator() GitlabOperator {
 }
 
 func (g *GitlabClient) NewGitlabClient(url, token string) (GitlabOperator, error) {
-	caCert, err := ioutil.ReadFile(_CaCertPath)
+	cert, err := GetCertificate(url)
 	if err != nil {
 		return nil, err
 	}
 
 	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM(caCert)
+	caCertPool.AppendCertsFromPEM([]byte(cert))
 
 	srvCert, _ := tls.LoadX509KeyPair(_ApiServerCertPath, _ApiServerKeyPath)
 	tlsConfig := &tls.Config{
@@ -67,6 +69,31 @@ func (g *GitlabClient) NewGitlabClient(url, token string) (GitlabOperator, error
 	}
 
 	return g, nil
+}
+
+func GetCertificate(addr string) (string, error) {
+	u, err := url.Parse(addr)
+	if err != nil {
+		return "", err
+	}
+
+	hostname := u.Hostname()
+	port := u.Port()
+	path := fmt.Sprintf("%s/%s_%s.crt", SSLDirectory, hostname, port)
+	cert, err := os.ReadFile(path)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return "", err
+		}
+
+		path := fmt.Sprintf("%s/%s.crt", SSLDirectory, hostname)
+		cert, err = os.ReadFile(path)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return string(cert), nil
 }
 
 func (g *GitlabClient) GetCurrentUser() (user *gitlab.User, res *gitlab.Response, err error) {

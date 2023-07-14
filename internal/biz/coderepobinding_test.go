@@ -64,7 +64,7 @@ func createFakeCodeRepoBindingResource(name, project, authRepo, permission strin
 func createFakeCodeRepoBindingNode(resource *resourcev1alpha1.CodeRepoBinding) *nodestree.Node {
 	return &nodestree.Node{
 		Name:    resource.Name,
-		Path:    fmt.Sprintf("%s/%s/%s/%s.yaml", localRepositoryPath, _CodeReposSubDir, resource.Name, resource.Name),
+		Path:    fmt.Sprintf("%s/%s/%s/%s.yaml", localRepositoryPath, CodeReposSubDir, resource.Name, resource.Name),
 		Level:   4,
 		Content: resource,
 		Kind:    nodestree.CodeRepoBinding,
@@ -83,14 +83,14 @@ func createFakeContainingCodeRepoBindingNodes(node *nodestree.Node) nodestree.No
 		Level: 1,
 		Children: []*nodestree.Node{
 			{
-				Name:  _CodeReposSubDir,
-				Path:  fmt.Sprintf("%v/%v", defaultProjectName, _CodeReposSubDir),
+				Name:  CodeReposSubDir,
+				Path:  fmt.Sprintf("%v/%v", defaultProjectName, CodeReposSubDir),
 				IsDir: true,
 				Level: 2,
 				Children: []*nodestree.Node{
 					{
 						Name:  node.Name,
-						Path:  fmt.Sprintf("%s/%s/%s", localRepositoryPath, _CodeReposSubDir, codeRepoNode1.Name),
+						Path:  fmt.Sprintf("%s/%s/%s", localRepositoryPath, CodeReposSubDir, codeRepoNode1.Name),
 						IsDir: true,
 						Level: 3,
 						Children: []*nodestree.Node{

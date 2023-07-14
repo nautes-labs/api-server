@@ -16,7 +16,6 @@ package biz
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -24,6 +23,7 @@ import (
 
 	"github.com/go-kratos/kratos/v2/log"
 	cluster "github.com/nautes-labs/api-server/pkg/cluster"
+	gitlab "github.com/nautes-labs/api-server/pkg/gitlab"
 	utilstrings "github.com/nautes-labs/api-server/util/string"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
@@ -34,8 +34,8 @@ import (
 )
 
 const (
-	_TenantLabel              = "coderepo.resource.nautes.io/tenant-management"
-	_NautesClusterDir         = "nautes/overlays/production/clusters"
+	TenantLabel               = "coderepo.resource.nautes.io/tenant-management"
+	NautesClusterDir          = "nautes/overlays/production/clusters"
 	DefaultClusterTemplateURL = "https://github.com/nautes-labs/cluster-templates.git"
 	SecretPath                = "default"
 	SecretEngine              = "pki"
@@ -112,15 +112,9 @@ func (c *ClusterUsecase) SaveCluster(ctx context.Context, param *cluster.Cluster
 	if cluster.IsPhysical(param.Cluster) {
 		err := c.SaveKubeconfig(ctx, param.Cluster.Name, param.Cluster.Spec.ApiServer, kubeconfig)
 		if err != nil {
-			c.log.Errorf("failed to saved kubeconfig to secre repo, cluster name: %s", param.Cluster.Name)
+			c.log.Errorf("failed to saved kubeconfig to secret store, cluster name: %s", param.Cluster.Name)
 			return err
 		}
-	}
-
-	cacert, err := c.GetCacert(ctx)
-	if err != nil {
-		c.log.Errorf("failed to get cacert to secre repo, cluster name: %s", param.Cluster.Name)
-		return err
 	}
 
 	httpURLToRepo := GetClusterTemplateHttpsURL(c.configs)
@@ -143,8 +137,20 @@ func (c *ClusterUsecase) SaveCluster(ctx context.Context, param *cluster.Cluster
 	}
 	defer cleanCodeRepo(tenantRepositoryLocalPath)
 
+	defaultCert, err := c.GetDefaultCertificate(ctx)
+	if err != nil {
+		c.log.Errorf("failed to get certificate to secret store, cluster name: %s", param.Cluster.Name)
+		return err
+	}
+	gitlabCert, err := gitlab.GetCertificate(c.configs.Git.Addr)
+	if err != nil {
+		return err
+	}
 	param.ClusterTemplateRepoLocalPath = clusterTemplateLocalPath
-	param.CaBundle = base64.StdEncoding.EncodeToString([]byte(cacert))
+	param.CaBundleList = cluster.CaBundleList{
+		Default: defaultCert,
+		Gitlab:  gitlabCert,
+	}
 	param.TenantConfigRepoLocalPath = tenantRepositoryLocalPath
 	param.RepoURL = repository.SshUrlToRepo
 	param.Configs = c.configs
@@ -195,7 +201,7 @@ func (c *ClusterUsecase) DeleteCluster(ctx context.Context, clusterName string) 
 	}
 	defer cleanCodeRepo(tenantRepositoryLocalPath)
 
-	resourceCluster, err := GetCluster(tenantRepositoryLocalPath, clusterName)
+	resourceCluster, err := GetClusterFromTenantRepository(tenantRepositoryLocalPath, clusterName)
 	if err != nil {
 		c.log.Errorf("cluster %s does not exist or is invalid", clusterName)
 		return fmt.Errorf("cluster %s does not exist or is invalid", clusterName)
@@ -296,23 +302,23 @@ func (r *ClusterUsecase) ConvertKubeconfig(config, server string) (string, error
 	return string(bytes), nil
 }
 
-func (c *ClusterUsecase) GetCacert(ctx context.Context) (string, error) {
+func (c *ClusterUsecase) GetDefaultCertificate(ctx context.Context) (string, error) {
 	secretOptions := &SecretOptions{
 		SecretPath:   SecretPath,
 		SecretEngine: SecretEngine,
 		SecretKey:    "cacert",
 	}
-	cacert, err := c.secretRepo.GetSecret(ctx, secretOptions)
+	cert, err := c.secretRepo.GetSecret(ctx, secretOptions)
 	if err != nil {
 		return "", err
 	}
 
-	return cacert, nil
+	return cert, nil
 }
 
 func (c *ClusterUsecase) GetTenantRepository(ctx context.Context) (*Project, error) {
 	codeRepos := &resourcev1alpha1.CodeRepoList{}
-	labelSelector := labels.SelectorFromSet(map[string]string{_TenantLabel: c.configs.Nautes.TenantName})
+	labelSelector := labels.SelectorFromSet(map[string]string{TenantLabel: c.configs.Nautes.TenantName})
 	err := c.client.List(context.Background(), codeRepos, &client.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
 		return nil, err
@@ -401,8 +407,8 @@ func GetClusterTemplateHttpsURL(configs *nautesconfigs.Config) string {
 	return DefaultClusterTemplateURL
 }
 
-func GetCluster(tenantRepositoryLocalPath, clusterName string) (*resourcev1alpha1.Cluster, error) {
-	filePath := fmt.Sprintf("%s/%s/%s.yaml", tenantRepositoryLocalPath, _NautesClusterDir, clusterName)
+func GetClusterFromTenantRepository(tenantRepositoryLocalPath, clusterName string) (*resourcev1alpha1.Cluster, error) {
+	filePath := fmt.Sprintf("%s/%s/%s.yaml", tenantRepositoryLocalPath, NautesClusterDir, clusterName)
 
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return nil, err

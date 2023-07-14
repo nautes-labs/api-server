@@ -187,8 +187,8 @@ var _ = Describe("Save product", func() {
 
 		secretRepo := NewMockSecretrepo(ctl)
 		secretRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any()).Return(nil, commonv1.ErrorSecretNotFound("secret data is not found"))
-		secretRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Eq(convertRepoName(int(defautlProject.ID))), gomock.Any(), gomock.Any(), gomock.Any(), extendKVs).Return(nil)
-		secretRepo.EXPECT().AuthorizationSecret(gomock.Any(), gomock.Eq(int(defautlProject.ID)), _ProductDestUser, string(nautesConfigs.Git.GitType), nautesConfigs.Secret.Vault.MountPath).Return(nil)
+		secretRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Eq(getCodeRepoResourceName(int(defautlProject.ID))), gomock.Any(), gomock.Any(), gomock.Any(), extendKVs).Return(nil)
+		secretRepo.EXPECT().AuthorizationSecret(gomock.Any(), gomock.Eq(int(defautlProject.ID)), ArgoOperator, string(nautesConfigs.Git.GitType), nautesConfigs.Secret.Vault.MountPath).Return(nil)
 
 		gitRepo := NewMockGitRepo(ctl)
 		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil)
@@ -225,8 +225,8 @@ var _ = Describe("Save product", func() {
 		extendKVs = make(map[string]string)
 		extendKVs["fingerprint"] = newDefaultProjectDeployKey.Key
 		extendKVs["id"] = strconv.Itoa(newDefaultProjectDeployKey.ID)
-		secretRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Eq(convertRepoName(int(defautlProject.ID))), gomock.Any(), gomock.Any(), gomock.Any(), extendKVs).Return(nil)
-		secretRepo.EXPECT().AuthorizationSecret(gomock.Any(), gomock.Eq(int(defautlProject.ID)), _ProductDestUser, string(nautesConfigs.Git.GitType), nautesConfigs.Secret.Vault.MountPath).Return(nil)
+		secretRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Eq(getCodeRepoResourceName(int(defautlProject.ID))), gomock.Any(), gomock.Any(), gomock.Any(), extendKVs).Return(nil)
+		secretRepo.EXPECT().AuthorizationSecret(gomock.Any(), gomock.Eq(int(defautlProject.ID)), ArgoOperator, string(nautesConfigs.Git.GitType), nautesConfigs.Secret.Vault.MountPath).Return(nil)
 
 		gitRepo := NewMockGitRepo(ctl)
 
@@ -321,7 +321,7 @@ var _ = Describe("Save product", func() {
 
 		secretRepo := NewMockSecretrepo(ctl)
 		secretRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any()).Return(nil, commonv1.ErrorSecretNotFound("secret data is not found"))
-		secretRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Eq(convertRepoName(int(defautlProject.ID))), gomock.Any(), gomock.Any(), gomock.Any(), extendKVs).Return(fmt.Errorf("unable to save secret"))
+		secretRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Eq(getCodeRepoResourceName(int(defautlProject.ID))), gomock.Any(), gomock.Any(), gomock.Any(), extendKVs).Return(fmt.Errorf("unable to save secret"))
 
 		gitRepo := NewMockGitRepo(ctl)
 		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil)
@@ -352,8 +352,8 @@ var _ = Describe("Save product", func() {
 
 		secretRepo := NewMockSecretrepo(ctl)
 		secretRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any()).Return(nil, commonv1.ErrorSecretNotFound("secret data is not found"))
-		secretRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Eq(convertRepoName(int(defautlProject.ID))), gomock.Any(), gomock.Any(), gomock.Any(), extendKVs).Return(nil)
-		secretRepo.EXPECT().AuthorizationSecret(gomock.Any(), gomock.Eq(int(defautlProject.ID)), _ProductDestUser, string(nautesConfigs.Git.GitType), nautesConfigs.Secret.Vault.MountPath).Return(fmt.Errorf("Failed to authorization"))
+		secretRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Eq(getCodeRepoResourceName(int(defautlProject.ID))), gomock.Any(), gomock.Any(), gomock.Any(), extendKVs).Return(nil)
+		secretRepo.EXPECT().AuthorizationSecret(gomock.Any(), gomock.Eq(int(defautlProject.ID)), ArgoOperator, string(nautesConfigs.Git.GitType), nautesConfigs.Secret.Vault.MountPath).Return(fmt.Errorf("Failed to authorization"))
 
 		gitRepo := NewMockGitRepo(ctl)
 		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil)
