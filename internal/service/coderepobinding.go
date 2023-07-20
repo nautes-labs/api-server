@@ -122,7 +122,7 @@ func (s *CodeRepoBindingService) ListCodeRepoBindings(ctx context.Context, req *
 }
 
 func (s *CodeRepoBindingService) SaveCodeRepoBinding(ctx context.Context, req *coderepobindingv1.SaveRequest) (*coderepobindingv1.SaveReply, error) {
-	productResourceName, err := s.resourcesUsecase.ConvertGroupToProduct(ctx, req.ProductName)
+	productResourceName, err := s.resourcesUsecase.ConvertGroupToProductName(ctx, req.ProductName)
 	if err != nil {
 		return nil, err
 	}

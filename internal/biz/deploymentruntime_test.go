@@ -352,6 +352,7 @@ var _ = Describe("Save deployment runtime", func() {
 
 			client := kubernetes.NewMockClient(ctl)
 			client.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			client.EXPECT().List(gomock.Any(), gomock.Eq(&resourcev1alpha1.DeploymentRuntimeList{})).Return(nil)
 
 			biz := NewDeploymentRuntimeUsecase(logger, nil, nodestree, nil, client, nautesConfigs)
 			ok, err := biz.CheckReference(options, fakeNode, nil)

@@ -20,6 +20,8 @@ option go_package = "github.com/nautes-labs/api-server/api/cluster/v1;v1";
 
 import "google/api/annotations.proto";
 import "validate/validate.proto";
+import "google/protobuf/struct.proto";
+
 
 service Cluster {
   rpc GetCluster (GetRequest) returns (GetReply) {
@@ -82,6 +84,12 @@ message GetReply {
   string worker_type = 7 [json_name = "worker_type"];
   // api_server specifies the API server address of the cluster.
   string api_server = 8 [json_name = "api_server"];
+  // components_list List of third-party components.
+  ComponentsList components_list = 9 [json_name="components_list"];
+  // // reserved_namespaces_allowed_products key is namespace name, value is the product name list witch can use namespace.
+  map<string, google.protobuf.ListValue> reserved_namespaces_allowed_products = 10 [json_name = "reserved_namespaces_allowed_products"];
+  // // product_allowed_cluster_resources key is product name, value is the list of cluster resources.
+  map<string, google.protobuf.ListValue> product_allowed_cluster_resources = 11 [json_name = "product_allowed_cluster_resources"];
 }
 
 // ListsRequest represents a request to list clusters.
@@ -128,6 +136,12 @@ message SaveRequest {
     string primary_domain = 12 [json_name = "primary_domain"];
     // tekton_host is the domain for the tekton dashboard, and it must be a subdomain of the PrimaryDomain
     string tekton_host = 13 [json_name = "tekton_host"];
+    // reserved_namespaces_allowed_products key is namespace name, value is the product name list witch can use namespace.
+    map<string, google.protobuf.ListValue> reserved_namespaces_allowed_products = 14 [json_name = "reserved_namespaces_allowed_products"];
+    // product_allowed_cluster_resources key is product name, value is the list of cluster resources.
+	  map<string, google.protobuf.ListValue> product_allowed_cluster_resources = 15 [json_name = "product_allowed_cluster_resources"];
+    // components_list List of third-party components.
+    ComponentsList components_list = 16 [json_name="components_list"];
   }
   // cluster_name specifies the name of the cluster.
   string cluster_name = 2 [json_name = "cluster_name"];
@@ -155,4 +169,34 @@ message DeleteRequest {
 message DeleteReply {
   // msg specifies the message of the delete response.
   string msg = 1 [json_name = "message"];
+}
+
+message StringList {
+  repeated string items = 1;
+}
+
+message ComponentsList  {
+  Component multi_tenant = 1 [json_name = "multi_tenant"];
+	Component cert_mgt = 2 [json_name = "cert_mgt"];
+	Component secret_mgt = 3 [json_name = "secret_mgt"];
+	Component secret_sync = 4 [json_name = "secret_sync"];
+	Component ingress_controller = 5 [json_name = "ingress_controller"];
+  Component deployment = 6 [json_name = "deployment"];
+	Component progressive_delivery = 7 [json_name = "progressive_delivery"];
+  Component pipeline = 8 [json_name = "pipeline"];
+  Component event_listener = 9 [json_name = "event_listener"];
+}
+
+message Component {
+	string name = 1 [json_name = "name"];
+	string namespace = 2 [json_name = "namespace"];
+}
+
+message ClusterResourceInfoList {
+	repeated ClusterResourceInfo items = 1 [json_name = "items"];
+}
+
+message ClusterResourceInfo {
+	string kind = 1 [json_name = "kind"];
+	string group = 2 [json_name = "group"];
 }
