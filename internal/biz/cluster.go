@@ -112,67 +112,74 @@ func (c *ClusterUsecase) SaveCluster(ctx context.Context, param *cluster.Cluster
 	if cluster.IsPhysical(param.Cluster) {
 		err := c.SaveKubeconfig(ctx, param.Cluster.Name, param.Cluster.Spec.ApiServer, kubeconfig)
 		if err != nil {
-			c.log.Errorf("failed to saved kubeconfig to secret store, cluster name: %s", param.Cluster.Name)
-			return err
+			c.log.Errorf("failed to call 'SaveCluster', could not save kubeconfig to secret store, cluster name: %s, err: %s", param.Cluster.Name, err)
+			return fmt.Errorf("failed to save kubeconfig to secret store, err: %s", err)
 		}
 	}
 
 	httpURLToRepo := GetClusterTemplateHttpsURL(c.configs)
 	clusterTemplateLocalPath, err := c.CloneRepository(ctx, httpURLToRepo)
 	if err != nil {
-		c.log.Errorf("failed to clone cluster template repository, the url %s may be invalid or does not exist", httpURLToRepo)
-		return err
+		c.log.Errorf("failed to call 'CloneRepository', could not clone cluster template repository, the url %s may be invalid or does not exist, err: %s", httpURLToRepo, err)
+		return fmt.Errorf("failed to clone cluster template repository, the url %s may be invalid or does not exist, err: %s", httpURLToRepo, err)
 	}
 	defer cleanCodeRepo(clusterTemplateLocalPath)
 
 	repository, err := c.GetTenantRepository(ctx)
 	if err != nil {
-		c.log.Errorf("failed to get tenant repository, cluster name: %s", param.Cluster.Name)
-		return err
+		c.log.Errorf("failed to call 'GetTenantRepository', could not get tenant repository, cluster name: %s, err: %s", param.Cluster.Name, err)
+		return fmt.Errorf("failed to get tenant repository, err: %s", err)
 	}
 	tenantRepositoryLocalPath, err := c.CloneRepository(ctx, repository.HttpUrlToRepo)
 	if err != nil {
-		c.log.Errorf("failed to clone tenant repository, the url %s may be invalid or does not exist", repository.HttpUrlToRepo)
-		return err
+		c.log.Errorf("failed to call 'CloneRepository', could not clone tenant repository, the url %s may be invalid or does not exist, err: %s", repository.HttpUrlToRepo, err)
+		return fmt.Errorf("failed to clone tenant repository, the url %s may be invalid or does not exist, err: %s", repository.HttpUrlToRepo, err)
 	}
 	defer cleanCodeRepo(tenantRepositoryLocalPath)
 
 	defaultCert, err := c.GetDefaultCertificate(ctx)
 	if err != nil {
-		c.log.Errorf("failed to get certificate to secret store, cluster name: %s", param.Cluster.Name)
-		return err
+		c.log.Errorf("failed to call 'GetDefaultCertificate', could not get default certificate from secret store, cluster name: %s, err: %s", param.Cluster.Name, err)
+		return fmt.Errorf("failed to get default certificate, err: %s", err)
 	}
+
 	gitlabCert, err := gitlab.GetCertificate(c.configs.Git.Addr)
 	if err != nil {
-		return err
+		c.log.Errorf("failed to call 'GetCertificate', could not get gitlab certificate from secret store, cluster name: %s, err: %s", param.Cluster.Name, err)
+		return fmt.Errorf("failed to get gitlab certificate, err: %s", err)
 	}
+
 	param.ClusterTemplateRepoLocalPath = clusterTemplateLocalPath
 	param.CaBundleList = cluster.CaBundleList{
 		Default: defaultCert,
 		Gitlab:  gitlabCert,
 	}
+
 	param.TenantConfigRepoLocalPath = tenantRepositoryLocalPath
 	param.RepoURL = repository.SshUrlToRepo
 	param.Configs = c.configs
 	err = c.cluster.InitializeClusterConfig(param)
 	if err != nil {
-		return err
+		c.log.Errorf("failed to call 'cluster.InitializeClusterConfig', could not initial cluster %s, err: %s", param.Cluster.Name, err)
+		return fmt.Errorf("failed to initial cluster, err: %s", err)
 	}
+
 	err = c.cluster.Save()
 	if err != nil {
-		c.log.Errorf("failed to save cluster, clustr name: %s", param.Cluster.Name)
-		return err
+		c.log.Errorf("failed to call 'cluster.Save', could not save cluster %s, err: %s", param.Cluster.Name, err)
+		return fmt.Errorf("failed to save cluster, err: %s", err)
 	}
 
 	err = c.resourcesUsecase.SaveConfig(ctx, tenantRepositoryLocalPath)
 	if err != nil {
-		c.log.Errorf("failed to save config to git, cluster name: %s", param.Cluster.Name)
-		return err
+		c.log.Errorf("failed to call 'resourcesUsecase.SaveConfig', could not save git config to git repo, cluster name: %s, err: %s", param.Cluster.Name, err)
+		return fmt.Errorf("failed to save git config to git repo, err: %s", err)
 	}
 
 	err = c.SaveDexConfig(param, tenantRepositoryLocalPath)
 	if err != nil {
-		return err
+		c.log.Errorf("failed to call 'SaveDexConfig', could not save dex config, cluster name: %s, err: %s", param.Cluster.Name, err)
+		return fmt.Errorf("failed to save dex config, err: %s", err)
 	}
 
 	c.log.Infof("successfully register cluster, cluster name: %s", param.Cluster.Name)
@@ -209,7 +216,8 @@ func (c *ClusterUsecase) DeleteCluster(ctx context.Context, clusterName string) 
 
 	err = resourceCluster.ValidateCluster(context.TODO(), resourceCluster, c.client, true)
 	if err != nil {
-		return err
+		c.log.Errorf("failed to call 'resourceCluster.ValidateCluster', err: %s", clusterName, err)
+		return fmt.Errorf("failed to validate cluster, err: %s", err)
 	}
 
 	param := &cluster.ClusterRegistrationParam{
@@ -221,24 +229,26 @@ func (c *ClusterUsecase) DeleteCluster(ctx context.Context, clusterName string) 
 	}
 	err = c.cluster.InitializeClusterConfig(param)
 	if err != nil {
-		return err
+		c.log.Errorf("failed to call 'cluster.InitializeClusterConfig', could not initial cluster %s, err: %s", clusterName, err)
+		return fmt.Errorf("failed to initial cluster, err: %s", err)
 	}
 
 	err = c.DeleteDexConfig(param)
 	if err != nil {
-		return err
+		c.log.Errorf("failed to call 'DeleteDexConfig', could not delete dex config, cluster name: %s, err: %s", clusterName, err)
+		return fmt.Errorf("failed to delete dex config, err: %s", err)
 	}
 
 	err = c.cluster.Remove()
 	if err != nil {
-		c.log.Errorf("failed to remove cluster, cluster name: %s", clusterName)
-		return err
+		c.log.Errorf("failed to call 'cluster.Remove', could not remove cluster %s, err: %s", clusterName, err)
+		return fmt.Errorf("failed to remove cluster, err: %s", err)
 	}
 
 	err = c.resourcesUsecase.SaveConfig(ctx, tenantRepositoryLocalPath)
 	if err != nil {
-		c.log.Errorf("failed to save config to git, cluster name: %s", clusterName)
-		return err
+		c.log.Errorf("failed to call 'resourcesUsecase.SaveConfig', could not save git config to git repo, cluster name: %s, err: %s", clusterName, err)
+		return fmt.Errorf("failed to save git config to git repo, err: %s", err)
 	}
 
 	c.log.Infof("successfully remove cluster, cluster name: %s", clusterName)
