@@ -152,12 +152,12 @@ func (c *CodeRepoUsecase) SaveCodeRepo(ctx context.Context, options *BizOptions,
 		return err
 	}
 
-	nodes, err := c.resourcesUsecase.loadDefaultProjectNodes(ctx, options.ProductName)
+	codeRepo, err := c.getCodeRepo(ctx, options.ProductName, codeRepoName)
 	if err != nil {
 		return err
 	}
 
-	err = c.codeRepoBindingUsecase.refreshAuthorization(ctx, nodes)
+	err = c.refreshAuthorization(ctx, options.ProductName, codeRepo.Spec.Project)
 	if err != nil {
 		return err
 	}
@@ -189,17 +189,12 @@ func (c *CodeRepoUsecase) DeleteCodeRepo(ctx context.Context, options *BizOption
 		operator:          c,
 	}
 
-	nodes, err := c.resourcesUsecase.loadDefaultProjectNodes(ctx, options.ProductName)
+	codeRepo, err := c.getCodeRepo(ctx, options.ProductName, codeRepoName)
 	if err != nil {
 		return err
 	}
 
-	codeRepo, err := c.getCodeRepo(ctx, nodes, codeRepoName)
-	if err != nil {
-		return err
-	}
-
-	err = c.codeRepoBindingUsecase.refreshAuthorization(ctx, nodes, codeRepo.Name)
+	err = c.refreshAuthorization(ctx, options.ProductName, codeRepo.Spec.Project, codeRepo.Name)
 	if err != nil {
 		return err
 	}
@@ -242,7 +237,12 @@ func (c *CodeRepoUsecase) DeleteCodeRepo(ctx context.Context, options *BizOption
 	return nil
 }
 
-func (c *CodeRepoUsecase) getCodeRepo(ctx context.Context, nodes *nodestree.Node, codeRepoName string) (*resourcev1alpha1.CodeRepo, error) {
+func (c *CodeRepoUsecase) getCodeRepo(ctx context.Context, productName, codeRepoName string) (*resourcev1alpha1.CodeRepo, error) {
+	nodes, err := c.resourcesUsecase.loadDefaultProjectNodes(ctx, productName)
+	if err != nil {
+		return nil, err
+	}
+
 	node := c.nodestree.GetNode(nodes, nodestree.CodeRepo, codeRepoName)
 	if node == nil {
 		return nil, commonv1.ErrorNodeNotFound("failed to get coderepo of repository %s", codeRepoName)
@@ -838,11 +838,9 @@ func (c *CodeRepoUsecase) CheckReference(options nodestree.CompareOptions, node 
 		return true, fmt.Errorf("git type cannot be empty")
 	}
 
-	if codeRepo.Spec.Webhook != nil {
-		err = nodestree.CheckGitHooks(string(gitType), codeRepo.Spec.Webhook.Events)
-		if err != nil {
-			return true, err
-		}
+	err = nodestree.CheckGitHooks(string(gitType), codeRepo.Spec.Webhook.Events)
+	if err != nil {
+		return true, err
 	}
 
 	if codeRepo.Spec.Project != "" {

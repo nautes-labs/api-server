@@ -191,13 +191,14 @@ func (s *CodeRepoService) SaveCodeRepo(ctx context.Context, req *coderepov1.Save
 			RepoName:          req.CoderepoName,
 			DeploymentRuntime: req.Body.DeploymentRuntime,
 			PipelineRuntime:   req.Body.PipelineRuntime,
+			Webhook: &resourcev1alpha1.Webhook{
+				Events: []string{},
+			},
 		},
 	}
 
 	if req.Body.Webhook != nil && req.Body.Webhook.Events != nil {
-		data.Spec.Webhook = &resourcev1alpha1.Webhook{
-			Events: req.Body.Webhook.Events,
-		}
+		data.Spec.Webhook.Events = req.Body.Webhook.Events
 	}
 
 	options := &biz.BizOptions{
