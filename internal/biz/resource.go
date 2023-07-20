@@ -531,25 +531,42 @@ func (r *ResourcesUsecase) ConvertRepoNameToCodeRepo(ctx context.Context, produc
 	return fmt.Sprintf("%s%d", RepoPrefix, int(project.ID)), nil
 }
 
-func (r *ResourcesUsecase) ConvertProductToGroupName(ctx context.Context, productName string) (string, error) {
-	id, err := utilstrings.ExtractNumber("product-", productName)
-	if err != nil {
-		return "", err
-	}
+var (
+	cacheGroup = make(map[string]*Group)
+)
 
-	group, err := r.codeRepo.GetGroup(ctx, id)
-	if err != nil {
-		return "", err
+func (r *ResourcesUsecase) ConvertProductToGroupName(ctx context.Context, productName string) (string, error) {
+	var err error
+	var id int
+
+	group, ok := cacheGroup[productName]
+	if !ok {
+		id, err = utilstrings.ExtractNumber("product-", productName)
+		if err != nil {
+			return "", err
+		}
+
+		group, err = r.codeRepo.GetGroup(ctx, id)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	return group.Name, nil
 }
 
-func (r *ResourcesUsecase) ConvertGroupToProduct(ctx context.Context, productName string) (string, error) {
-	group, err := r.codeRepo.GetGroup(ctx, productName)
-	if err != nil {
-		return "", err
+func (r *ResourcesUsecase) ConvertGroupToProductName(ctx context.Context, productName string) (string, error) {
+	var err error
+
+	group, ok := cacheGroup[productName]
+	if !ok {
+		group, err = r.codeRepo.GetGroup(ctx, productName)
+		if err != nil {
+			return "", err
+		}
+		cacheGroup[productName] = group
 	}
+
 	return fmt.Sprintf("%s%d", ProductPrefix, int(group.ID)), nil
 }
 

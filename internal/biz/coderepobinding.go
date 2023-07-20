@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 
 	errors "github.com/go-kratos/kratos/v2/errors"
@@ -129,7 +130,7 @@ func (c *CodeRepoBindingUsecase) SaveCodeRepoBinding(ctx context.Context, option
 		return err
 	}
 
-	return c.refreshAuthorization(ctx, *latestNodes, data.Spec.CodeRepo)
+	return c.refreshAuthorization(ctx, latestNodes, data.Spec.CodeRepo)
 }
 
 func (c *CodeRepoBindingUsecase) DeleteCodeRepoBinding(ctx context.Context, options *BizOptions) error {
@@ -165,7 +166,7 @@ func (c *CodeRepoBindingUsecase) DeleteCodeRepoBinding(ctx context.Context, opti
 		return err
 	}
 
-	return c.refreshAuthorization(ctx, *nodes, lastCodeRepoBinding.Spec.CodeRepo)
+	return c.refreshAuthorization(ctx, nodes, lastCodeRepoBinding.Spec.CodeRepo)
 }
 
 func (c *CodeRepoBindingUsecase) getCodeRepoBindings(nodes nodestree.Node, codeRepoName string) ([]*resourcev1alpha1.CodeRepoBinding, error) {
@@ -279,23 +280,51 @@ func (c *CodeRepoBindingUsecase) applyDeploykey(ctx context.Context, authorizati
 	return nil
 }
 
-func (c *CodeRepoBindingUsecase) refreshAuthorization(ctx context.Context, nodes nodestree.Node, codeRepoName string) error {
-	err := c.clearInvalidDeployKey(ctx, nodes)
+func (c *CodeRepoBindingUsecase) refreshAuthorization(ctx context.Context, nodes *nodestree.Node, skipRepositories ...string) error {
+	var errorMessages []string
+
+	err := c.clearInvalidDeployKey(ctx, *nodes)
 	if err != nil {
 		return err
 	}
 
-	err = c.authorizeForSameProjectRepo(ctx, nodes)
+	err = c.authorizeForSameProjectRepo(ctx, *nodes)
 	if err != nil {
 		return err
 	}
 
-	if err := c.processAuthorization(ctx, nodes, string(ReadOnly), codeRepoName); err != nil {
-		return err
+	permissionToRepos := make(map[string][]string)
+	codeRepoBindingNodes := nodestree.ListsResourceNodes(*nodes, nodestree.CodeRepoBinding)
+	for _, codeRepoBindingNode := range codeRepoBindingNodes {
+		codeRepoBinding, ok := codeRepoBindingNode.Content.(*resourcev1alpha1.CodeRepoBinding)
+		if !ok {
+			continue
+		}
+
+		permission := codeRepoBinding.Spec.Permissions
+		x, ok := permissionToRepos[permission]
+		if !ok {
+			permissionToRepos[permission] = []string{codeRepoBinding.Spec.CodeRepo}
+		}
+
+		utilstrings.AddIfNotExists(x, codeRepoBinding.Spec.CodeRepo)
 	}
 
-	if err := c.processAuthorization(ctx, nodes, string(ReadWrite), codeRepoName); err != nil {
-		return err
+	for permission, authRepos := range permissionToRepos {
+		for _, repo := range authRepos {
+			err = c.processAuthorization(ctx, *nodes, permission, repo)
+			if err != nil {
+				if commonv1.IsNoAuthorization(err) {
+					errorMessages = append(errorMessages, err.Error())
+				} else {
+					return err
+				}
+			}
+		}
+	}
+
+	if len(errorMessages) > 0 {
+		return commonv1.ErrorRefreshPermissionsAccessDenied("failed to refersh permission, err: %s", strings.Join(errorMessages, "\n"))
 	}
 
 	return nil
