@@ -58,10 +58,7 @@ func wireApp(confServer *conf.Server, logger log.Logger, nodesTree nodestree.Nod
 	environmentService := service.NewEnvironmentService(environmentUsecase)
 	dexRepo := data.NewDexRepo(client2)
 	clusterUsecase := biz.NewClusterUsecase(logger, codeRepo, secretrepo, resourcesUsecase, config, client2, clusteroperator, dexRepo)
-	clusterService, err := service.NewClusterService(clusterUsecase, config)
-	if err != nil {
-		return nil, nil, err
-	}
+	clusterService := service.NewClusterService(clusterUsecase, config)
 	serviceProductGroup := server.NewServiceGroup(projectPipelineRuntimeService, deploymentruntimeService, codeRepoService, codeRepoBindingService, productService, projectService, environmentService, clusterService)
 	httpServer := server.NewHTTPServer(confServer, serviceProductGroup)
 	app := newApp(logger, grpcServer, httpServer)
