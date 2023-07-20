@@ -17,7 +17,11 @@ package service
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"os"
+	"reflect"
+	"strings"
 
 	clusterv1 "github.com/nautes-labs/api-server/api/cluster/v1"
 	"github.com/nautes-labs/api-server/internal/biz"
@@ -28,6 +32,8 @@ import (
 	utilstring "github.com/nautes-labs/api-server/util/string"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
+	"google.golang.org/protobuf/types/known/structpb"
+	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -47,12 +53,18 @@ var (
 
 type ClusterService struct {
 	clusterv1.UnimplementedClusterServer
-	cluster *biz.ClusterUsecase
-	configs *nautesconfigs.Config
+	cluster                 *biz.ClusterUsecase
+	configs                 *nautesconfigs.Config
+	thirdPartComponentsList []*Component
 }
 
-func NewClusterService(cluster *biz.ClusterUsecase, configs *nautesconfigs.Config) *ClusterService {
-	return &ClusterService{cluster: cluster, configs: configs}
+func NewClusterService(cluster *biz.ClusterUsecase, configs *nautesconfigs.Config) (*ClusterService, error) {
+	thirdPartComponentsList, err := loadThirdPartComponentsList(thirdPartComponentsPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ClusterService{cluster: cluster, configs: configs, thirdPartComponentsList: thirdPartComponentsList}, nil
 }
 
 func (s *ClusterService) GetCluster(ctx context.Context, req *clusterv1.GetRequest) (*clusterv1.GetReply, error) {
@@ -61,7 +73,12 @@ func (s *ClusterService) GetCluster(ctx context.Context, req *clusterv1.GetReque
 		return nil, err
 	}
 
-	return s.convertClustertoReply(cluster), nil
+	reply, err := s.convertClustertoReply(cluster)
+	if err != nil {
+		return nil, err
+	}
+
+	return reply, nil
 }
 
 func (s *ClusterService) ListClusters(ctx context.Context, req *clusterv1.ListsRequest) (*clusterv1.ListsReply, error) {
@@ -70,7 +87,7 @@ func (s *ClusterService) ListClusters(ctx context.Context, req *clusterv1.ListsR
 		return nil, err
 	}
 
-	reply := &clusterv1.ListsReply{}
+	listReply := &clusterv1.ListsReply{}
 	for _, cluster := range clusters {
 		passed, err := selector.Match(req.FieldSelector, cluster, clustrFilterFieldRules)
 		if err != nil {
@@ -80,10 +97,15 @@ func (s *ClusterService) ListClusters(ctx context.Context, req *clusterv1.ListsR
 			continue
 		}
 
-		reply.Items = append(reply.Items, s.convertClustertoReply(cluster))
+		reply, err := s.convertClustertoReply(cluster)
+		if err != nil {
+			return nil, err
+		}
+
+		listReply.Items = append(listReply.Items, reply)
 	}
 
-	return reply, nil
+	return listReply, nil
 }
 
 func (s *ClusterService) SaveCluster(ctx context.Context, req *clusterv1.SaveRequest) (*clusterv1.SaveReply, error) {
@@ -94,24 +116,9 @@ func (s *ClusterService) SaveCluster(ctx context.Context, req *clusterv1.SaveReq
 
 	ctx = biz.SetResourceContext(ctx, "", biz.SaveMethod, "", "", nodestree.Cluster, req.ClusterName)
 
-	cluster := &resourcev1alpha1.Cluster{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: resourcev1alpha1.GroupVersion.String(),
-			Kind:       nodestree.Cluster,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      req.ClusterName,
-			Namespace: s.configs.Nautes.Namespace,
-		},
-		Spec: resourcev1alpha1.ClusterSpec{
-			ApiServer:     req.Body.ApiServer,
-			ClusterType:   resourcev1alpha1.ClusterType(req.Body.ClusterType),
-			ClusterKind:   resourcev1alpha1.ClusterKind(req.Body.ClusterKind),
-			Usage:         resourcev1alpha1.ClusterUsage(req.Body.Usage),
-			HostCluster:   req.Body.HostCluster,
-			PrimaryDomain: req.Body.PrimaryDomain,
-			WorkerType:    resourcev1alpha1.ClusterWorkType(req.Body.WorkerType),
-		},
+	cluster, err := s.constructResourceCluster(req, s.configs.Nautes.Namespace)
+	if err != nil {
+		return nil, err
 	}
 
 	var vcluster *registercluster.Vcluster
@@ -215,12 +222,21 @@ func (s *ClusterService) Validate(req *clusterv1.SaveRequest) error {
 	return nil
 }
 
-func (s *ClusterService) convertClustertoReply(cluster *resourcev1alpha1.Cluster) *clusterv1.GetReply {
+func (s *ClusterService) convertClustertoReply(cluster *resourcev1alpha1.Cluster) (*clusterv1.GetReply, error) {
 	reply := &clusterv1.GetReply{}
 	reply.Name = cluster.Name
 
-	spec := &cluster.Spec
-	if spec != nil {
+	reservedNamespacesAllowedProducts, err := transformMap(cluster.Spec.ReservedNamespacesAllowedProducts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get reserved namespaces, err: %s", err)
+	}
+
+	productAllowedClusterResources, err := transformMap(cluster.Spec.ProductAllowedClusterResources)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get cluster resources, err: %s", err)
+	}
+
+	if spec := &cluster.Spec; spec != nil {
 		reply.ApiServer = cluster.Spec.ApiServer
 		reply.ClusterKind = string(cluster.Spec.ClusterKind)
 		reply.ClusterType = string(cluster.Spec.ClusterType)
@@ -228,7 +244,422 @@ func (s *ClusterService) convertClustertoReply(cluster *resourcev1alpha1.Cluster
 		reply.Usage = string(cluster.Spec.Usage)
 		reply.WorkerType = string(cluster.Spec.WorkerType)
 		reply.PrimaryDomain = cluster.Spec.PrimaryDomain
+		reply.ComponentsList = &clusterv1.ComponentsList{
+			MultiTenant:         transformComponent(cluster.Spec.ComponentsList.MultiTenant).(*clusterv1.Component),
+			CertMgt:             transformComponent(cluster.Spec.ComponentsList.CertMgt).(*clusterv1.Component),
+			SecretMgt:           transformComponent(cluster.Spec.ComponentsList.SecretMgt).(*clusterv1.Component),
+			SecretSync:          transformComponent(cluster.Spec.ComponentsList.SecretSync).(*clusterv1.Component),
+			IngressController:   transformComponent(cluster.Spec.ComponentsList.IngressController).(*clusterv1.Component),
+			Deployment:          transformComponent(cluster.Spec.ComponentsList.Deployment).(*clusterv1.Component),
+			ProgressiveDelivery: transformComponent(cluster.Spec.ComponentsList.ProgressiveDelivery).(*clusterv1.Component),
+			Pipeline:            transformComponent(cluster.Spec.ComponentsList.Pipeline).(*clusterv1.Component),
+			EventListener:       transformComponent(cluster.Spec.ComponentsList.EventListener).(*clusterv1.Component),
+		}
+		reply.ReservedNamespacesAllowedProducts = reservedNamespacesAllowedProducts
+		reply.ProductAllowedClusterResources = productAllowedClusterResources
 	}
 
-	return reply
+	return reply, nil
+}
+
+// transformComponent Mutual conversion between two components, Resource Components are converted to API Components, and vice versa.
+func transformComponent(component interface{}) interface{} {
+	if component == nil {
+		return nil
+	}
+
+	val := reflect.ValueOf(component).Elem()
+	name := val.FieldByName("Name")
+	namespace := val.FieldByName("Namespace")
+
+	_, ok := component.(*resourcev1alpha1.Component)
+	if ok {
+		return &clusterv1.Component{
+			Name:      name.String(),
+			Namespace: namespace.String(),
+		}
+	}
+
+	_, ok = component.(*clusterv1.Component)
+	if ok {
+		return &resourcev1alpha1.Component{
+			Name:      name.String(),
+			Namespace: namespace.String(),
+		}
+	}
+
+	return nil
+}
+
+// transformMap takes an interface and transforms it to a map[string]*structpb.ListValue based on its actual type.
+func transformMap(inputMap interface{}) (map[string]*structpb.ListValue, error) {
+	switch actual := inputMap.(type) {
+	case map[string][]string:
+		return transformValues(actual, convertStringToValue)
+	case map[string][]resourcev1alpha1.ClusterResourceInfo:
+		return transformValues(actual, convertStructToValue)
+	default:
+		return nil, fmt.Errorf("unsupported input type: %T", inputMap)
+	}
+}
+
+// transformValues converts a map of string and slice of a certain type to a map of string and list value.
+func transformValues(inputMap interface{}, convertFunc func(interface{}) (*structpb.Value, error)) (map[string]*structpb.ListValue, error) {
+	listValuesMap := make(map[string]*structpb.ListValue)
+
+	switch actual := inputMap.(type) {
+	case map[string][]string:
+		for componentName, valueSlice := range actual {
+			values, err := convertSliceToValues(valueSlice, convertFunc)
+			if err != nil {
+				return nil, err
+			}
+			listValuesMap[componentName] = &structpb.ListValue{Values: values}
+		}
+	case map[string][]resourcev1alpha1.ClusterResourceInfo:
+		for resourceType, valueSlice := range actual {
+			values, err := convertSliceToValues(valueSlice, convertFunc)
+			if err != nil {
+				return nil, err
+			}
+			listValuesMap[resourceType] = &structpb.ListValue{Values: values}
+		}
+	}
+
+	return listValuesMap, nil
+}
+
+// convertSliceToValues converts a slice of a certain type to a slice of values using the provided convert function.
+func convertSliceToValues(slice interface{}, convertFunc func(interface{}) (*structpb.Value, error)) ([]*structpb.Value, error) {
+	values := make([]*structpb.Value, 0)
+	switch actual := slice.(type) {
+	case []string:
+		for _, elem := range actual {
+			value, err := convertFunc(elem)
+			if err != nil {
+				return nil, fmt.Errorf("failed to convert string to value: %w", err)
+			}
+			values = append(values, value)
+		}
+	case []resourcev1alpha1.ClusterResourceInfo:
+		for _, elem := range actual {
+			value, err := convertFunc(elem)
+			if err != nil {
+				return nil, fmt.Errorf("failed to convert struct to value: %w", err)
+			}
+			values = append(values, value)
+		}
+	}
+
+	return values, nil
+}
+
+// convertStringToValue creates a new structpb.Value from a string.
+func convertStringToValue(s interface{}) (*structpb.Value, error) {
+	return structpb.NewValue(s)
+}
+
+// convertStructToValue converts a struct to a structpb.Value by marshalling and unmarshalling it.
+func convertStructToValue(s interface{}) (*structpb.Value, error) {
+	jsonBytes, err := json.Marshal(s)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal struct to JSON: %w", err)
+	}
+
+	pbValue := &structpb.Value{}
+	if err := json.Unmarshal(jsonBytes, pbValue); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal JSON to structpb.Value: %w", err)
+	}
+
+	return pbValue, nil
+}
+
+// constructResourceCluster creates a new Cluster resource based on the given SaveRequest and namespace.
+func (s *ClusterService) constructResourceCluster(req *clusterv1.SaveRequest, namespace string) (*resourcev1alpha1.Cluster, error) {
+	componentsList, err := s.constructResourceComponentsList(req.Body.ComponentsList)
+	if err != nil {
+		return nil, err
+	}
+
+	reservedNamespaces, err := s.constructReservedNamespaces(req.Body.ReservedNamespacesAllowedProducts)
+	if err != nil {
+		return nil, err
+	}
+
+	clusterResources, err := s.constructAllowedClusterResources(req.Body.ProductAllowedClusterResources)
+	if err != nil {
+		return nil, err
+	}
+
+	return &resourcev1alpha1.Cluster{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: resourcev1alpha1.GroupVersion.String(),
+			Kind:       nodestree.Cluster,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      req.ClusterName,
+			Namespace: namespace,
+		},
+		Spec: resourcev1alpha1.ClusterSpec{
+			ApiServer:                         req.Body.ApiServer,
+			ClusterType:                       resourcev1alpha1.ClusterType(req.Body.ClusterType),
+			ClusterKind:                       resourcev1alpha1.ClusterKind(req.Body.ClusterKind),
+			Usage:                             resourcev1alpha1.ClusterUsage(req.Body.Usage),
+			HostCluster:                       req.Body.HostCluster,
+			PrimaryDomain:                     req.Body.PrimaryDomain,
+			WorkerType:                        resourcev1alpha1.ClusterWorkType(req.Body.WorkerType),
+			ComponentsList:                    *componentsList,
+			ReservedNamespacesAllowedProducts: reservedNamespaces,
+			ProductAllowedClusterResources:    clusterResources,
+		},
+	}, nil
+}
+
+func (s *ClusterService) constructResourceComponentsList(componentsList *clusterv1.ComponentsList) (*resourcev1alpha1.ComponentsList, error) {
+	filldComponentsList, err := fillEmptyWithDefaultInComponentsList(componentsList, s.thirdPartComponentsList)
+	if err != nil {
+		return nil, err
+	}
+
+	resourceComponentList := convertComponentsList(filldComponentsList)
+
+	return resourceComponentList, nil
+}
+
+func fillEmptyWithDefaultInComponentsList(componentsList *clusterv1.ComponentsList, thirdPartComponentsList []*Component) (*clusterv1.ComponentsList, error) {
+	val := reflect.Indirect(reflect.ValueOf(componentsList))
+	processedComponentsList, err := setDefaultValuesIfEmpty(val, thirdPartComponentsList)
+	if err != nil {
+		return nil, err
+	}
+
+	return processedComponentsList, nil
+}
+
+func loadThirdPartComponentsList(path string) ([]*Component, error) {
+	bytes, err := os.ReadFile(path)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+
+		path := os.Getenv(EnvthirdPartComponents)
+		if path == "" {
+			return nil, err
+		}
+
+		bytes, err = os.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	components := []*Component{}
+	err = yaml.Unmarshal(bytes, &components)
+	if err != nil {
+		return nil, err
+	}
+
+	errMsgs := validateMissingFieldValues(components)
+	if len(errMsgs) > 0 {
+		return nil, fmt.Errorf("failed to verify default component configuration, err: %s", strings.Join(errMsgs, ", "))
+	}
+
+	return components, nil
+}
+
+func validateMissingFieldValues(components []*Component) []string {
+	resourceComponentsList := resourcev1alpha1.ComponentsList{}
+	val := reflect.ValueOf(resourceComponentsList)
+
+	componentsType := []string{}
+	for i := 0; i < val.NumField(); i++ {
+		field := val.Field(i)
+
+		if field.Type().Kind() != reflect.Ptr {
+			continue
+		}
+
+		componentType := val.Type().Field(i).Name
+		componentsType = append(componentsType, componentType)
+	}
+
+	tmp := make(map[string]*Component)
+	for _, component := range components {
+		key := strings.ToLower(component.Type)
+		tmp[key] = component
+	}
+
+	errMsgs := make([]string, 0)
+	for _, componentType := range componentsType {
+		key := strings.ToLower(componentType)
+		component, ok := tmp[key]
+		if !ok {
+			errMsgs = append(errMsgs, fmt.Sprintf("component '%s' value not found", componentType))
+		}
+
+		if component.Name == "" ||
+			component.Namespace == "" ||
+			len(component.InstallPath) == 0 {
+			errMsgs = append(errMsgs, fmt.Sprintf("component '%s' value incomplete, the name and namespace of the component are not empty, and the installation path must exist", componentType))
+		}
+	}
+
+	return errMsgs
+}
+
+func setDefaultValuesIfEmpty(val reflect.Value, componentsList []*Component) (*clusterv1.ComponentsList, error) {
+	for i := 0; i < val.NumField(); i++ {
+		field := val.Field(i)
+
+		if field.Type().Kind() != reflect.Ptr {
+			continue
+		}
+
+		componentType := val.Type().Field(i).Name
+
+		if field.IsNil() {
+			defaultComponent, err := getDefaultComponent(componentsList, componentType)
+			if err != nil {
+				return nil, err
+			}
+			field.Set(reflect.ValueOf(defaultComponent))
+		} else {
+			err := fillDefaultFields(field, componentsList, componentType)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	value, ok := val.Interface().(clusterv1.ComponentsList)
+	if !ok {
+		return nil, fmt.Errorf("failed to get 'ComponentsList' type struct")
+	}
+
+	return &value, nil
+}
+
+func getDefaultComponent(componentsList []*Component, componentType string) (*clusterv1.Component, error) {
+	defaultComponent := getComponent(componentsList, componentType, "")
+	if defaultComponent == nil {
+		return nil, fmt.Errorf("failed to get default component for the component type '%s'", componentType)
+	}
+	return defaultComponent, nil
+}
+
+func fillDefaultFields(field reflect.Value, componentsList []*Component, componentType string) error {
+	component := field.Elem()
+	name := component.FieldByName("Name")
+	namespace := component.FieldByName("Namespace")
+
+	if name.String() == "" {
+		defaultComponent, err := getDefaultComponent(componentsList, componentType)
+		if err != nil {
+			return fmt.Errorf("failed to get default component for the component type '%s'", componentType)
+		}
+		name.SetString(defaultComponent.Name)
+	}
+
+	if namespace.String() == "" {
+		component := getComponent(componentsList, componentType, name.String())
+		if component == nil {
+			return fmt.Errorf("failed to get %s component for the component type '%s'", name.String(), componentType)
+		}
+		namespace.SetString(component.Namespace)
+	}
+	return nil
+}
+
+func getComponent(componentsList []*Component, componentType, componentName string) *clusterv1.Component {
+	for _, component := range componentsList {
+		if !strings.EqualFold(component.Type, componentType) {
+			continue
+		}
+
+		if componentName != "" && component.Name == componentName {
+			return &clusterv1.Component{
+				Name:      component.Name,
+				Namespace: component.Namespace,
+			}
+		} else if componentName == "" && component.Default {
+			return &clusterv1.Component{
+				Name:      component.Name,
+				Namespace: component.Namespace,
+			}
+		}
+	}
+
+	return nil
+}
+
+func (s *ClusterService) constructReservedNamespaces(listValue map[string]*structpb.ListValue) (map[string][]string, error) {
+	reservedNamespaces := make(map[string][]string)
+	for key, value := range listValue {
+		productNames := make([]string, 0)
+
+		for _, val := range value.Values {
+			val, ok := val.Kind.(*structpb.Value_StringValue)
+			if !ok {
+				return nil, fmt.Errorf("the value of the reserved namespace must be a string")
+			}
+
+			productNames = append(productNames, val.StringValue)
+		}
+
+		reservedNamespaces[key] = productNames
+	}
+
+	return reservedNamespaces, nil
+}
+
+func (s *ClusterService) constructAllowedClusterResources(listValue map[string]*structpb.ListValue) (map[string][]resourcev1alpha1.ClusterResourceInfo, error) {
+	clusterResourceInfoMap := make(map[string][]resourcev1alpha1.ClusterResourceInfo)
+
+	for productName, value := range listValue {
+		clusterResourcesInfo := make([]resourcev1alpha1.ClusterResourceInfo, 0)
+
+		for _, val := range value.Values {
+			val, ok := val.Kind.(*structpb.Value_StructValue)
+			if !ok {
+				return nil, fmt.Errorf("the cluster information of %s must be an struct 'ClusterResourceInfo' type", productName)
+			}
+
+			bytes, err := val.StructValue.MarshalJSON()
+			if err != nil {
+				return nil, fmt.Errorf("failed to parsing cluster resource information of %s to json data, err: %s", productName, err)
+			}
+
+			tmp := resourcev1alpha1.ClusterResourceInfo{}
+			err = json.Unmarshal(bytes, &tmp)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parsing cluster resource information of %s to struct: 'ClusterResourceInfo', err: %s", productName, err)
+			}
+
+			if tmp.Group == "" ||
+				tmp.Kind == "" {
+				return nil, fmt.Errorf("failed to get cluster resource information of %s, the group and kind of the cluster resource cannot be empty", productName)
+			}
+
+			clusterResourcesInfo = append(clusterResourcesInfo, tmp)
+		}
+
+		clusterResourceInfoMap[productName] = clusterResourcesInfo
+	}
+
+	return clusterResourceInfoMap, nil
+}
+
+func convertComponentsList(components *clusterv1.ComponentsList) *resourcev1alpha1.ComponentsList {
+	return &resourcev1alpha1.ComponentsList{
+		MultiTenant:         transformComponent(components.MultiTenant).(*resourcev1alpha1.Component),
+		CertMgt:             transformComponent(components.CertMgt).(*resourcev1alpha1.Component),
+		SecretMgt:           transformComponent(components.SecretMgt).(*resourcev1alpha1.Component),
+		SecretSync:          transformComponent(components.SecretSync).(*resourcev1alpha1.Component),
+		IngressController:   transformComponent(components.IngressController).(*resourcev1alpha1.Component),
+		Deployment:          transformComponent(components.Deployment).(*resourcev1alpha1.Component),
+		ProgressiveDelivery: transformComponent(components.ProgressiveDelivery).(*resourcev1alpha1.Component),
+		Pipeline:            transformComponent(components.Pipeline).(*resourcev1alpha1.Component),
+		EventListener:       transformComponent(components.EventListener).(*resourcev1alpha1.Component),
+	}
 }

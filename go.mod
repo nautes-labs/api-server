@@ -29,7 +29,7 @@ require (
 require (
 	github.com/hashicorp/vault/api v1.9.0
 	github.com/hashicorp/vault/api/auth/kubernetes v0.4.0
-	github.com/nautes-labs/pkg v0.3.3
+	github.com/nautes-labs/pkg v0.3.4-0.20230718062633-e91f11b0c25c
 	github.com/onsi/ginkgo/v2 v2.11.0
 	github.com/onsi/gomega v1.27.8
 	k8s.io/api v0.26.2
@@ -258,6 +258,7 @@ replace (
 	k8s.io/controller-manager => k8s.io/controller-manager v0.26.1
 	k8s.io/cri-api => k8s.io/cri-api v0.26.1
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.26.1
+	k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v0.26.1
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.26.1
 	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.26.1
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f
@@ -272,4 +273,5 @@ replace (
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.26.1
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.26.1
 	sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.9
+
 )
