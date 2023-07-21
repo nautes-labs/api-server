@@ -18,14 +18,12 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"strings"
 
 	errors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/log"
 	commonv1 "github.com/nautes-labs/api-server/api/common/v1"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
 	utilkey "github.com/nautes-labs/api-server/util/key"
-	utilstrings "github.com/nautes-labs/api-server/util/string"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -254,78 +252,6 @@ func (c *CodeRepoUsecase) getCodeRepo(ctx context.Context, nodes *nodestree.Node
 	}
 
 	return codeRepo, nil
-}
-
-// refreshAuthorization Check the authorization code repository's scope of permissions.
-// If there is an authorization, refresh the permission; otherwise, do not refresh it.
-func (c *CodeRepoUsecase) refreshAuthorization(ctx context.Context, productName, currentProjectName string, skipRepositories ...string) error {
-	var errorMessages []string
-
-	nodes, err := c.nodestree.GetNodes()
-	if err != nil {
-		return err
-	}
-
-	err = c.codeRepoBindingUsecase.clearInvalidDeployKey(ctx, *nodes)
-	if err != nil {
-		return err
-	}
-
-	err = c.codeRepoBindingUsecase.authorizeForSameProjectRepo(ctx, *nodes)
-	if err != nil {
-		return err
-	}
-
-	codeReposNodes := nodestree.ListsResourceNodes(*nodes, nodestree.CodeRepo)
-	for _, node := range codeReposNodes {
-		codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
-		if !ok {
-			return fmt.Errorf("wrong type found for %s node when refresh Authorization", node.Name)
-		}
-		ok = utilstrings.ContainsString(skipRepositories, codeRepo.Name)
-		if ok {
-			continue
-		}
-
-		codeRepoBindings, err := c.codeRepoBindingUsecase.getCodeRepoBindings(*nodes, codeRepo.Name)
-		if err != nil {
-			return err
-		}
-		// No authorization under repository, allow skipping.
-		if len(codeRepoBindings) == 0 {
-			continue
-		}
-
-		for _, binding := range codeRepoBindings {
-			if binding.Spec.Permissions == string(ReadOnly) {
-				err = c.codeRepoBindingUsecase.processAuthorization(ctx, *nodes, string(ReadOnly), codeRepo.Name)
-				if err != nil {
-					if commonv1.IsNoAuthorization(err) {
-						errorMessages = append(errorMessages, err.Error())
-					} else {
-						return err
-					}
-				}
-			}
-
-			if binding.Spec.Permissions == string(ReadWrite) {
-				err = c.codeRepoBindingUsecase.processAuthorization(ctx, *nodes, string(ReadWrite), codeRepo.Name)
-				if err != nil {
-					if commonv1.IsNoAuthorization(err) {
-						errorMessages = append(errorMessages, err.Error())
-					} else {
-						return err
-					}
-				}
-			}
-		}
-	}
-
-	if len(errorMessages) > 0 {
-		return commonv1.ErrorRefreshPermissionsAccessDenied("failed to refersh permission, err: %s", strings.Join(errorMessages, "\n"))
-	}
-
-	return nil
 }
 
 func (c *CodeRepoUsecase) convertProductToGroupName(ctx context.Context, codeRepo *resourcev1alpha1.CodeRepo) error {
