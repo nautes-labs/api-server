@@ -376,22 +376,7 @@ func convertStructToValue(s interface{}) (*structpb.Value, error) {
 
 // constructResourceCluster creates a new Cluster resource based on the given SaveRequest and namespace.
 func (s *ClusterService) constructResourceCluster(req *clusterv1.SaveRequest, namespace string) (*resourcev1alpha1.Cluster, error) {
-	componentsList, err := s.constructResourceComponentsList(req.Body.ComponentsList)
-	if err != nil {
-		return nil, err
-	}
-
-	reservedNamespaces, err := s.constructReservedNamespaces(req.Body.ReservedNamespacesAllowedProducts)
-	if err != nil {
-		return nil, err
-	}
-
-	clusterResources, err := s.constructAllowedClusterResources(req.Body.ProductAllowedClusterResources)
-	if err != nil {
-		return nil, err
-	}
-
-	return &resourcev1alpha1.Cluster{
+	cluster := &resourcev1alpha1.Cluster{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: resourcev1alpha1.GroupVersion.String(),
 			Kind:       nodestree.Cluster,
@@ -401,21 +386,51 @@ func (s *ClusterService) constructResourceCluster(req *clusterv1.SaveRequest, na
 			Namespace: namespace,
 		},
 		Spec: resourcev1alpha1.ClusterSpec{
-			ApiServer:                         req.Body.ApiServer,
-			ClusterType:                       resourcev1alpha1.ClusterType(req.Body.ClusterType),
-			ClusterKind:                       resourcev1alpha1.ClusterKind(req.Body.ClusterKind),
-			Usage:                             resourcev1alpha1.ClusterUsage(req.Body.Usage),
-			HostCluster:                       req.Body.HostCluster,
-			PrimaryDomain:                     req.Body.PrimaryDomain,
-			WorkerType:                        resourcev1alpha1.ClusterWorkType(req.Body.WorkerType),
-			ComponentsList:                    *componentsList,
-			ReservedNamespacesAllowedProducts: reservedNamespaces,
-			ProductAllowedClusterResources:    clusterResources,
+			ApiServer:     req.Body.ApiServer,
+			ClusterType:   resourcev1alpha1.ClusterType(req.Body.ClusterType),
+			ClusterKind:   resourcev1alpha1.ClusterKind(req.Body.ClusterKind),
+			Usage:         resourcev1alpha1.ClusterUsage(req.Body.Usage),
+			HostCluster:   req.Body.HostCluster,
+			PrimaryDomain: req.Body.PrimaryDomain,
+			WorkerType:    resourcev1alpha1.ClusterWorkType(req.Body.WorkerType),
 		},
-	}, nil
+	}
+
+	componentsList, err := s.constructResourceComponentsList(req.Body.ComponentsList)
+	if err != nil {
+		return nil, err
+	}
+
+	if componentsList != nil {
+		cluster.Spec.ComponentsList = *componentsList
+	}
+
+	reservedNamespaces, err := s.constructReservedNamespaces(req.Body.ReservedNamespacesAllowedProducts)
+	if err != nil {
+		return nil, err
+	}
+
+	if reservedNamespaces != nil {
+		cluster.Spec.ReservedNamespacesAllowedProducts = reservedNamespaces
+	}
+
+	clusterResources, err := s.constructAllowedClusterResources(req.Body.ProductAllowedClusterResources)
+	if err != nil {
+		return nil, err
+	}
+
+	if clusterResources != nil {
+		cluster.Spec.ProductAllowedClusterResources = clusterResources
+	}
+
+	return cluster, nil
 }
 
 func (s *ClusterService) constructResourceComponentsList(componentsList *clusterv1.ComponentsList) (*resourcev1alpha1.ComponentsList, error) {
+	if componentsList == nil {
+		return nil, nil
+	}
+
 	filldComponentsList, err := fillEmptyWithDefaultInComponentsList(componentsList, s.thirdPartComponentsList)
 	if err != nil {
 		return nil, err
@@ -594,6 +609,10 @@ func getComponent(componentsList []*Component, componentType, componentName stri
 }
 
 func (s *ClusterService) constructReservedNamespaces(listValue map[string]*structpb.ListValue) (map[string][]string, error) {
+	if listValue == nil {
+		return nil, nil
+	}
+
 	reservedNamespaces := make(map[string][]string)
 	for key, value := range listValue {
 		productNames := make([]string, 0)
@@ -615,6 +634,9 @@ func (s *ClusterService) constructReservedNamespaces(listValue map[string]*struc
 
 func (s *ClusterService) constructAllowedClusterResources(listValue map[string]*structpb.ListValue) (map[string][]resourcev1alpha1.ClusterResourceInfo, error) {
 	clusterResourceInfoMap := make(map[string][]resourcev1alpha1.ClusterResourceInfo)
+	if listValue == nil {
+		return nil, nil
+	}
 
 	for productName, value := range listValue {
 		clusterResourcesInfo := make([]resourcev1alpha1.ClusterResourceInfo, 0)
