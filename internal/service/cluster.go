@@ -428,7 +428,7 @@ func (s *ClusterService) constructResourceCluster(req *clusterv1.SaveRequest, na
 
 func (s *ClusterService) constructResourceComponentsList(componentsList *clusterv1.ComponentsList) (*resourcev1alpha1.ComponentsList, error) {
 	if componentsList == nil {
-		return nil, nil
+		componentsList = &clusterv1.ComponentsList{}
 	}
 
 	filldComponentsList, err := fillEmptyWithDefaultInComponentsList(componentsList, s.thirdPartComponentsList)
