@@ -93,15 +93,19 @@ var (
 )
 
 func CheckGitHooks(gitType string, events []string) error {
-	if gitType == gitlab {
+	switch gitType {
+	case gitlab:
 		for _, event := range events {
+			if event == "" {
+				continue
+			}
+
 			if ok := utilstring.ContainsString(gitlabWebhook, event); !ok {
 				return fmt.Errorf("invalid webhook %s please refer to gitlab api documentation: https://docs.gitlab.com/ee/api/projects.html#edit-project-hook", event)
 			}
 		}
-	} else if gitType == github {
-		// TODO
-		// add github webhook validate
+	default:
+		return fmt.Errorf("'%s' platform not supported", gitType)
 	}
 
 	return nil

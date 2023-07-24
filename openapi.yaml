@@ -1212,6 +1212,15 @@ components:
                     type: string
                     description: Msg is a message confirming the delete.
             description: Represents a response to a DeleteRequest message.
+        api.deploymentruntime.v1.DeploymentRuntimesDestination:
+            type: object
+            properties:
+                environment:
+                    type: string
+                namespaces:
+                    type: array
+                    items:
+                        type: string
         api.deploymentruntime.v1.GetReply:
             type: object
             properties:
@@ -1229,8 +1238,7 @@ components:
                 manifest_source:
                     $ref: '#/components/schemas/api.deploymentruntime.v1.ManifestSource'
                 destination:
-                    type: string
-                    description: Destination is the destination for the deployment.
+                    $ref: '#/components/schemas/api.deploymentruntime.v1.DeploymentRuntimesDestination'
             description: GetReply is a message that returns a Deployment Runtime.
         api.deploymentruntime.v1.ListsReply:
             type: object
@@ -1272,8 +1280,7 @@ components:
                 manifest_source:
                     $ref: '#/components/schemas/api.deploymentruntime.v1.ManifestSource'
                 destination:
-                    type: string
-                    description: Destination is the destination for the deployment.
+                    $ref: '#/components/schemas/api.deploymentruntime.v1.DeploymentRuntimesDestination'
             description: Body is the message body.
         api.environment.v1.DeleteReply:
             type: object
