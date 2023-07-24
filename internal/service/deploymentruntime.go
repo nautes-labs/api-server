@@ -52,9 +52,12 @@ func NewDeploymentruntimeService(deploymentRuntime *biz.DeploymentRuntimeUsecase
 
 func (s *DeploymentruntimeService) CovertDeploymentRuntimeValueToReply(runtime *resourcev1alpha1.DeploymentRuntime) *deploymentruntimev1.GetReply {
 	return &deploymentruntimev1.GetReply{
-		Product:     runtime.Spec.Product,
-		Name:        runtime.Name,
-		Destination: runtime.Spec.Destination,
+		Product: runtime.Spec.Product,
+		Name:    runtime.Name,
+		Destination: &deploymentruntimev1.DeploymentRuntimesDestination{
+			Environment: runtime.Spec.Destination.Environment,
+			Namespaces:  runtime.Spec.Destination.Namespaces,
+		},
 		ProjectsRef: runtime.Spec.ProjectsRef,
 		ManifestSource: &deploymentruntimev1.ManifestSource{
 			CodeRepo:       runtime.Spec.ManifestSource.CodeRepo,
@@ -121,7 +124,10 @@ func (s *DeploymentruntimeService) SaveDeploymentRuntime(ctx context.Context, re
 		Spec: v1alpha1.DeploymentRuntimeSpec{
 			Product:     req.ProductName,
 			ProjectsRef: req.Body.ProjectsRef,
-			Destination: req.Body.Destination,
+			Destination: resourcev1alpha1.DeploymentRuntimesDestination{
+				Environment: req.Body.Destination.Environment,
+				Namespaces:  req.Body.Destination.Namespaces,
+			},
 			ManifestSource: resourcev1alpha1.ManifestSource{
 				CodeRepo:       req.Body.ManifestSource.CodeRepo,
 				TargetRevision: req.Body.ManifestSource.TargetRevision,

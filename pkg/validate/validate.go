@@ -28,10 +28,11 @@ type validateClient struct {
 	nodes                *nodestree.Node
 	nodestree            nodestree.NodesTree
 	tenantAdminNamespace string
+	productName          string
 }
 
-func NewValidateClient(client client.Client, nodestree nodestree.NodesTree, nodes *nodestree.Node, tenantAdminNamespace string) resourcev1alpha1.ValidateClient {
-	return &validateClient{client: client, nodestree: nodestree, nodes: nodes, tenantAdminNamespace: tenantAdminNamespace}
+func NewValidateClient(client client.Client, nodestree nodestree.NodesTree, nodes *nodestree.Node, tenantAdminNamespace, productName string) resourcev1alpha1.ValidateClient {
+	return &validateClient{client: client, nodestree: nodestree, nodes: nodes, tenantAdminNamespace: tenantAdminNamespace, productName: productName}
 }
 
 func (v *validateClient) GetCodeRepo(ctx context.Context, repoName string) (*resourcev1alpha1.CodeRepo, error) {
@@ -93,7 +94,7 @@ func (v *validateClient) ListCodeRepoBindings(ctx context.Context, productName, 
 
 func (v *validateClient) ListDeploymentRuntimes(ctx context.Context, productName string) ([]resourcev1alpha1.DeploymentRuntime, error) {
 	items := make([]resourcev1alpha1.DeploymentRuntime, 0)
-	if productName != "" {
+	if productName != "" && productName == v.productName {
 		nodes := nodestree.ListsResourceNodes(*v.nodes, nodestree.DeploymentRuntime)
 		for _, node := range nodes {
 			runtime, ok := node.Content.(*resourcev1alpha1.DeploymentRuntime)
@@ -118,7 +119,7 @@ func (v *validateClient) ListDeploymentRuntimes(ctx context.Context, productName
 
 func (v *validateClient) ListProjectPipelineRuntimes(ctx context.Context, productName string) ([]resourcev1alpha1.ProjectPipelineRuntime, error) {
 	items := make([]resourcev1alpha1.ProjectPipelineRuntime, 0)
-	if productName != "" {
+	if productName != "" && productName == v.productName {
 		nodes := nodestree.ListsResourceNodes(*v.nodes, nodestree.ProjectPipelineRuntime)
 		for _, node := range nodes {
 			runtime, ok := node.Content.(*resourcev1alpha1.ProjectPipelineRuntime)

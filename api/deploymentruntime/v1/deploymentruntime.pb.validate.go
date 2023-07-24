@@ -326,7 +326,34 @@ func (m *GetReply) validate(all bool) error {
 		}
 	}
 
-	// no validation rules for Destination
+	if all {
+		switch v := interface{}(m.GetDestination()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, GetReplyValidationError{
+					field:  "Destination",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, GetReplyValidationError{
+					field:  "Destination",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetDestination()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return GetReplyValidationError{
+				field:  "Destination",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
 
 	if len(errors) > 0 {
 		return GetReplyMultiError(errors)
@@ -428,6 +455,8 @@ func (m *ListsRequest) validate(all bool) error {
 	var errors []error
 
 	// no validation rules for ProductName
+
+	// no validation rules for FieldSelector
 
 	if len(errors) > 0 {
 		return ListsRequestMultiError(errors)
@@ -1081,6 +1110,120 @@ var _ interface {
 	ErrorName() string
 } = DeleteReplyValidationError{}
 
+// Validate checks the field values on DeploymentRuntimesDestination with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *DeploymentRuntimesDestination) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on DeploymentRuntimesDestination with
+// the rules defined in the proto definition for this message. If any rules
+// are violated, the result is a list of violation errors wrapped in
+// DeploymentRuntimesDestinationMultiError, or nil if none found.
+func (m *DeploymentRuntimesDestination) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *DeploymentRuntimesDestination) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if utf8.RuneCountInString(m.GetEnvironment()) < 1 {
+		err := DeploymentRuntimesDestinationValidationError{
+			field:  "Environment",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return DeploymentRuntimesDestinationMultiError(errors)
+	}
+
+	return nil
+}
+
+// DeploymentRuntimesDestinationMultiError is an error wrapping multiple
+// validation errors returned by DeploymentRuntimesDestination.ValidateAll()
+// if the designated constraints aren't met.
+type DeploymentRuntimesDestinationMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m DeploymentRuntimesDestinationMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m DeploymentRuntimesDestinationMultiError) AllErrors() []error { return m }
+
+// DeploymentRuntimesDestinationValidationError is the validation error
+// returned by DeploymentRuntimesDestination.Validate if the designated
+// constraints aren't met.
+type DeploymentRuntimesDestinationValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e DeploymentRuntimesDestinationValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e DeploymentRuntimesDestinationValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e DeploymentRuntimesDestinationValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e DeploymentRuntimesDestinationValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e DeploymentRuntimesDestinationValidationError) ErrorName() string {
+	return "DeploymentRuntimesDestinationValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e DeploymentRuntimesDestinationValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sDeploymentRuntimesDestination.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = DeploymentRuntimesDestinationValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = DeploymentRuntimesDestinationValidationError{}
+
 // Validate checks the field values on SaveRequest_Body with the rules defined
 // in the proto definition for this message. If any rules are violated, the
 // first error encountered is returned, or nil if there are no violations.
@@ -1143,15 +1286,33 @@ func (m *SaveRequest_Body) validate(all bool) error {
 		}
 	}
 
-	if utf8.RuneCountInString(m.GetDestination()) < 1 {
-		err := SaveRequest_BodyValidationError{
-			field:  "Destination",
-			reason: "value length must be at least 1 runes",
+	if all {
+		switch v := interface{}(m.GetDestination()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, SaveRequest_BodyValidationError{
+					field:  "Destination",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, SaveRequest_BodyValidationError{
+					field:  "Destination",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
 		}
-		if !all {
-			return err
+	} else if v, ok := interface{}(m.GetDestination()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return SaveRequest_BodyValidationError{
+				field:  "Destination",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
 		}
-		errors = append(errors, err)
 	}
 
 	if len(errors) > 0 {

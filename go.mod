@@ -29,7 +29,7 @@ require (
 require (
 	github.com/hashicorp/vault/api v1.9.0
 	github.com/hashicorp/vault/api/auth/kubernetes v0.4.0
-	github.com/nautes-labs/pkg v0.3.4-0.20230718062633-e91f11b0c25c
+	github.com/nautes-labs/pkg v0.3.4-0.20230721021338-6c6d7e6ed549
 	github.com/onsi/ginkgo/v2 v2.11.0
 	github.com/onsi/gomega v1.27.8
 	k8s.io/api v0.26.2

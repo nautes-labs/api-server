@@ -269,6 +269,8 @@ func (m *ListsRequest) validate(all bool) error {
 
 	// no validation rules for ProductName
 
+	// no validation rules for FieldSelector
+
 	if len(errors) > 0 {
 		return ListsRequestMultiError(errors)
 	}
