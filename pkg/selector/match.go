@@ -33,7 +33,7 @@ func Match(fieldSelectorStr string, content interface{}, rules map[string]map[st
 	for _, filter := range filters {
 		selector, ok := rules[filter.Field][filter.Symbol]
 		if !ok {
-			return false, fmt.Errorf("the filter field %s operator symbol %s is not supported", filter.Field, filter.Symbol)
+			return false, fmt.Errorf("failed to get selector, the filter field %s operator symbol %s is not supported", filter.Field, filter.Symbol)
 		}
 
 		matchFn, err := selector.GetMatchFunc(filter.Symbol)
@@ -45,7 +45,7 @@ func Match(fieldSelectorStr string, content interface{}, rules map[string]map[st
 
 		matches, err := matchResource(content, filter)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("failed to match resource, err: %w", err)
 		}
 		if !matches {
 			return false, nil
@@ -58,7 +58,7 @@ func Match(fieldSelectorStr string, content interface{}, rules map[string]map[st
 func matchResource(entity interface{}, filter *Filter) (bool, error) {
 	val := reflect.ValueOf(entity)
 	if val.Kind() != reflect.Ptr || val.IsNil() {
-		return false, fmt.Errorf("matchResource: entity must be a non-nil pointer")
+		return false, fmt.Errorf("the entity must be a non-nil pointer")
 	}
 	return matchValue(val.Elem(), filter.Value, filter.Field, filter.MatchFunc)
 }
@@ -70,7 +70,7 @@ func matchValue(f reflect.Value, value, field string, matchFunc MatchFunc) (bool
 		f = f.FieldByName(fieldName)
 
 		if !f.IsValid() {
-			return false, fmt.Errorf("matchResource: field %s not found", fieldName)
+			return false, fmt.Errorf("the field %s value is invalid", fieldName)
 		}
 
 		// If the 'In' operator is included, the value matching of the array elements is performed.
