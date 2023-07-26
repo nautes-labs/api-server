@@ -56,62 +56,13 @@ func NewCodeRepoService(codeRepo *biz.CodeRepoUsecase, configs *nautesconfigs.Co
 	}
 }
 
-func (s *CodeRepoService) CovertCodeRepoValueToReply(ctx context.Context, productName string, node *nodestree.Node) (*coderepov1.GetReply, error) {
-	var git *coderepov1.GitProject
-	codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
-	if !ok {
-		return nil, fmt.Errorf("wrong type for codeRepo %s", node.Name)
-	}
-
-	codeRepo, project, err := s.codeRepo.GetProjectByCodeRepoName(ctx, codeRepo.Spec.RepoName, productName)
-	if err != nil {
-		return nil, err
-	}
-
-	if s.configs.Git.GitType == nautesconfigs.GIT_TYPE_GITLAB {
-		git = &coderepov1.GitProject{
-			Gitlab: &coderepov1.GitlabProject{
-				Name:          project.Name,
-				Description:   project.Description,
-				Path:          project.Path,
-				Visibility:    project.Visibility,
-				HttpUrlToRepo: project.HttpUrlToRepo,
-				SshUrlToRepo:  project.SshUrlToRepo,
-			},
-		}
-	} else {
-		git = &coderepov1.GitProject{
-			Github: &coderepov1.GithubProject{
-				Name:          project.Name,
-				Description:   project.Description,
-				Path:          project.Path,
-				Visibility:    project.Visibility,
-				HttpUrlToRepo: project.HttpUrlToRepo,
-				SshUrlToRepo:  project.SshUrlToRepo,
-			},
-		}
-	}
-
-	return &coderepov1.GetReply{
-		Product: codeRepo.Spec.Product,
-		Name:    codeRepo.Spec.RepoName,
-		Project: codeRepo.Spec.Project,
-		Webhook: &coderepov1.Webhook{
-			Events: codeRepo.Spec.Webhook.Events,
-		},
-		PipelineRuntime:   codeRepo.Spec.PipelineRuntime,
-		DeploymentRuntime: codeRepo.Spec.DeploymentRuntime,
-		Git:               git,
-	}, nil
-}
-
 func (s *CodeRepoService) GetCodeRepo(ctx context.Context, req *coderepov1.GetRequest) (*coderepov1.GetReply, error) {
-	node, err := s.codeRepo.GetCodeRepo(ctx, req.CoderepoName, req.ProductName)
+	projectCodeRepo, err := s.codeRepo.GetCodeRepo(ctx, req.CoderepoName, req.ProductName)
 	if err != nil {
 		return nil, err
 	}
 
-	reply, err := s.CovertCodeRepoValueToReply(ctx, req.ProductName, node)
+	reply, err := s.covertCodeRepoValueToReply(ctx, projectCodeRepo.CodeRepo, projectCodeRepo.Project)
 	if err != nil {
 		return nil, err
 	}
@@ -122,13 +73,13 @@ func (s *CodeRepoService) GetCodeRepo(ctx context.Context, req *coderepov1.GetRe
 func (s *CodeRepoService) ListCodeRepos(ctx context.Context, req *coderepov1.ListsRequest) (*coderepov1.ListsReply, error) {
 	var items []*coderepov1.GetReply
 
-	nodes, err := s.codeRepo.ListCodeRepos(ctx, req.ProductName)
+	projectCodeRepos, err := s.codeRepo.ListCodeRepos(ctx, req.ProductName)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, node := range nodes {
-		passed, err := selector.Match(req.FieldSelector, node.Content, codeRepoFilterFieldRules)
+	for _, projectCodeRepo := range projectCodeRepos {
+		passed, err := selector.Match(req.FieldSelector, projectCodeRepo.CodeRepo, codeRepoFilterFieldRules)
 		if err != nil {
 			return nil, err
 		}
@@ -136,7 +87,7 @@ func (s *CodeRepoService) ListCodeRepos(ctx context.Context, req *coderepov1.Lis
 			continue
 		}
 
-		item, err := s.CovertCodeRepoValueToReply(ctx, req.ProductName, node)
+		item, err := s.covertCodeRepoValueToReply(ctx, projectCodeRepo.CodeRepo, projectCodeRepo.Project)
 		if err != nil {
 			return nil, err
 		}
@@ -238,4 +189,58 @@ func (s *CodeRepoService) DeleteCodeRepo(ctx context.Context, req *coderepov1.De
 	return &coderepov1.DeleteReply{
 		Msg: fmt.Sprintf("Successfully deleted %v configuration", req.CoderepoName),
 	}, nil
+}
+
+func (s *CodeRepoService) covertCodeRepoValueToReply(ctx context.Context, codeRepo *resourcev1alpha1.CodeRepo, project *biz.Project) (*coderepov1.GetReply, error) {
+	git := s.contructGit(project)
+
+	webhook := s.setWebhook(codeRepo)
+
+	return &coderepov1.GetReply{
+		Product:           codeRepo.Spec.Product,
+		Name:              codeRepo.Spec.RepoName,
+		Project:           codeRepo.Spec.Project,
+		Webhook:           webhook,
+		PipelineRuntime:   codeRepo.Spec.PipelineRuntime,
+		DeploymentRuntime: codeRepo.Spec.DeploymentRuntime,
+		Git:               git,
+	}, nil
+}
+
+func (*CodeRepoService) setWebhook(codeRepo *resourcev1alpha1.CodeRepo) *coderepov1.Webhook {
+	webhook := &coderepov1.Webhook{}
+	if codeRepo.Spec.Webhook != nil {
+		webhook.Events = codeRepo.Spec.Webhook.Events
+	}
+	return webhook
+}
+
+func (s *CodeRepoService) contructGit(project *biz.Project) *coderepov1.GitProject {
+	var git *coderepov1.GitProject
+
+	if s.configs.Git.GitType == nautesconfigs.GIT_TYPE_GITLAB {
+		git = &coderepov1.GitProject{
+			Gitlab: &coderepov1.GitlabProject{
+				Name:          project.Name,
+				Description:   project.Description,
+				Path:          project.Path,
+				Visibility:    project.Visibility,
+				HttpUrlToRepo: project.HttpUrlToRepo,
+				SshUrlToRepo:  project.SshUrlToRepo,
+			},
+		}
+	} else {
+		git = &coderepov1.GitProject{
+			Github: &coderepov1.GithubProject{
+				Name:          project.Name,
+				Description:   project.Description,
+				Path:          project.Path,
+				Visibility:    project.Visibility,
+				HttpUrlToRepo: project.HttpUrlToRepo,
+				SshUrlToRepo:  project.SshUrlToRepo,
+			},
+		}
+	}
+
+	return git
 }

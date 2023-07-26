@@ -25,6 +25,7 @@ import (
 	commonv1 "github.com/nautes-labs/api-server/api/common/v1"
 	"github.com/nautes-labs/api-server/pkg/kubernetes"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
+	utilstrings "github.com/nautes-labs/api-server/util/string"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -100,21 +101,30 @@ var _ = Describe("Get codeRepo", func() {
 		fakeResource      = createFakeCodeRepoResource(resourceName)
 		fakeNode          = createFakeCodeRepoNode(fakeResource)
 		fakeNodes         = createFakeCcontainingCodeRepoNodes(fakeNode)
+		gid, _            = utilstrings.ExtractNumber(ProductPrefix, fakeResource.Spec.Product)
+		group             = &Group{ID: int32(gid), Name: fakeResource.Spec.Product, Path: fakeResource.Spec.Product}
 		project           = &Project{ID: 1222, HttpUrlToRepo: fmt.Sprintf("ssh://git@gitlab.io/nautes-labs/%s.git", resourceName)}
-		toGetCodeRepoPath = fmt.Sprintf("%s/%s", defaultProductGroup.Path, resourceName)
+		productPrefixPath = fmt.Sprintf("%s/%s", fakeResource.Spec.Product, resourceName)
+		groupPath         = fmt.Sprintf("%s/%s", defaultGroupName, resourceName)
 	)
 
 	It("will get successfully", testUseCase.GetResourceSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourcesUsecase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(toGetCodeRepoPath)).Return(project, nil)
+		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(productPrefixPath)).Return(project, nil).AnyTimes()
+		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(defaultProjectPath)).Return(defautlProject, nil).AnyTimes()
+		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(groupPath)).Return(project, nil)
+
+		codeRepo.EXPECT().GetGroup(gomock.Any(), gomock.Eq(gid)).Return(group, nil)
 
 		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourcesUsecase, nil, nil)
-		node, err := biz.GetCodeRepo(context.Background(), resourceName, defaultGroupName)
+		projectCodeRepo, err := biz.GetCodeRepo(context.Background(), resourceName, defaultGroupName)
 		Expect(err).ShouldNot(HaveOccurred())
-		Expect(node).To(Equal(fakeNode))
+		Expect(projectCodeRepo.CodeRepo).To(Equal(fakeResource))
 	}))
 
 	It("will fail when resource is not found", testUseCase.GetResourceFail(func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
-		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(toGetCodeRepoPath)).Return(project, nil)
+		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(productPrefixPath)).Return(project, nil).AnyTimes()
+		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(defaultProjectPath)).Return(defautlProject, nil).AnyTimes()
+		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(groupPath)).Return(project, nil)
 
 		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, nil, nil)
 		_, err := biz.GetCodeRepo(context.Background(), resourceName, defaultGroupName)
@@ -124,13 +134,19 @@ var _ = Describe("Get codeRepo", func() {
 
 var _ = Describe("List coderepos", func() {
 	var (
-		resourceName = "toGetCodeRepo"
+		resourceName = "repo-1222"
 		fakeResource = createFakeCodeRepoResource(resourceName)
 		fakeNode     = createFakeCodeRepoNode(fakeResource)
 		fakeNodes    = createFakeCcontainingCodeRepoNodes(fakeNode)
+		gid, _       = utilstrings.ExtractNumber(ProductPrefix, fakeResource.Spec.Product)
+		group        = &Group{ID: int32(gid), Name: fakeResource.Spec.Product, Path: fakeResource.Spec.Product}
+		pid, _       = utilstrings.ExtractNumber(RepoPrefix, resourceName)
+		project      = &Project{ID: int32(pid), Name: fakeResource.Spec.RepoName, Path: fakeResource.Spec.RepoName}
 	)
 
 	It("will list successfully", testUseCase.ListResourceSuccess(fakeNodes, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
+		codeRepo.EXPECT().GetGroup(gomock.Any(), gomock.Eq(gid)).Return(group, nil)
+		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(pid)).Return(project, nil)
 
 		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, nil, nil)
 		_, err := biz.ListCodeRepos(ctx, defaultGroupName)
@@ -142,6 +158,7 @@ var _ = Describe("List coderepos", func() {
 var _ = Describe("Save codeRepo", func() {
 	var (
 		resourceName  = "repo-1222"
+		pid, _        = utilstrings.ExtractNumber(RepoPrefix, resourceName)
 		fakeResource  = createFakeCodeRepoResource(resourceName)
 		fakeNode      = createFakeCodeRepoNode(fakeResource)
 		fakeNodes     = createFakeCcontainingCodeRepoNodes(fakeNode)
@@ -184,18 +201,46 @@ var _ = Describe("Save codeRepo", func() {
 			ResouceName: resourceName,
 			ProductName: defaultGroupName,
 		}
+		projectDeployKey = &ProjectDeployKey{
+			ID:    2013,
+			Key:   "Key1",
+			Title: "deploykey1",
+		}
 		listDeployKeys = []*ProjectDeployKey{
 			{
-				ID:  2013,
-				Key: "Key1",
+				ID:    2013,
+				Key:   "Key1",
+				Title: "deploykey1",
 			},
 			{
-				ID:  2014,
-				Key: "Key2",
+				ID:    2014,
+				Key:   "Key2",
+				Title: "deploykey2",
 			},
 		}
-		projectAccessToken    = &ProjectAccessToken{ID: 81, Token: "access token"}
-		projectAccessTokens   = []*ProjectAccessToken{projectAccessToken}
+		sameTitleListDeployKeys = []*ProjectDeployKey{
+			{
+				ID:    2013,
+				Key:   "Key1",
+				Title: "deploykey1",
+			},
+			{
+				ID:    2014,
+				Key:   "Key2",
+				Title: "deploykey2",
+			},
+			{
+				ID:    2015,
+				Key:   "Key3",
+				Title: fmt.Sprintf("%s%d-%s", RepoPrefix, pid, ReadWrite),
+			},
+		}
+		projectAccessToken  = &ProjectAccessToken{ID: 81, Token: "access token"}
+		projectAccessTokens = []*ProjectAccessToken{
+			{ID: 81, Name: "token1", Token: "access token"},
+			{ID: 82, Name: "token2", Token: "access token"},
+			{ID: 83, Name: "token2", Token: "access token"},
+		}
 		accessTokenSecretData = &AccessTokenSecretData{
 			ID: 81,
 		}
@@ -253,7 +298,7 @@ var _ = Describe("Save codeRepo", func() {
 
 		secretRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any()).Return(nil, commonv1.ErrorSecretNotFound("secret data is not found")).Times(2)
 		secretRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Eq(getCodeRepoResourceName(int(toSaveProject.ID))), gomock.Any(), gomock.Any(), gomock.Any(), extendKVs).Return(nil).Times(2)
-		secretRepo.EXPECT().GetProjectAccessToken(gomock.Any(), secretOptions).Return(nil, commonv1.ErrorSecretNotFound("secret data is not found"))
+		secretRepo.EXPECT().GetProjectAccessToken(gomock.Any(), secretOptions).Return(nil, commonv1.ErrorAccesstokenNotFound("failed to get access token from secret repo"))
 		secretRepo.EXPECT().SaveProjectAccessToken(gomock.Any(), gomock.Eq(getCodeRepoResourceName(int(toSaveProject.ID))), gomock.Eq(projectAccessToken.Token), gomock.Any(), gomock.Any(), gomock.Eq(accessTokenExtendKVs)).Return(nil)
 
 		nodestree.EXPECT().GetNodes().Return(&fakeNodes, nil).AnyTimes()
@@ -308,6 +353,111 @@ var _ = Describe("Save codeRepo", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 	}))
 
+	It("clear same titile invalid deploy key", testUseCase.UpdateResoureSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
+		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(defaultProjectPath)).Return(defautlProject, nil)
+		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Any()).Return(toSaveProject, nil).AnyTimes()
+		codeRepo.EXPECT().UpdateCodeRepo(gomock.Any(), gomock.Eq(int(toSaveProject.ID)), options).Return(toSaveProject, nil)
+
+		codeRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(toSaveProjectDeployKey, nil).Times(2)
+		codeRepo.EXPECT().ListDeployKeys(gomock.Any(), gomock.Eq(int(toSaveProject.ID)), gomock.Any()).Return(sameTitleListDeployKeys, nil).AnyTimes()
+		codeRepo.EXPECT().DeleteDeployKey(gomock.Any(), gomock.Eq(int(toSaveProject.ID)), int(2014)).Return(nil).AnyTimes()
+		codeRepo.EXPECT().GetProjectAccessToken(gomock.Any(), gomock.Eq(int(toSaveProject.ID)), gomock.Any()).Return(projectAccessToken, nil).AnyTimes()
+		codeRepo.EXPECT().ListAccessTokens(gomock.Any(), gomock.Eq(int(toSaveProject.ID)), gomock.Any()).Return(projectAccessTokens, nil).AnyTimes()
+		codeRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(projectDeployKey, nil)
+		codeRepo.EXPECT().DeleteDeployKey(gomock.Any(), gomock.Eq(int(toSaveProject.ID)), gomock.Any()).Return(nil)
+
+		secretRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any()).Return(nil, commonv1.ErrorSecretNotFound("secret data is not found")).Times(2)
+		secretRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Eq(getCodeRepoResourceName(int(toSaveProject.ID))), gomock.Any(), gomock.Any(), gomock.Any(), extendKVs).Return(nil).Times(2)
+		secretRepo.EXPECT().GetProjectAccessToken(gomock.Any(), secretOptions).Return(accessTokenSecretData, nil)
+
+		cloneRepositoryParam := &CloneRepositoryParam{
+			URL:   toSaveProject.HttpUrlToRepo,
+			User:  _GitUser,
+			Email: _GitEmail,
+		}
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil).AnyTimes()
+
+		nodestree.EXPECT().GetNodes().Return(&fakeNodes, nil).AnyTimes()
+		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Eq(codeRepoKind), gomock.Any()).Return(fakeNode).AnyTimes()
+
+		client.EXPECT().List(context.Background(), gomock.Any(), gomock.Any()).Return(nil)
+		codeRepoBindingUsecase := NewCodeRepoCodeRepoBindingUsecase(logger, codeRepo, secretRepo, nodestree, resourceUseCase, nautesConfigs, nil)
+
+		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, codeRepoBindingUsecase, client)
+		err := biz.SaveCodeRepo(context.Background(), bizOptions, data, options)
+		Expect(err).ShouldNot(HaveOccurred())
+	}))
+
+	It("failed to get repository access token", testUseCase.UpdateResoureSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
+		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(defaultProjectPath)).Return(defautlProject, nil)
+		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Any()).Return(toSaveProject, nil).AnyTimes()
+		codeRepo.EXPECT().UpdateCodeRepo(gomock.Any(), gomock.Eq(int(toSaveProject.ID)), options).Return(toSaveProject, nil)
+
+		codeRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(toSaveProjectDeployKey, nil).Times(2)
+		codeRepo.EXPECT().ListDeployKeys(gomock.Any(), int(toSaveProject.ID), gomock.Any()).Return(listDeployKeys, nil).AnyTimes()
+		codeRepo.EXPECT().DeleteDeployKey(gomock.Any(), int(toSaveProject.ID), int(2014)).Return(nil).AnyTimes()
+		codeRepo.EXPECT().GetProjectAccessToken(gomock.Any(), gomock.Eq(int(toSaveProject.ID)), gomock.Any()).Return(nil, commonv1.ErrorAccesstokenNotFound("failed to get access token")).AnyTimes()
+		codeRepo.EXPECT().ListAccessTokens(gomock.Any(), gomock.Eq(int(toSaveProject.ID)), gomock.Any()).Return(projectAccessTokens, nil).AnyTimes()
+		codeRepo.EXPECT().CreateProjectAccessToken(gomock.Any(), gomock.Eq(int(toSaveProject.ID)), gomock.Eq(createProjectAccessTokenOptions)).Return(projectAccessToken, nil)
+
+		secretRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any()).Return(nil, commonv1.ErrorSecretNotFound("secret data is not found")).Times(2)
+		secretRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Eq(getCodeRepoResourceName(int(toSaveProject.ID))), gomock.Any(), gomock.Any(), gomock.Any(), extendKVs).Return(nil).Times(2)
+		secretRepo.EXPECT().GetProjectAccessToken(gomock.Any(), secretOptions).Return(accessTokenSecretData, nil)
+		secretRepo.EXPECT().SaveProjectAccessToken(gomock.Any(), gomock.Eq(getCodeRepoResourceName(int(toSaveProject.ID))), gomock.Eq(projectAccessToken.Token), gomock.Any(), gomock.Any(), gomock.Eq(accessTokenExtendKVs)).Return(nil)
+
+		cloneRepositoryParam := &CloneRepositoryParam{
+			URL:   toSaveProject.HttpUrlToRepo,
+			User:  _GitUser,
+			Email: _GitEmail,
+		}
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil).AnyTimes()
+
+		nodestree.EXPECT().GetNodes().Return(&fakeNodes, nil).AnyTimes()
+		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Eq(codeRepoKind), gomock.Any()).Return(fakeNode).AnyTimes()
+
+		client.EXPECT().List(context.Background(), gomock.Any(), gomock.Any()).Return(nil)
+		codeRepoBindingUsecase := NewCodeRepoCodeRepoBindingUsecase(logger, codeRepo, secretRepo, nodestree, resourceUseCase, nautesConfigs, nil)
+
+		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, codeRepoBindingUsecase, client)
+		err := biz.SaveCodeRepo(context.Background(), bizOptions, data, options)
+		Expect(err).ShouldNot(HaveOccurred())
+	}))
+
+	It("failed to get access token from secret repo", testUseCase.UpdateResoureSuccess(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
+		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Eq(defaultProjectPath)).Return(defautlProject, nil)
+		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Any()).Return(toSaveProject, nil).AnyTimes()
+		codeRepo.EXPECT().UpdateCodeRepo(gomock.Any(), gomock.Eq(int(toSaveProject.ID)), options).Return(toSaveProject, nil)
+
+		codeRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(toSaveProjectDeployKey, nil).Times(2)
+		codeRepo.EXPECT().ListDeployKeys(gomock.Any(), int(toSaveProject.ID), gomock.Any()).Return(listDeployKeys, nil).AnyTimes()
+		codeRepo.EXPECT().DeleteDeployKey(gomock.Any(), int(toSaveProject.ID), int(2014)).Return(nil).AnyTimes()
+		codeRepo.EXPECT().GetProjectAccessToken(gomock.Any(), gomock.Eq(int(toSaveProject.ID)), gomock.Any()).Return(projectAccessToken, nil).AnyTimes()
+		codeRepo.EXPECT().ListAccessTokens(gomock.Any(), gomock.Eq(int(toSaveProject.ID)), gomock.Any()).Return(projectAccessTokens, nil).AnyTimes()
+		codeRepo.EXPECT().CreateProjectAccessToken(gomock.Any(), gomock.Eq(int(toSaveProject.ID)), gomock.Eq(createProjectAccessTokenOptions)).Return(projectAccessToken, nil)
+
+		secretRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any()).Return(nil, commonv1.ErrorSecretNotFound("secret data is not found")).Times(2)
+		secretRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Eq(getCodeRepoResourceName(int(toSaveProject.ID))), gomock.Any(), gomock.Any(), gomock.Any(), extendKVs).Return(nil).Times(2)
+		secretRepo.EXPECT().GetProjectAccessToken(gomock.Any(), secretOptions).Return(nil, commonv1.ErrorAccesstokenNotFound("failed to get access token"))
+		secretRepo.EXPECT().SaveProjectAccessToken(gomock.Any(), gomock.Eq(getCodeRepoResourceName(int(toSaveProject.ID))), gomock.Eq(projectAccessToken.Token), gomock.Any(), gomock.Any(), gomock.Eq(accessTokenExtendKVs)).Return(nil)
+
+		cloneRepositoryParam := &CloneRepositoryParam{
+			URL:   toSaveProject.HttpUrlToRepo,
+			User:  _GitUser,
+			Email: _GitEmail,
+		}
+		gitRepo.EXPECT().Clone(gomock.Any(), cloneRepositoryParam).Return(localRepositoryPath, nil).AnyTimes()
+
+		nodestree.EXPECT().GetNodes().Return(&fakeNodes, nil).AnyTimes()
+		nodestree.EXPECT().GetNode(gomock.Any(), gomock.Eq(codeRepoKind), gomock.Any()).Return(fakeNode).AnyTimes()
+
+		client.EXPECT().List(context.Background(), gomock.Any(), gomock.Any()).Return(nil)
+		codeRepoBindingUsecase := NewCodeRepoCodeRepoBindingUsecase(logger, codeRepo, secretRepo, nodestree, resourceUseCase, nautesConfigs, nil)
+
+		biz := NewCodeRepoUsecase(logger, codeRepo, secretRepo, nodestree, nautesConfigs, resourceUseCase, codeRepoBindingUsecase, client)
+		err := biz.SaveCodeRepo(context.Background(), bizOptions, data, options)
+		Expect(err).ShouldNot(HaveOccurred())
+	}))
+
 	It("auto merge conflict, updated successfully", testUseCase.UpdateResourceAndAutoMerge(fakeNodes, fakeNode, func(codeRepo *MockCodeRepo, secretRepo *MockSecretrepo, resourceUseCase *ResourcesUsecase, nodestree *nodestree.MockNodesTree, gitRepo *MockGitRepo, client *kubernetes.MockClient) {
 		codeRepo.EXPECT().GetCodeRepo(gomock.Any(), gomock.Any()).Return(toSaveProject, nil).AnyTimes()
 		codeRepo.EXPECT().UpdateCodeRepo(gomock.Any(), gomock.Eq(int(toSaveProject.ID)), options).Return(toSaveProject, nil)
@@ -320,7 +470,7 @@ var _ = Describe("Save codeRepo", func() {
 
 		secretRepo.EXPECT().GetDeployKey(gomock.Any(), gomock.Any()).Return(nil, commonv1.ErrorSecretNotFound("secret data is not found")).Times(2)
 		secretRepo.EXPECT().SaveDeployKey(gomock.Any(), gomock.Eq(getCodeRepoResourceName(int(toSaveProject.ID))), gomock.Any(), gomock.Any(), gomock.Any(), extendKVs).Return(nil).Times(2).Times(2)
-		secretRepo.EXPECT().GetProjectAccessToken(gomock.Any(), secretOptions).Return(nil, commonv1.ErrorSecretNotFound("secret data is not found"))
+		secretRepo.EXPECT().GetProjectAccessToken(gomock.Any(), secretOptions).Return(nil, commonv1.ErrorAccesstokenNotFound("failed to get access token from secret repo"))
 		secretRepo.EXPECT().SaveProjectAccessToken(gomock.Any(), gomock.Eq(getCodeRepoResourceName(int(toSaveProject.ID))), gomock.Eq(projectAccessToken.Token), gomock.Any(), gomock.Any(), gomock.Eq(accessTokenExtendKVs)).Return(nil)
 
 		cloneRepositoryParam := &CloneRepositoryParam{

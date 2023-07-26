@@ -16,6 +16,7 @@ package biz
 
 import (
 	"context"
+	"fmt"
 )
 
 // Common
@@ -119,4 +120,8 @@ func SetResourceContext(ctx context.Context, productName, method, parentResouceK
 		ResourceName:       resourceName,
 	}
 	return context.WithValue(ctx, ResourceInfoKey, info)
+}
+
+func getCodeRepoResourceName(id int) string {
+	return fmt.Sprintf("%s%d", RepoPrefix, id)
 }
