@@ -410,18 +410,20 @@ func (s *ClusterService) constructResourceCluster(req *clusterv1.SaveRequest, na
 		return nil, err
 	}
 
-	if reservedNamespaces != nil {
-		cluster.Spec.ReservedNamespacesAllowedProducts = reservedNamespaces
+	if reservedNamespaces == nil {
+		reservedNamespaces = make(map[string][]string)
 	}
+	cluster.Spec.ReservedNamespacesAllowedProducts = reservedNamespaces
 
 	clusterResources, err := s.constructAllowedClusterResources(req.Body.ProductAllowedClusterResources)
 	if err != nil {
 		return nil, err
 	}
 
-	if clusterResources != nil {
-		cluster.Spec.ProductAllowedClusterResources = clusterResources
+	if clusterResources == nil {
+		clusterResources = make(map[string][]resourcev1alpha1.ClusterResourceInfo)
 	}
+	cluster.Spec.ProductAllowedClusterResources = clusterResources
 
 	return cluster, nil
 }
