@@ -109,6 +109,12 @@ func (c *ClusterUsecase) ListClusters(ctx context.Context) ([]*resourcev1alpha1.
 }
 
 func (c *ClusterUsecase) SaveCluster(ctx context.Context, param *cluster.ClusterRegistrationParam, kubeconfig string) error {
+	err := param.Cluster.ValidateCluster(context.TODO(), param.Cluster, c.client, false)
+	if err != nil {
+		c.log.Errorf("failed to call 'resourceCluster.ValidateCluster', err: %s", param.Cluster.Name, err)
+		return fmt.Errorf("failed to validate cluster, err: %s", err)
+	}
+
 	if cluster.IsPhysical(param.Cluster) {
 		err := c.SaveKubeconfig(ctx, param.Cluster.Name, param.Cluster.Spec.ApiServer, kubeconfig)
 		if err != nil {

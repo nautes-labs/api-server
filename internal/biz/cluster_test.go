@@ -144,7 +144,7 @@ var _ = Describe("Save cluster", func() {
 		param.Cluster = hostCluster
 
 		client := kubernetes.NewMockClient(ctl)
-		client.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		client.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 		codeRepo := NewMockCodeRepo(ctl)
 		codeRepo.EXPECT().GetCurrentUser(gomock.Any()).Return(_GitUser, _GitEmail, nil).AnyTimes()
@@ -180,9 +180,13 @@ var _ = Describe("Save cluster", func() {
 		param.Cluster = hostCluster
 
 		client := kubernetes.NewMockClient(ctl)
+		client.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
 		codeRepo := NewMockCodeRepo(ctl)
+
 		secretRepo := NewMockSecretrepo(ctl)
 		secretRepo.EXPECT().SaveClusterConfig(gomock.Any(), param.Cluster.Name, gomock.Any()).Return(errors.New("failed to saved kubeconfig"))
+
 		gitRepo := NewMockGitRepo(ctl)
 
 		resourceusecase := NewResourcesUsecase(logger, codeRepo, secretRepo, gitRepo, nil, nautesConfigs)
@@ -198,6 +202,8 @@ var _ = Describe("Save cluster", func() {
 		param.Cluster = hostCluster
 
 		client := kubernetes.NewMockClient(ctl)
+		client.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
 		codeRepo := NewMockCodeRepo(ctl)
 		codeRepo.EXPECT().GetCurrentUser(gomock.Any()).Return(_GitUser, _GitEmail, nil).AnyTimes()
 
@@ -221,7 +227,7 @@ var _ = Describe("Save cluster", func() {
 		param.Cluster = hostCluster
 
 		client := kubernetes.NewMockClient(ctl)
-		client.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		client.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 		codeRepo := NewMockCodeRepo(ctl)
 		codeRepo.EXPECT().GetCurrentUser(gomock.Any()).Return(_GitUser, _GitEmail, nil).AnyTimes()
@@ -248,7 +254,7 @@ var _ = Describe("Save cluster", func() {
 		param.Cluster = physcialCluster
 
 		client := kubernetes.NewMockClient(ctl)
-		client.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		client.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 		codeRepo := NewMockCodeRepo(ctl)
 		codeRepo.EXPECT().GetCurrentUser(gomock.Any()).Return(_GitUser, _GitEmail, nil).AnyTimes()
@@ -286,7 +292,7 @@ var _ = Describe("Save cluster", func() {
 		param.Cluster = virtualCluster
 
 		client := kubernetes.NewMockClient(ctl)
-		client.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		client.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 		codeRepo := NewMockCodeRepo(ctl)
 		codeRepo.EXPECT().GetCurrentUser(gomock.Any()).Return(_GitUser, _GitEmail, nil).AnyTimes()
@@ -321,7 +327,8 @@ var _ = Describe("Save cluster", func() {
 		param.Cluster = virtualCluster
 
 		client := kubernetes.NewMockClient(ctl)
-		client.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("codeRepo is not found"))
+		firstList := client.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		client.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("codeRepo is not found")).After(firstList)
 
 		codeRepo := NewMockCodeRepo(ctl)
 		codeRepo.EXPECT().GetCurrentUser(gomock.Any()).Return(_GitUser, _GitEmail, nil).AnyTimes()
@@ -329,7 +336,7 @@ var _ = Describe("Save cluster", func() {
 		secretRepo := NewMockSecretrepo(ctl)
 
 		gitRepo := NewMockGitRepo(ctl)
-		gitRepo.EXPECT().Clone(gomock.Any(), clusterTemplateCloneParam).Return(clusterTemplateLocalPath, nil)
+		gitRepo.EXPECT().Clone(gomock.Any(), clusterTemplateCloneParam).Return(clusterTemplateLocalPath, nil).AnyTimes()
 
 		resourceusecase := NewResourcesUsecase(logger, codeRepo, secretRepo, gitRepo, nil, nautesConfigs)
 
@@ -346,7 +353,7 @@ var _ = Describe("Save cluster", func() {
 		param.Cluster = physcialCluster
 
 		client := kubernetes.NewMockClient(ctl)
-		client.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		client.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 		codeRepo := NewMockCodeRepo(ctl)
 		codeRepo.EXPECT().GetCurrentUser(gomock.Any()).Return(_GitUser, _GitEmail, nil).AnyTimes()
