@@ -40,6 +40,7 @@ type CodeRepoUsecase struct {
 	resourcesUsecase       *ResourcesUsecase
 	codeRepoBindingUsecase *CodeRepoBindingUsecase
 	client                 client.Client
+	wg                     sync.WaitGroup
 }
 
 type CodeRepoData struct {
