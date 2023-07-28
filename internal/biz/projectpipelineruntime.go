@@ -247,7 +247,7 @@ func (p *ProjectPipelineRuntimeUsecase) CheckReference(options nodestree.Compare
 		return true, err
 	}
 
-	validateClient := validate.NewValidateClient(p.client, p.nodestree, &options.Nodes, p.config.Nautes.Namespace)
+	validateClient := validate.NewValidateClient(p.client, p.nodestree, &options.Nodes, p.config.Nautes.Namespace, options.ProductName)
 	projectPipelineRuntime.Namespace = options.ProductName
 	illegalEventSources, err := projectPipelineRuntime.Validate(context.TODO(), validateClient)
 	if err != nil {

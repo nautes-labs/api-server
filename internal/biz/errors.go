@@ -15,6 +15,9 @@
 package biz
 
 import (
+	"fmt"
+	"strings"
+
 	errors "github.com/go-kratos/kratos/v2/errors"
 )
 
@@ -25,6 +28,7 @@ const (
 	RESOURCE_NOT_FOUND = "RESOURCE_NOT_FOUND"
 	RESOURCE_NOT_MATCH = "RESOURCE_NOT_MATCH"
 	NO_AUTHORIZATION   = "NO_AUTHORIZATION"
+	ResourceNotExist   = "RESOURCE_NOT_EXIST"
 )
 
 var (
@@ -36,4 +40,14 @@ var (
 	ErrorNoAuth          = errors.New(403, NO_AUTHORIZATION, "no access to the code repository")
 )
 
-const _ResourceDoesNotExistOrUnavailable = "During global validation, it was found that %s '%s' does not exist or is unavailable. Please check %s '%s' in directory '%s'."
+const _ResourceDoesNotExistOrUnavailable = "during global validation, it was found that %s '%s' does not exist or is unavailable. Please check %s '%s' in directory '%s'."
+
+func ResourceDoesNotExistOrUnavailable(resourceName, resourceKind, resourcePath string, errMsgs ...string) error {
+	errMsg := fmt.Sprintf("During global validation, it was found that %s '%s' does not exist or is unavailable. Please check resource path of default project: %s", resourceName, resourceKind, resourcePath)
+
+	if len(errMsgs) > 0 {
+		errMsg = fmt.Sprintf("%s, err: %s", errMsg, strings.Join(errMsgs, "|"))
+	}
+
+	return errors.New(500, ResourceNotExist, errMsg)
+}

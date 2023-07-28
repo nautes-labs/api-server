@@ -18,15 +18,13 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"strings"
-	"sync"
 
 	errors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/log"
 	commonv1 "github.com/nautes-labs/api-server/api/common/v1"
 	"github.com/nautes-labs/api-server/pkg/nodestree"
 	utilkey "github.com/nautes-labs/api-server/util/key"
-	utilstrings "github.com/nautes-labs/api-server/util/string"
+	utilstring "github.com/nautes-labs/api-server/util/string"
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -65,7 +63,12 @@ func NewCodeRepoUsecase(logger log.Logger, codeRepo CodeRepo, secretRepo Secretr
 	return codeRepoUsecase
 }
 
-func (c *CodeRepoUsecase) GetCodeRepo(ctx context.Context, codeRepoName, productName string) (*nodestree.Node, error) {
+type ProjectCodeRepo struct {
+	CodeRepo *resourcev1alpha1.CodeRepo
+	Project  *Project
+}
+
+func (c *CodeRepoUsecase) GetCodeRepo(ctx context.Context, codeRepoName, productName string) (*ProjectCodeRepo, error) {
 	pid := fmt.Sprintf("%s/%s", productName, codeRepoName)
 	project, err := c.codeRepo.GetCodeRepo(ctx, pid)
 	if err != nil {
@@ -83,21 +86,30 @@ func (c *CodeRepoUsecase) GetCodeRepo(ctx context.Context, codeRepoName, product
 			return resourceName, nil
 		}
 
-		resourceName, err := c.getCodeRepoName(nodes, codeRepoName)
-		if err != nil {
-			return "", nil
-		}
-
-		return resourceName, nil
+		return "", fmt.Errorf("failed to get resource name")
 	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	return node, nil
+	codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
+	if !ok {
+		return nil, fmt.Errorf("failed to get codeRepo %s, err: the resource is wrong type", codeRepoName)
+	}
+
+	err = c.convertProductToGroupName(ctx, codeRepo)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get codeRepo %s, err: unable to convert product name", codeRepoName)
+	}
+
+	return &ProjectCodeRepo{
+		Project:  project,
+		CodeRepo: codeRepo,
+	}, nil
 }
 
-func (c *CodeRepoUsecase) ListCodeRepos(ctx context.Context, productName string) ([]*nodestree.Node, error) {
+func (c *CodeRepoUsecase) ListCodeRepos(ctx context.Context, productName string) ([]*ProjectCodeRepo, error) {
 	nodes, err := c.resourcesUsecase.List(ctx, productName, c)
 	if err != nil {
 		return nil, err
@@ -105,7 +117,15 @@ func (c *CodeRepoUsecase) ListCodeRepos(ctx context.Context, productName string)
 
 	codeRepoNodes := nodestree.ListsResourceNodes(*nodes, nodestree.CodeRepo)
 
-	return codeRepoNodes, nil
+	items := make([]*ProjectCodeRepo, 0)
+	for _, node := range codeRepoNodes {
+		projectCodeRepo := c.getProjectByNode(ctx, node)
+		if projectCodeRepo != nil {
+			items = append(items, projectCodeRepo)
+		}
+	}
+
+	return items, nil
 }
 
 func (c *CodeRepoUsecase) SaveCodeRepo(ctx context.Context, options *BizOptions, data *CodeRepoData, gitOptions *GitCodeRepoOptions) error {
@@ -154,12 +174,12 @@ func (c *CodeRepoUsecase) SaveCodeRepo(ctx context.Context, options *BizOptions,
 		return err
 	}
 
-	codeRepo, err := c.getCodeRepo(ctx, options.ProductName, codeRepoName)
+	nodes, err := c.resourcesUsecase.loadDefaultProjectNodes(ctx, options.ProductName)
 	if err != nil {
 		return err
 	}
 
-	err = c.refreshAuthorization(ctx, options.ProductName, codeRepo.Spec.Project)
+	err = c.codeRepoBindingUsecase.refreshAuthorization(ctx, nodes)
 	if err != nil {
 		return err
 	}
@@ -191,12 +211,17 @@ func (c *CodeRepoUsecase) DeleteCodeRepo(ctx context.Context, options *BizOption
 		operator:          c,
 	}
 
-	codeRepo, err := c.getCodeRepo(ctx, options.ProductName, codeRepoName)
+	nodes, err := c.resourcesUsecase.loadDefaultProjectNodes(ctx, options.ProductName)
 	if err != nil {
 		return err
 	}
 
-	err = c.refreshAuthorization(ctx, options.ProductName, codeRepo.Spec.Project, codeRepo.Name)
+	codeRepo, err := c.getCodeRepoByName(ctx, nodes, codeRepoName)
+	if err != nil {
+		return err
+	}
+
+	err = c.codeRepoBindingUsecase.refreshAuthorization(ctx, nodes, codeRepo.Name)
 	if err != nil {
 		return err
 	}
@@ -206,12 +231,7 @@ func (c *CodeRepoUsecase) DeleteCodeRepo(ctx context.Context, options *BizOption
 			return codeRepoName, nil
 		}
 
-		resourceName, err := c.getCodeRepoName(nodes, options.ResouceName)
-		if err != nil {
-			return "", err
-		}
-
-		return resourceName, nil
+		return "", fmt.Errorf("failed to get resource name")
 	}); err != nil {
 		return err
 	}
@@ -239,12 +259,31 @@ func (c *CodeRepoUsecase) DeleteCodeRepo(ctx context.Context, options *BizOption
 	return nil
 }
 
-func (c *CodeRepoUsecase) getCodeRepo(ctx context.Context, productName, codeRepoName string) (*resourcev1alpha1.CodeRepo, error) {
-	nodes, err := c.resourcesUsecase.loadDefaultProjectNodes(ctx, productName)
-	if err != nil {
-		return nil, err
+func (c *CodeRepoUsecase) getProjectByNode(ctx context.Context, node *nodestree.Node) *ProjectCodeRepo {
+	codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
+	if !ok {
+		return nil
 	}
 
+	err := c.convertProductToGroupName(ctx, codeRepo)
+	if err != nil {
+		return nil
+	}
+
+	pid, err := utilstring.ExtractNumber(RepoPrefix, codeRepo.Name)
+	if err != nil {
+		return nil
+	}
+
+	project, err := c.codeRepo.GetCodeRepo(ctx, pid)
+	if err != nil {
+		return nil
+	}
+
+	return &ProjectCodeRepo{Project: project, CodeRepo: codeRepo}
+}
+
+func (c *CodeRepoUsecase) getCodeRepoByName(ctx context.Context, nodes *nodestree.Node, codeRepoName string) (*resourcev1alpha1.CodeRepo, error) {
 	node := c.nodestree.GetNode(nodes, nodestree.CodeRepo, codeRepoName)
 	if node == nil {
 		return nil, commonv1.ErrorNodeNotFound("failed to get coderepo of repository %s", codeRepoName)
@@ -256,78 +295,6 @@ func (c *CodeRepoUsecase) getCodeRepo(ctx context.Context, productName, codeRepo
 	}
 
 	return codeRepo, nil
-}
-
-// refreshAuthorization Check the authorization code repository's scope of permissions.
-// If there is an authorization, refresh the permission; otherwise, do not refresh it.
-func (c *CodeRepoUsecase) refreshAuthorization(ctx context.Context, productName, currentProjectName string, skipRepositories ...string) error {
-	var errorMessages []string
-
-	nodes, err := c.nodestree.GetNodes()
-	if err != nil {
-		return err
-	}
-
-	err = c.codeRepoBindingUsecase.clearInvalidDeployKey(ctx, *nodes)
-	if err != nil {
-		return err
-	}
-
-	err = c.codeRepoBindingUsecase.authorizeForSameProjectRepo(ctx, *nodes)
-	if err != nil {
-		return err
-	}
-
-	codeReposNodes := nodestree.ListsResourceNodes(*nodes, nodestree.CodeRepo)
-	for _, node := range codeReposNodes {
-		codeRepo, ok := node.Content.(*resourcev1alpha1.CodeRepo)
-		if !ok {
-			return fmt.Errorf("wrong type found for %s node when refresh Authorization", node.Name)
-		}
-		ok = utilstrings.ContainsString(skipRepositories, codeRepo.Name)
-		if ok {
-			continue
-		}
-
-		codeRepoBindings, err := c.codeRepoBindingUsecase.getCodeRepoBindings(*nodes, codeRepo.Name)
-		if err != nil {
-			return err
-		}
-		// No authorization under repository, allow skipping.
-		if len(codeRepoBindings) == 0 {
-			continue
-		}
-
-		for _, binding := range codeRepoBindings {
-			if binding.Spec.Permissions == string(ReadOnly) {
-				err = c.codeRepoBindingUsecase.processAuthorization(ctx, *nodes, string(ReadOnly), codeRepo.Name)
-				if err != nil {
-					if commonv1.IsNoAuthorization(err) {
-						errorMessages = append(errorMessages, err.Error())
-					} else {
-						return err
-					}
-				}
-			}
-
-			if binding.Spec.Permissions == string(ReadWrite) {
-				err = c.codeRepoBindingUsecase.processAuthorization(ctx, *nodes, string(ReadWrite), codeRepo.Name)
-				if err != nil {
-					if commonv1.IsNoAuthorization(err) {
-						errorMessages = append(errorMessages, err.Error())
-					} else {
-						return err
-					}
-				}
-			}
-		}
-	}
-
-	if len(errorMessages) > 0 {
-		return commonv1.ErrorRefreshPermissionsAccessDenied("failed to refersh permission, err: %s", strings.Join(errorMessages, "\n"))
-	}
-
-	return nil
 }
 
 func (c *CodeRepoUsecase) convertProductToGroupName(ctx context.Context, codeRepo *resourcev1alpha1.CodeRepo) error {
@@ -495,11 +462,20 @@ func (c *CodeRepoUsecase) removeInvalidDeploykey(ctx context.Context, pid int, p
 		validProjectDeployKeys[deployKey.ID] = true
 	}
 
-	deployKeysToDelete, err := c.FilterProjectDeployKeysByIDList(ctx, pid, validProjectDeployKeys)
+	deployKeysToDelete, err := c.filterProjectDeployKeysByIDList(ctx, pid, validProjectDeployKeys)
 	if err != nil {
 		return err
 	}
 
+	err = c.deleteSameTitleDeployKey(ctx, pid, deployKeysToDelete, projectDeployKeys)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *CodeRepoUsecase) deleteSameTitleDeployKey(ctx context.Context, pid int, deployKeysToDelete []*ProjectDeployKey, projectDeployKeys []*ProjectDeployKey) error {
 	for _, key := range deployKeysToDelete {
 		for _, projectDeployKey := range projectDeployKeys {
 			if key.Title == projectDeployKey.Title {
@@ -510,11 +486,10 @@ func (c *CodeRepoUsecase) removeInvalidDeploykey(ctx context.Context, pid int, p
 			}
 		}
 	}
-
 	return nil
 }
 
-func (c *CodeRepoUsecase) FilterProjectDeployKeysByIDList(ctx context.Context, pid int, idList map[int]bool) ([]*ProjectDeployKey, error) {
+func (c *CodeRepoUsecase) filterProjectDeployKeysByIDList(ctx context.Context, pid int, idList map[int]bool) ([]*ProjectDeployKey, error) {
 	keys, err := GetAllDeployKeys(ctx, c.codeRepo, pid)
 	if err != nil {
 		return nil, err
@@ -533,7 +508,7 @@ func (c *CodeRepoUsecase) FilterProjectDeployKeysByIDList(ctx context.Context, p
 func (c *CodeRepoUsecase) saveAccessToken(ctx context.Context, pid int) (*ProjectAccessToken, error) {
 	accessTokenSecretData, err := c.getAccessTokenFromSecretRepo(ctx, pid)
 	if err != nil {
-		ok := commonv1.IsSecretNotFound(err)
+		ok := commonv1.IsAccesstokenNotFound(err)
 		if !ok {
 			return nil, err
 		}
@@ -570,11 +545,20 @@ func (c *CodeRepoUsecase) removeInvalidProjectAccessTokens(ctx context.Context, 
 		validAccessTokens[projectAccessToken.ID] = true
 	}
 
-	accessTokensToDelete, err := c.FilterAccessTokensByIDList(ctx, pid, validAccessTokens)
+	accessTokensToDelete, err := c.filterAccessTokensByIDList(ctx, pid, validAccessTokens)
 	if err != nil {
 		return err
 	}
 
+	err = c.deleteSameNameAccessToken(accessTokensToDelete, projectAccessTokens, ctx, pid)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *CodeRepoUsecase) deleteSameNameAccessToken(accessTokensToDelete []*ProjectAccessToken, projectAccessTokens []*ProjectAccessToken, ctx context.Context, pid int) error {
 	for _, token := range accessTokensToDelete {
 		for _, validToken := range projectAccessTokens {
 			if token.Name == validToken.Name {
@@ -585,11 +569,10 @@ func (c *CodeRepoUsecase) removeInvalidProjectAccessTokens(ctx context.Context, 
 			}
 		}
 	}
-
 	return nil
 }
 
-func (c *CodeRepoUsecase) FilterAccessTokensByIDList(ctx context.Context, pid int, idList map[int]bool) ([]*ProjectAccessToken, error) {
+func (c *CodeRepoUsecase) filterAccessTokensByIDList(ctx context.Context, pid int, idList map[int]bool) ([]*ProjectAccessToken, error) {
 	allAccessTokens, err := c.GetAllAccessTokens(ctx, pid)
 	if err != nil {
 		return nil, err
@@ -840,9 +823,11 @@ func (c *CodeRepoUsecase) CheckReference(options nodestree.CompareOptions, node 
 		return true, fmt.Errorf("git type cannot be empty")
 	}
 
-	err = nodestree.CheckGitHooks(string(gitType), codeRepo.Spec.Webhook.Events)
-	if err != nil {
-		return true, err
+	if codeRepo.Spec.Webhook != nil {
+		err = nodestree.CheckGitHooks(string(gitType), codeRepo.Spec.Webhook.Events)
+		if err != nil {
+			return true, err
+		}
 	}
 
 	if codeRepo.Spec.Project != "" {
@@ -968,43 +953,6 @@ func nodesToCodeRepoists(nodes nodestree.Node, options ...ListMatchOptions) ([]*
 	return resources, nil
 }
 
-func (c *CodeRepoUsecase) getCodeRepoName(nodes nodestree.Node, codeRepoName string) (string, error) {
-	var resourceName string
-	var codeReposDir *nodestree.Node
-
-	for _, node := range nodes.Children {
-		if node.Name == CodeReposSubDir {
-			codeReposDir = node
-			break
-		}
-	}
-
-	if codeReposDir == nil {
-		return "", ErrorResourceNoFound
-	}
-
-	for _, subNode := range codeReposDir.Children {
-		for _, node := range subNode.Children {
-			if node.Kind != nodestree.CodeRepo {
-				continue
-			}
-
-			name := nodestree.GetResourceValue(node.Content, "Spec", "RepoName")
-			if name == codeRepoName {
-				resourceName = node.Name
-				break
-			}
-
-		}
-	}
-
-	if resourceName == "" {
-		return "", ErrorResourceNoFound
-	}
-
-	return resourceName, nil
-}
-
 func getCodeRepoProvider(k8sClient client.Client, namespace string) (*resourcev1alpha1.CodeRepoProvider, error) {
 	providers := &resourcev1alpha1.CodeRepoProviderList{}
 	err := k8sClient.List(context.TODO(), providers, &client.ListOptions{
@@ -1020,50 +968,4 @@ func getCodeRepoProvider(k8sClient client.Client, namespace string) (*resourcev1
 	}
 
 	return nil, nil
-}
-
-func getCodeRepoResourceName(id int) string {
-	return fmt.Sprintf("%s%d", RepoPrefix, id)
-}
-
-func (c *CodeRepoUsecase) GetProjectByCodeRepoName(ctx context.Context, codeRepoName, productName string) (*resourcev1alpha1.CodeRepo, *Project, error) {
-	pid := fmt.Sprintf("%s/%s", productName, codeRepoName)
-	project, err := c.codeRepo.GetCodeRepo(ctx, pid)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if project != nil {
-		resourceName := getCodeRepoResourceName(int(project.ID))
-		codeRepoName = resourceName
-	}
-
-	node, err := c.resourcesUsecase.Get(ctx, nodestree.CodeRepo, productName, c, func(nodes nodestree.Node) (string, error) {
-		if project != nil {
-			resourceName := getCodeRepoResourceName(int(project.ID))
-			return resourceName, nil
-		}
-
-		resourceName, err := c.getCodeRepoName(nodes, codeRepoName)
-		if err != nil {
-			return "", nil
-		}
-
-		return resourceName, nil
-	})
-	if err != nil {
-		return nil, nil, err
-	}
-
-	codeRepo, err := nodeToCodeRepo(node)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	err = c.convertProductToGroupName(ctx, codeRepo)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return codeRepo, project, nil
 }

@@ -88,24 +88,24 @@ func IsResourceExist(options CompareOptions, targetResourceName, resourceKind st
 	return false
 }
 
-func CheckGitHooks(gitType string, events []string) error {
-	if gitType == gitlab {
-		webhooks := []string{"confidential_issues_events", "confidential_note_events", "deployment_events", "issues_events", "job_events", "merge_requests_events", "note_events", "pipeline_events", "push_events", "releases_events", "tag_push_events"}
-		isValidHook := true
+var (
+	gitlabWebhook = []string{"confidential_issues_events", "confidential_note_events", "deployment_events", "issues_events", "job_events", "merge_requests_events", "note_events", "pipeline_events", "push_events", "releases_events", "tag_push_events"}
+)
 
+func CheckGitHooks(gitType string, events []string) error {
+	switch gitType {
+	case gitlab:
 		for _, event := range events {
-			if ok := utilstring.ContainsString(webhooks, event); !ok {
-				isValidHook = false
+			if event == "" {
+				continue
+			}
+
+			if ok := utilstring.ContainsString(gitlabWebhook, event); !ok {
+				return fmt.Errorf("invalid webhook %s please refer to gitlab api documentation: https://docs.gitlab.com/ee/api/projects.html#edit-project-hook", event)
 			}
 		}
-
-		if !isValidHook {
-			return fmt.Errorf("invalid webhook please refer to gitlab api documentation: https://docs.gitlab.com/ee/api/projects.html#edit-project-hook")
-		}
-
-	} else if gitType == github {
-		// TODO
-		// add github webhook validate
+	default:
+		return fmt.Errorf("'%s' platform not supported", gitType)
 	}
 
 	return nil

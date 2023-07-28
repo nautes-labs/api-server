@@ -58,7 +58,13 @@ spec:
         - name: resources-layout
           mountPath: /usr/local/share/
           readOnly: true
+        - name: third-part-components
+          mountPath: /opt/nautes/thirdPartComponents
+          readOnly: true
+        - name: nautes-tls-certs
+          mountPath: /opt/nautes/ssl/
         - name: api-server-log
+          readOnly: true
           mountPath: /log
         - name: ca-certs
           mountPath: /usr/local/share/ca-certificates/
@@ -69,6 +75,15 @@ spec:
           items:
           - key: resources_layout.yaml
             path: resources_layout.yaml
+      - name: third-part-components
+        configMap:
+          name: third-part-components
+          items:
+          - key: thirdPartComponents
+            path: thirdPartComponents.yaml
+      - name: nautes-tls-certs
+        configMap:
+          name: nautes-tls-certs
       - name: api-server-secret
         projected:
           sources:

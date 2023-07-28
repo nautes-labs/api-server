@@ -28,10 +28,11 @@ type validateClient struct {
 	nodes                *nodestree.Node
 	nodestree            nodestree.NodesTree
 	tenantAdminNamespace string
+	productName          string
 }
 
-func NewValidateClient(client client.Client, nodestree nodestree.NodesTree, nodes *nodestree.Node, tenantAdminNamespace string) resourcev1alpha1.ValidateClient {
-	return &validateClient{client: client, nodestree: nodestree, nodes: nodes, tenantAdminNamespace: tenantAdminNamespace}
+func NewValidateClient(client client.Client, nodestree nodestree.NodesTree, nodes *nodestree.Node, tenantAdminNamespace, productName string) resourcev1alpha1.ValidateClient {
+	return &validateClient{client: client, nodestree: nodestree, nodes: nodes, tenantAdminNamespace: tenantAdminNamespace, productName: productName}
 }
 
 func (v *validateClient) GetCodeRepo(ctx context.Context, repoName string) (*resourcev1alpha1.CodeRepo, error) {
@@ -74,51 +75,69 @@ func (v *validateClient) GetCluster(ctx context.Context, name string) (*resource
 	return cluster, nil
 }
 
-func (v *validateClient) ListCodeRepoBinding(ctx context.Context, productName, repoName string) (*resourcev1alpha1.CodeRepoBindingList, error) {
+func (v *validateClient) ListCodeRepoBindings(ctx context.Context, productName, repoName string) ([]resourcev1alpha1.CodeRepoBinding, error) {
 	nodes := nodestree.ListsResourceNodes(*v.nodes, nodestree.CodeRepoBinding)
 
-	list := &resourcev1alpha1.CodeRepoBindingList{}
+	items := make([]resourcev1alpha1.CodeRepoBinding, 0)
 	for _, node := range nodes {
 		codeRepoBinding, ok := node.Content.(*resourcev1alpha1.CodeRepoBinding)
 		if !ok {
 			continue
 		}
 		if codeRepoBinding.Spec.CodeRepo == repoName {
-			list.Items = append(list.Items, *codeRepoBinding)
+			items = append(items, *codeRepoBinding)
 		}
 	}
 
-	return list, nil
+	return items, nil
 }
 
-func (v *validateClient) ListDeploymentRuntime(ctx context.Context, productName string) (*resourcev1alpha1.DeploymentRuntimeList, error) {
-	nodes := nodestree.ListsResourceNodes(*v.nodes, nodestree.DeploymentRuntime)
-
-	list := &resourcev1alpha1.DeploymentRuntimeList{}
-	for _, node := range nodes {
-		runtime, ok := node.Content.(*resourcev1alpha1.DeploymentRuntime)
-		if !ok {
-			continue
+func (v *validateClient) ListDeploymentRuntimes(ctx context.Context, productName string) ([]resourcev1alpha1.DeploymentRuntime, error) {
+	items := make([]resourcev1alpha1.DeploymentRuntime, 0)
+	if productName != "" && productName == v.productName {
+		nodes := nodestree.ListsResourceNodes(*v.nodes, nodestree.DeploymentRuntime)
+		for _, node := range nodes {
+			runtime, ok := node.Content.(*resourcev1alpha1.DeploymentRuntime)
+			if !ok {
+				continue
+			}
+			runtime.Namespace = productName
+			items = append(items, *runtime)
 		}
-		runtime.Namespace = productName
-		list.Items = append(list.Items, *runtime)
+	} else {
+		list := resourcev1alpha1.DeploymentRuntimeList{}
+		err := v.client.List(ctx, &list)
+		if err != nil {
+			return nil, err
+		}
+
+		items = append(items, list.Items...)
 	}
 
-	return list, nil
+	return items, nil
 }
 
-func (v *validateClient) ListProjectPipelineRuntime(ctx context.Context, productName string) (*resourcev1alpha1.ProjectPipelineRuntimeList, error) {
-	nodes := nodestree.ListsResourceNodes(*v.nodes, nodestree.ProjectPipelineRuntime)
-
-	list := &resourcev1alpha1.ProjectPipelineRuntimeList{}
-	for _, node := range nodes {
-		runtime, ok := node.Content.(*resourcev1alpha1.ProjectPipelineRuntime)
-		if !ok {
-			continue
+func (v *validateClient) ListProjectPipelineRuntimes(ctx context.Context, productName string) ([]resourcev1alpha1.ProjectPipelineRuntime, error) {
+	items := make([]resourcev1alpha1.ProjectPipelineRuntime, 0)
+	if productName != "" && productName == v.productName {
+		nodes := nodestree.ListsResourceNodes(*v.nodes, nodestree.ProjectPipelineRuntime)
+		for _, node := range nodes {
+			runtime, ok := node.Content.(*resourcev1alpha1.ProjectPipelineRuntime)
+			if !ok {
+				continue
+			}
+			runtime.Namespace = productName
+			items = append(items, *runtime)
 		}
-		runtime.Namespace = productName
-		list.Items = append(list.Items, *runtime)
+	} else {
+		list := resourcev1alpha1.ProjectPipelineRuntimeList{}
+		err := v.client.List(ctx, &list)
+		if err != nil {
+			return nil, err
+		}
+
+		items = append(items, list.Items...)
 	}
 
-	return list, nil
+	return items, nil
 }

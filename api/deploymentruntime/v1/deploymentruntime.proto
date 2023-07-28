@@ -74,8 +74,8 @@ message GetReply {
   repeated string projectsRef = 3 [json_name = "projects_ref"];
   // ManifestSource is the source of the deployment manifest.
   ManifestSource manifestSource = 4 [json_name = "manifest_source"];
-  // Destination is the destination for the deployment.
-  string destination = 5 [json_name = "destination"];
+  // Destination is the destination and custom namespaces for the deployment.
+  DeploymentRuntimesDestination destination = 5 [json_name = "destination"];
 }
 
 // ListsRequest is a message for retrieving a list of Deployment Runtimes.
@@ -105,8 +105,8 @@ message SaveRequest {
      repeated string projectsRef = 1 [json_name = "projects_ref"];
      // ManifestSource is the source of the deployment manifest.
      ManifestSource manifestSource = 2 [json_name = "manifest_source", (validate.rules).message.required = true];
-     // Destination is the destination for the deployment.
-     string destination = 3 [json_name = "destination", (validate.rules).string.min_len = 1];
+     // Destination is the destination and custom namespaces for the deployment.
+     DeploymentRuntimesDestination destination = 3 [json_name = "destination"];
   }
   // ProductName is the name of the product.
   string productName = 1 [json_name = "product_name"];
@@ -138,4 +138,9 @@ message DeleteRequest {
 message DeleteReply {
   // Msg is a message confirming the delete.  
   string msg = 1 [json_name = "message"];
+}
+
+message DeploymentRuntimesDestination {
+  string environment = 1 [json_name = "environment", (validate.rules).string.min_len = 1];
+  repeated string namespaces = 2 [json_name = "namespaces"];
 }

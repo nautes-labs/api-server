@@ -25,6 +25,7 @@ import (
 	resourcev1alpha1 "github.com/nautes-labs/pkg/api/v1alpha1"
 	nautesconfigs "github.com/nautes-labs/pkg/pkg/nautesconfigs"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -91,7 +92,7 @@ func (d *DeploymentRuntimeUsecase) SaveDeploymentRuntime(ctx context.Context, op
 	pid := fmt.Sprintf("%s/%s", group.Path, data.Spec.ManifestSource.CodeRepo)
 	project, err := d.codeRepo.GetCodeRepo(ctx, pid)
 	if err != nil {
-		return fmt.Errorf("the referenced code repository %s does not exist", data.Spec.ManifestSource.CodeRepo)
+		return fmt.Errorf("failed to get repository %s, err: %s", data.Spec.ManifestSource.CodeRepo, err)
 	}
 
 	data.Spec.ManifestSource.CodeRepo = fmt.Sprintf("%s%d", RepoPrefix, int(project.ID))
@@ -179,24 +180,34 @@ func (d *DeploymentRuntimeUsecase) CheckReference(options nodestree.CompareOptio
 
 	projectsRef := deploymentRuntime.Spec.ProjectsRef
 	for _, projectName := range projectsRef {
+		if projectName == "" {
+			continue
+		}
+
 		ok := nodestree.IsResourceExist(options, projectName, nodestree.Project)
 		if !ok {
 			return true, fmt.Errorf("the referenced project %s by the deployment runtime %s does not exist while verifying the validity of the global template", projectName, deploymentRuntime.Name)
 		}
 	}
 
-	envName := deploymentRuntime.Spec.Destination
-	ok = nodestree.IsResourceExist(options, envName, nodestree.Environment)
-	if !ok {
-		err := fmt.Errorf("failed to get environment %s", envName)
-		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable+"err: "+err.Error(), nodestree.Environment, fmt.Sprintf("%s/%s", RuntimesDir, deploymentRuntime.Name))
+	envName := deploymentRuntime.Spec.Destination.Environment
+	if envName != "" {
+		ok = nodestree.IsResourceExist(options, envName, nodestree.Environment)
+		if !ok {
+			resourcePath := fmt.Sprintf("%s/%s", RuntimesDir, deploymentRuntime.Name)
+			err := ResourceDoesNotExistOrUnavailable(envName, nodestree.Environment, resourcePath)
+			return true, err
+		}
 	}
 
 	codeRepoName := deploymentRuntime.Spec.ManifestSource.CodeRepo
-	ok = nodestree.IsResourceExist(options, codeRepoName, nodestree.CodeRepo)
-	if !ok {
-		err := fmt.Errorf("failed to get codeRepo %s", codeRepoName)
-		return true, fmt.Errorf(_ResourceDoesNotExistOrUnavailable+"err: "+err.Error(), nodestree.CodeRepo, fmt.Sprintf("%s/%s", CodeReposSubDir, deploymentRuntime.Name))
+	if codeRepoName != "" {
+		ok = nodestree.IsResourceExist(options, codeRepoName, nodestree.CodeRepo)
+		if !ok {
+			err := fmt.Errorf("failed to get codeRepo %s", codeRepoName)
+			resourcePath := fmt.Sprintf("%s/%s", RuntimesDir, deploymentRuntime.Name)
+			return true, ResourceDoesNotExistOrUnavailable(codeRepoName, nodestree.CodeRepo, resourcePath, err.Error())
+		}
 	}
 
 	ok, err := d.compare(options.Nodes)
@@ -204,7 +215,7 @@ func (d *DeploymentRuntimeUsecase) CheckReference(options nodestree.CompareOptio
 		return true, err
 	}
 
-	validateClient := validate.NewValidateClient(d.client, d.nodestree, &options.Nodes, d.config.Nautes.Namespace)
+	validateClient := validate.NewValidateClient(d.client, d.nodestree, &options.Nodes, d.config.Nautes.Namespace, options.ProductName)
 	deploymentRuntime.Namespace = options.ProductName
 	illegalProjectRefs, err := deploymentRuntime.Validate(context.TODO(), validateClient)
 	if err != nil {

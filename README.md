@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![golang](https://img.shields.io/badge/golang-v1.20.0-brightgreen)](https://go.dev/doc/install)
-[![version](https://img.shields.io/badge/version-v0.3.5-green)]()
+[![version](https://img.shields.io/badge/version-v0.3.6-green)]()
 
 
 Nautes 的设计是遵循了 GitOps 的最佳实践，将用户应用环境以及 Nautes 自身环境的声明均存储在版本库中。声明数据分为两类：密钥数据是存储在 Vault 中，其他数据是存储在 Git（目前只支持 GitLab）仓库中，API Server 项目则是提供了一组用于操作这些声明数据的 REST API。

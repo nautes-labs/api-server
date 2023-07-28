@@ -836,6 +836,34 @@ paths:
                                 $ref: '#/components/schemas/api.project.v1.DeleteReply'
 components:
     schemas:
+        api.cluster.v1.Component:
+            type: object
+            properties:
+                name:
+                    type: string
+                namespace:
+                    type: string
+        api.cluster.v1.ComponentsList:
+            type: object
+            properties:
+                multi_tenant:
+                    $ref: '#/components/schemas/api.cluster.v1.Component'
+                cert_mgt:
+                    $ref: '#/components/schemas/api.cluster.v1.Component'
+                secret_mgt:
+                    $ref: '#/components/schemas/api.cluster.v1.Component'
+                secret_sync:
+                    $ref: '#/components/schemas/api.cluster.v1.Component'
+                ingress_controller:
+                    $ref: '#/components/schemas/api.cluster.v1.Component'
+                deployment:
+                    $ref: '#/components/schemas/api.cluster.v1.Component'
+                progressive_delivery:
+                    $ref: '#/components/schemas/api.cluster.v1.Component'
+                pipeline:
+                    $ref: '#/components/schemas/api.cluster.v1.Component'
+                event_listener:
+                    $ref: '#/components/schemas/api.cluster.v1.Component'
         api.cluster.v1.DeleteReply:
             type: object
             properties:
@@ -870,6 +898,18 @@ components:
                 api_server:
                     type: string
                     description: api_server specifies the API server address of the cluster.
+                components_list:
+                    $ref: '#/components/schemas/api.cluster.v1.ComponentsList'
+                reserved_namespaces_allowed_products:
+                    type: object
+                    additionalProperties:
+                        $ref: '#/components/schemas/google.protobuf.ListValue'
+                    description: // reserved_namespaces_allowed_products key is namespace name, value is the product name list witch can use namespace.
+                product_allowed_cluster_resources:
+                    type: object
+                    additionalProperties:
+                        $ref: '#/components/schemas/google.protobuf.ListValue'
+                    description: // product_allowed_cluster_resources key is product name, value is the list of cluster resources.
             description: GetReply represents a response to a get request.
         api.cluster.v1.ListsReply:
             type: object
@@ -923,6 +963,18 @@ components:
                 tekton_host:
                     type: string
                     description: tekton_host is the domain for the tekton dashboard, and it must be a subdomain of the PrimaryDomain
+                reserved_namespaces_allowed_products:
+                    type: object
+                    additionalProperties:
+                        $ref: '#/components/schemas/google.protobuf.ListValue'
+                    description: reserved_namespaces_allowed_products key is namespace name, value is the product name list witch can use namespace.
+                product_allowed_cluster_resources:
+                    type: object
+                    additionalProperties:
+                        $ref: '#/components/schemas/google.protobuf.ListValue'
+                    description: product_allowed_cluster_resources key is product name, value is the list of cluster resources.
+                components_list:
+                    $ref: '#/components/schemas/api.cluster.v1.ComponentsList'
             description: Body represents the body of the save request.
         api.cluster.v1.Traefik:
             type: object
@@ -1160,6 +1212,15 @@ components:
                     type: string
                     description: Msg is a message confirming the delete.
             description: Represents a response to a DeleteRequest message.
+        api.deploymentruntime.v1.DeploymentRuntimesDestination:
+            type: object
+            properties:
+                environment:
+                    type: string
+                namespaces:
+                    type: array
+                    items:
+                        type: string
         api.deploymentruntime.v1.GetReply:
             type: object
             properties:
@@ -1177,8 +1238,7 @@ components:
                 manifest_source:
                     $ref: '#/components/schemas/api.deploymentruntime.v1.ManifestSource'
                 destination:
-                    type: string
-                    description: Destination is the destination for the deployment.
+                    $ref: '#/components/schemas/api.deploymentruntime.v1.DeploymentRuntimesDestination'
             description: GetReply is a message that returns a Deployment Runtime.
         api.deploymentruntime.v1.ListsReply:
             type: object
@@ -1220,8 +1280,7 @@ components:
                 manifest_source:
                     $ref: '#/components/schemas/api.deploymentruntime.v1.ManifestSource'
                 destination:
-                    type: string
-                    description: Destination is the destination for the deployment.
+                    $ref: '#/components/schemas/api.deploymentruntime.v1.DeploymentRuntimesDestination'
             description: Body is the message body.
         api.environment.v1.DeleteReply:
             type: object
@@ -1575,6 +1634,17 @@ components:
                     type: string
                     description: 'Isolation definition of pipeline runtime related resources: shared(default) or exclusive'
             description: Message containing the body of the request.
+        google.protobuf.ListValue:
+            type: object
+            properties:
+                values:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/google.protobuf.Value'
+                    description: Repeated field of dynamically typed values.
+            description: '`ListValue` is a wrapper around a repeated field of values. The JSON representation for `ListValue` is JSON array.'
+        google.protobuf.Value:
+            description: Represents a dynamically typed value which can be either null, a number, a string, a boolean, a recursive struct value, or a list of values.
 tags:
     - name: Cluster
     - name: CodeRepo

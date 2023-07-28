@@ -37,7 +37,10 @@ func createDeploymentRuntimeResource(name, repoID string) *resourcev1alpha1.Depl
 		Spec: resourcev1alpha1.DeploymentRuntimeSpec{
 			Product:     defaultProductId,
 			ProjectsRef: []string{"project1"},
-			Destination: "env1",
+			Destination: resourcev1alpha1.DeploymentRuntimesDestination{
+				Environment: "env1",
+				Namespaces:  []string{},
+			},
 			ManifestSource: resourcev1alpha1.ManifestSource{
 				CodeRepo:       repoID,
 				TargetRevision: "main",
@@ -310,7 +313,7 @@ var _ = Describe("Save deployment runtime", func() {
 		It("codeRepo reference not found", func() {
 			projectName := fakeResource.Spec.ProjectsRef[0]
 			projectNodes := createProjectNodes(createProjectNode(createProjectResource(projectName)))
-			env := fakeResource.Spec.Destination
+			env := fakeResource.Spec.Destination.Environment
 			envProjects := createContainEnvironmentNodes(createEnvironmentNode(createEnvironmentResource(env, _TestClusterHostEnvType, _TestDeploymentClusterName)))
 			fakeNodes.Children = append(fakeNodes.Children, projectNodes.Children...)
 			fakeNodes.Children = append(fakeNodes.Children, envProjects.Children...)
@@ -331,7 +334,7 @@ var _ = Describe("Save deployment runtime", func() {
 		It("will successed", func() {
 			projectName := fakeResource.Spec.ProjectsRef[0]
 			projectNodes := createProjectNodes(createProjectNode(createProjectResource(projectName)))
-			env := fakeResource.Spec.Destination
+			env := fakeResource.Spec.Destination.Environment
 			envProjects := createContainEnvironmentNodes(createEnvironmentNode(createEnvironmentResource(env, _TestClusterHostEnvType, _TestDeploymentClusterName)))
 			fakeNodes.Children = append(fakeNodes.Children, projectNodes.Children...)
 			fakeNodes.Children = append(fakeNodes.Children, envProjects.Children...)
@@ -352,6 +355,7 @@ var _ = Describe("Save deployment runtime", func() {
 
 			client := kubernetes.NewMockClient(ctl)
 			client.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			client.EXPECT().List(gomock.Any(), gomock.Eq(&resourcev1alpha1.DeploymentRuntimeList{})).Return(nil)
 
 			biz := NewDeploymentRuntimeUsecase(logger, nil, nodestree, nil, client, nautesConfigs)
 			ok, err := biz.CheckReference(options, fakeNode, nil)
