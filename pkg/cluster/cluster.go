@@ -168,16 +168,18 @@ func ConvertProjectPipeline(ingresses []Ingress, hostClusterName string, httpsNo
 	for _, ingress := range ingresses {
 		re := regexp.MustCompile(`^(.*?)-tekton-dashborard$`)
 		match := re.FindStringSubmatch(ingress.Metadata.Name)
-		name := match[1]
-		projectPipelineItems = append(projectPipelineItems, &ProjectPipelineItem{
-			Name: name,
-			TektonConfig: &TektonConfig{
-				URL:           fmt.Sprintf("https://%s:%d", ingress.Spec.TLS[0].Hosts[0], httpsNodePort),
-				Host:          ingress.Spec.Rules[0].Host,
-				HttpsNodePort: httpsNodePort,
-			},
-			HostClusterName: hostClusterName,
-		})
+		if len(match) >= 1 {
+			name := match[1]
+			projectPipelineItems = append(projectPipelineItems, &ProjectPipelineItem{
+				Name: name,
+				TektonConfig: &TektonConfig{
+					URL:           fmt.Sprintf("https://%s:%d", ingress.Spec.TLS[0].Hosts[0], httpsNodePort),
+					Host:          ingress.Spec.Rules[0].Host,
+					HttpsNodePort: httpsNodePort,
+				},
+				HostClusterName: hostClusterName,
+			})
+		}
 	}
 
 	return projectPipelineItems
