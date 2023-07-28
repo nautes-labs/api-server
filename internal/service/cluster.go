@@ -396,6 +396,14 @@ func (s *ClusterService) constructResourceCluster(req *clusterv1.SaveRequest, na
 		},
 	}
 
+	if cluster.Spec.PrimaryDomain == "" {
+		domain, err := utilstring.ParseUrl(req.Body.ApiServer)
+		if err != nil {
+			return nil, err
+		}
+		cluster.Spec.PrimaryDomain = domain
+	}
+
 	componentsList, err := s.constructResourceComponentsList(req.Body.ComponentsList)
 	if err != nil {
 		return nil, err
